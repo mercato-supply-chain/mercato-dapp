@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -23,9 +23,9 @@ import {
 
 export function Navigation() {
   const router = useRouter()
-  const supabase = createClient()
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const supabase = useMemo(() => createClient(), [])
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
+  const [profile, setProfile] = useState<{ full_name?: string; company_name?: string; user_type?: string } | null>(null)
 
   useEffect(() => {
     const getUser = async () => {
@@ -45,7 +45,14 @@ export function Navigation() {
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      const newUser = session?.user ?? null
+      setUser(newUser)
+      if (newUser) {
+        supabase.from('profiles').select('*').eq('id', newUser.id).single()
+          .then(({ data }) => setProfile(data))
+      } else {
+        setProfile(null)
+      }
     })
 
     return () => subscription.unsubscribe()
