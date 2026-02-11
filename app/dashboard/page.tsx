@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     .single()
 
   const userType = profile?.user_type || 'pyme'
-  const fullName = profile?.full_name || user.email
+  const fullName = profile?.full_name || profile?.contact_name || user.email
   const companyName = profile?.company_name
 
   // Get user's deals based on their role
@@ -106,7 +106,8 @@ export default async function DashboardPage() {
         ]
       case 'supplier':
         return [
-          { label: 'View Active Deals', href: '/dashboard/deals', icon: Package },
+          { label: 'Manage Products & Categories', href: '/dashboard/supplier-profile', icon: Package },
+          { label: 'View Active Deals', href: '/dashboard/deals', icon: TrendingUp },
           { label: 'Upload Delivery Proof', href: '/dashboard/deliveries', icon: CheckCircle2 },
         ]
       default:
@@ -134,6 +135,55 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Supplier: My Products & Categories */}
+        {userType === 'supplier' && (profile?.products?.length > 0 || profile?.categories?.length > 0) && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                My Products & Categories
+              </CardTitle>
+              <CardDescription>
+                Your catalog that PyMEs see when creating deals
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {profile?.categories && profile.categories.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-muted-foreground">Categories</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.categories.map((cat: string) => (
+                        <Badge key={cat} variant="secondary" className="capitalize">
+                          {cat}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {profile?.products && profile.products.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-muted-foreground">Products</p>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.products.map((product: string) => (
+                        <Badge key={product} variant="outline">
+                          {product}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/dashboard/supplier-profile">
+                  Manage Products & Categories
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-3 mb-8">

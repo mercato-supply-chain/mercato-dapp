@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Package, TrendingUp, User, Menu, LogOut, Settings, LayoutDashboard } from 'lucide-react'
+import { Package, TrendingUp, User, Menu, LogOut, Settings, LayoutDashboard, Plus, DollarSign, CheckCircle2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -25,7 +25,7 @@ export function Navigation() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
-  const [profile, setProfile] = useState<{ full_name?: string; company_name?: string; user_type?: string } | null>(null)
+  const [profile, setProfile] = useState<{ full_name?: string; contact_name?: string; company_name?: string; user_type?: string } | null>(null)
 
   useEffect(() => {
     const getUser = async () => {
@@ -105,14 +105,14 @@ export function Navigation() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2">
                     <User className="h-4 w-4" />
-                    {profile?.full_name || profile?.company_name || user.email}
+                    {profile?.full_name || profile?.contact_name || profile?.company_name || user.email}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {profile?.full_name || profile?.company_name}
+                        {profile?.full_name || profile?.contact_name || profile?.company_name}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
@@ -131,6 +131,61 @@ export function Navigation() {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+                  {profile?.user_type === 'pyme' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/create-deal" className="cursor-pointer">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Deal
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/marketplace?filter=funded" className="cursor-pointer">
+                          <TrendingUp className="mr-2 h-4 w-4" />
+                          Browse Investors
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {profile?.user_type === 'investor' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/marketplace" className="cursor-pointer">
+                          <Package className="mr-2 h-4 w-4" />
+                          Browse Deals
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/investments" className="cursor-pointer">
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          My Investments
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {profile?.user_type === 'supplier' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/supplier-profile" className="cursor-pointer">
+                          <Package className="mr-2 h-4 w-4" />
+                          Products & Categories
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/deals" className="cursor-pointer">
+                          <TrendingUp className="mr-2 h-4 w-4" />
+                          Active Deals
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/deliveries" className="cursor-pointer">
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Delivery Proof
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
@@ -195,7 +250,7 @@ export function Navigation() {
                       <div className="my-2 border-t border-border" />
                       <div className="px-2 py-1.5">
                         <p className="text-sm font-medium">
-                          {profile?.full_name || profile?.company_name}
+                          {profile?.full_name || profile?.contact_name || profile?.company_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {user.email}
@@ -208,6 +263,67 @@ export function Navigation() {
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard
                       </Link>
+                      {profile?.user_type === 'pyme' && (
+                        <>
+                          <Link 
+                            href="/create-deal" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create Deal
+                          </Link>
+                          <Link 
+                            href="/marketplace?filter=funded" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <TrendingUp className="h-4 w-4" />
+                            Browse Investors
+                          </Link>
+                        </>
+                      )}
+                      {profile?.user_type === 'investor' && (
+                        <>
+                          <Link 
+                            href="/marketplace" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <Package className="h-4 w-4" />
+                            Browse Deals
+                          </Link>
+                          <Link 
+                            href="/dashboard/investments" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            My Investments
+                          </Link>
+                        </>
+                      )}
+                      {profile?.user_type === 'supplier' && (
+                        <>
+                          <Link 
+                            href="/dashboard/supplier-profile" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <Package className="h-4 w-4" />
+                            Products & Categories
+                          </Link>
+                          <Link 
+                            href="/dashboard/deals" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <TrendingUp className="h-4 w-4" />
+                            Active Deals
+                          </Link>
+                          <Link 
+                            href="/dashboard/deliveries" 
+                            className="flex items-center gap-2 text-sm font-medium"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Delivery Proof
+                          </Link>
+                        </>
+                      )}
                       <Link 
                         href="/settings" 
                         className="flex items-center gap-2 text-sm font-medium"

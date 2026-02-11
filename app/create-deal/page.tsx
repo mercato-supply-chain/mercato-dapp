@@ -50,6 +50,7 @@ export default function CreateDealPage() {
     pricePerUnit: '',
     
     // Step 2: Supplier & Terms
+    supplierId: '',
     supplierName: '',
     supplierContact: '',
     term: '60',
@@ -90,6 +91,20 @@ export default function CreateDealPage() {
     setFilteredSuppliers(filtered)
   }, [formData.category, suppliers])
 
+
+  // Derive available categories from suppliers - only show categories that have suppliers
+  const availableCategories = Array.from(
+    new Set(
+      suppliers.flatMap((s) => s.categories || []).filter(Boolean)
+    )
+  ).sort()
+
+  const formatCategoryLabel = (cat: string) =>
+    cat
+      .split(/[\s_-]+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ')
+
   const loadSuppliers = async () => {
     const { data } = await supabase
       .from('profiles')
@@ -109,6 +124,7 @@ export default function CreateDealPage() {
     if (supplier) {
       setFormData(prev => ({
         ...prev,
+        supplierId,
         supplierName: supplier.company_name,
         supplierContact: supplier.email || supplier.address || '',
       }))
@@ -121,7 +137,8 @@ export default function CreateDealPage() {
 
   const estimatedYield = totalAmount * 0.12 * (Number(formData.term) / 365)
 
-  const canProceedStep1 = formData.productName && formData.quantity && formData.pricePerUnit
+  const canProceedStep1 = formData.productName && formData.quantity && formData.pricePerUnit &&
+    (availableCategories.length === 0 || formData.category)
   const canProceedStep2 = formData.supplierName && formData.term
   const canSubmit = canProceedStep1 && canProceedStep2
 
@@ -130,12 +147,26 @@ export default function CreateDealPage() {
     
     setIsLoading(true)
     try {
-      // Get selected supplier info
-      const selectedSupplier = suppliers.find(s => 
-        s.company_name === formData.supplierName
-      )
+      // Get selected supplier - prefer ID lookup, fallback to name
+      let selectedSupplier = formData.supplierId
+        ? suppliers.find(s => s.id === formData.supplierId)
+        : suppliers.find(s => s.company_name === formData.supplierName)
 
-      if (!selectedSupplier?.address) {
+      // If address missing from cached data (or supplier not in cache), fetch fresh from Supabase
+      const supplierIdToFetch = formData.supplierId || selectedSupplier?.id
+      if (supplierIdToFetch && (!selectedSupplier?.address || !selectedSupplier.address.trim())) {
+        const { data: freshSupplier } = await supabase
+          .from('profiles')
+          .select('id, company_name, address')
+          .eq('id', supplierIdToFetch)
+          .eq('user_type', 'supplier')
+          .single()
+        if (freshSupplier) {
+          selectedSupplier = { ...selectedSupplier, ...freshSupplier }
+        }
+      }
+
+      if (!selectedSupplier?.address || !selectedSupplier.address.trim()) {
         alert('Selected supplier does not have a Stellar wallet address configured. Please select a different supplier.')
         setIsLoading(false)
         return
@@ -212,7 +243,7 @@ export default function CreateDealPage() {
           })
           .eq('id', deal.id)
 
-        router.push(`/deals/${deal.id}`)
+        router.push('/dashboard')
       } else {
         throw new Error(escrowResult.error || 'Failed to initialize escrow')
       }
@@ -292,18 +323,27 @@ export default function CreateDealPage() {
                     <Label htmlFor="category">Category</Label>
                     <Select value={formData.category} onValueChange={(value) => updateFormData('category', value)}>
                       <SelectTrigger id="category">
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={availableCategories.length > 0 ? "Select category" : "No categories available yet"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="electronics">Electronics</SelectItem>
-                        <SelectItem value="food">Food & Beverage</SelectItem>
-                        <SelectItem value="healthcare">Healthcare</SelectItem>
-                        <SelectItem value="textiles">Textiles</SelectItem>
-                        <SelectItem value="construction">Construction</SelectItem>
-                        <SelectItem value="automotive">Automotive</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {availableCategories.length === 0 ? (
+                          <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                            No suppliers have added categories yet. Ask suppliers to add their products & categories in their profile.
+                          </div>
+                        ) : (
+                          availableCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {formatCategoryLabel(cat)}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
+                    {availableCategories.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Categories shown are from suppliers who have added them to their profile
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -357,7 +397,10 @@ export default function CreateDealPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="supplier">Select Supplier *</Label>
-                    <Select onValueChange={handleSupplierSelect}>
+                    <Select 
+                      value={formData.supplierId || undefined} 
+                      onValueChange={handleSupplierSelect}
+                    >
                       <SelectTrigger id="supplier">
                         <SelectValue placeholder={formData.supplierName || "Choose from verified suppliers"} />
                       </SelectTrigger>

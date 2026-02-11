@@ -4,6 +4,7 @@ import React from "react"
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
@@ -27,11 +28,7 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     bio: '',
-    categories: [] as string[],
-    products: [] as string[],
   })
-  const [categoryInput, setCategoryInput] = useState('')
-  const [productInput, setProductInput] = useState('')
 
   useEffect(() => {
     const getProfile = async () => {
@@ -53,13 +50,11 @@ export default function SettingsPage() {
       if (profile) {
         setProfile(profile)
         setFormData({
-          full_name: profile.full_name || '',
+          full_name: profile.full_name || profile.contact_name || '',
           company_name: profile.company_name || '',
           phone: profile.phone || '',
           address: profile.address || '',
           bio: profile.bio || '',
-          categories: profile.categories || [],
-          products: profile.products || [],
         })
       }
 
@@ -74,19 +69,13 @@ export default function SettingsPage() {
     setIsSaving(true)
 
     try {
-      const updateData: any = {
+      const updateData = {
         full_name: formData.full_name,
         company_name: formData.company_name,
         phone: formData.phone,
         address: formData.address,
         bio: formData.bio,
         updated_at: new Date().toISOString(),
-      }
-
-      // Only include supplier fields if user is a supplier
-      if (profile?.user_type === 'supplier') {
-        updateData.categories = formData.categories
-        updateData.products = formData.products
       }
 
       const { error } = await supabase
@@ -218,129 +207,14 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Supplier-specific fields */}
                 {profile?.user_type === 'supplier' && (
-                  <>
-                    <div className="border-t border-border pt-6">
-                      <h3 className="mb-4 font-semibold">Supplier Information</h3>
-                      
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Categories</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={categoryInput}
-                              onChange={(e) => setCategoryInput(e.target.value)}
-                              placeholder="e.g., electronics, textiles"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault()
-                                  if (categoryInput.trim() && !formData.categories.includes(categoryInput.trim())) {
-                                    setFormData({ 
-                                      ...formData, 
-                                      categories: [...formData.categories, categoryInput.trim().toLowerCase()] 
-                                    })
-                                    setCategoryInput('')
-                                  }
-                                }
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                if (categoryInput.trim() && !formData.categories.includes(categoryInput.trim())) {
-                                  setFormData({ 
-                                    ...formData, 
-                                    categories: [...formData.categories, categoryInput.trim().toLowerCase()] 
-                                  })
-                                  setCategoryInput('')
-                                }
-                              }}
-                            >
-                              Add
-                            </Button>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {formData.categories.map((cat) => (
-                              <Badge 
-                                key={cat} 
-                                variant="secondary"
-                                className="cursor-pointer capitalize"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    categories: formData.categories.filter(c => c !== cat)
-                                  })
-                                }}
-                              >
-                                {cat} ×
-                              </Badge>
-                            ))}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Click a category to remove it
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Products</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={productInput}
-                              onChange={(e) => setProductInput(e.target.value)}
-                              placeholder="e.g., LED displays, cotton fabric"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault()
-                                  if (productInput.trim() && !formData.products.includes(productInput.trim())) {
-                                    setFormData({ 
-                                      ...formData, 
-                                      products: [...formData.products, productInput.trim()] 
-                                    })
-                                    setProductInput('')
-                                  }
-                                }
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                if (productInput.trim() && !formData.products.includes(productInput.trim())) {
-                                  setFormData({ 
-                                    ...formData, 
-                                    products: [...formData.products, productInput.trim()] 
-                                  })
-                                  setProductInput('')
-                                }
-                              }}
-                            >
-                              Add
-                            </Button>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {formData.products.map((product) => (
-                              <Badge 
-                                key={product} 
-                                variant="secondary"
-                                className="cursor-pointer"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    products: formData.products.filter(p => p !== product)
-                                  })
-                                }}
-                              >
-                                {product} ×
-                              </Badge>
-                            ))}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Click a product to remove it
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                  <p className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                    As a supplier, manage your products and categories from your{' '}
+                    <Link href="/dashboard/supplier-profile" className="font-medium underline hover:text-foreground">
+                      Products & Categories
+                    </Link>{' '}
+                    page (also available in Quick Actions on your dashboard).
+                  </p>
                 )}
 
                 <div className="flex gap-4">

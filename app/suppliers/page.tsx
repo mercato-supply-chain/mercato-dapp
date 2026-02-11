@@ -230,7 +230,7 @@ export default function SuppliersPage() {
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Wallet className="h-4 w-4 shrink-0" />
                         <span className="truncate font-mono text-xs">
-                          {supplier.wallet_address.slice(0, 6)}...{supplier.wallet_address.slice(-4)}
+                          {supplier.address.slice(0, 6)}...{supplier.address.slice(-4)}
                         </span>
                       </div>
                     )}
