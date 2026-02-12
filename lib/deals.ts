@@ -1,0 +1,90 @@
+import type { Deal, DealStatus, Milestone } from './types'
+
+/** DB deal row with optional relations from Supabase select */
+export interface DealRow {
+  id: string
+  pyme_id: string
+  supplier_id?: string | null
+  investor_id?: string | null
+  title: string
+  description: string
+  category: string
+  product_name: string
+  product_quantity: number
+  product_unit_price: number
+  supplier_name: string
+  amount: number
+  interest_rate: number
+  term_days: number
+  status: string
+  escrow_address?: string | null
+  escrow_contract_address?: string | null
+  created_at?: string | null
+  funded_at?: string | null
+  completed_at?: string | null
+  milestones?: MilestoneRow[] | null
+  /** From Supabase select with alias: pyme:profiles!deals_pyme_id_fkey(...) */
+  pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
+  /** Fallback if relation is returned as table name */
+  profiles?: { company_name?: string; full_name?: string; contact_name?: string } | null
+}
+
+export interface MilestoneRow {
+  id: string
+  deal_id: string
+  title: string
+  description?: string | null
+  percentage: number
+  amount: number
+  status: string
+  completed_at?: string | null
+}
+
+const DB_STATUS_TO_DEAL_STATUS: Record<string, DealStatus> = {
+  seeking_funding: 'awaiting_funding',
+  funded: 'funded',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'completed',
+}
+
+/**
+ * Map a Supabase deal row (with optional milestones and pyme profile) to the Deal type used by DealCard and marketplace.
+ */
+export function mapDealFromDb(row: DealRow): Deal {
+  const pymeProfile = row.pyme ?? row.profiles
+  const pymeName =
+    pymeProfile?.company_name ||
+    pymeProfile?.full_name ||
+    pymeProfile?.contact_name ||
+    'PyME'
+
+  const milestones: Milestone[] = (row.milestones ?? []).map((m) => ({
+    id: m.id,
+    name: m.title,
+    percentage: Number(m.percentage),
+    status: m.status === 'completed' ? 'completed' : m.status === 'in_progress' ? 'pending' : 'pending',
+    completedAt: m.completed_at ?? undefined,
+  }))
+
+  const status = DB_STATUS_TO_DEAL_STATUS[row.status] ?? 'awaiting_funding'
+
+  return {
+    id: row.id,
+    productName: row.product_name || row.title,
+    quantity: row.product_quantity ?? 0,
+    priceUSDC: Number(row.amount),
+    supplier: row.supplier_name,
+    term: row.term_days ?? 0,
+    status,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : '',
+    fundedAt: row.funded_at ? new Date(row.funded_at).toISOString().slice(0, 10) : undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at).toISOString().slice(0, 10) : undefined,
+    milestones,
+    escrowAddress: row.escrow_contract_address ?? row.escrow_address ?? undefined,
+    pymeName,
+    description: row.description ?? undefined,
+    category: row.category ?? undefined,
+    yieldAPR: row.interest_rate != null ? Number(row.interest_rate) : undefined,
+  }
+}

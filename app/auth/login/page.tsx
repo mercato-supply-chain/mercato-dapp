@@ -1,7 +1,6 @@
 'use client'
 
-import React from "react"
-
+import type { FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,7 +24,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
     setIsLoading(true)
@@ -51,7 +50,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold">
-            <Package className="h-6 w-6" />
+            <Package className="h-6 w-6" aria-hidden />
             MERCATO
           </Link>
           <p className="mt-2 text-muted-foreground">Supply chain finance platform</p>
@@ -71,8 +70,11 @@ export default function LoginPage() {
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
-                    placeholder="john@acme.com"
+                    autoComplete="email"
+                    spellCheck={false}
+                    placeholder="john@acme.com…"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -90,7 +92,10 @@ export default function LoginPage() {
                   </div>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -98,13 +103,17 @@ export default function LoginPage() {
                 </div>
 
                 {error && (
-                  <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  <div
+                    className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+                    role="alert"
+                    aria-live="polite"
+                  >
                     {error}
                   </div>
                 )}
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                  {isLoading ? 'Signing in…' : 'Sign In'}
                 </Button>
               </div>
 

@@ -1,117 +1,124 @@
 'use client'
 
 import { useState } from 'react'
+import {
+  useInitializeEscrow,
+  useSendTransaction,
+} from '@trustless-work/escrow/hooks'
+import type {
+  InitializeMultiReleaseEscrowPayload,
+  EscrowType,
+} from '@trustless-work/escrow'
+import { signTransaction } from '@/lib/trustless/wallet-kit'
+import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
+import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 
 export interface EscrowMilestone {
   description: string
-  amount: string
+  amount: number
   receiver: string
 }
 
-export interface EscrowRoles {
-  approver: string // PyME address
-  serviceProvider: string // Supplier address
-  platformAddress: string // MERCATO platform address
-  releaseSigner: string // Platform or admin address
-  disputeResolver: string // Platform or admin address
-}
-
-export interface InitializeEscrowPayload {
+export interface InitializeEscrowParams {
   signer: string
   engagementId: string
   title: string
   description: string
-  roles: EscrowRoles
+  approver: string
+  serviceProvider: string
   platformFee: number
   milestones: EscrowMilestone[]
-  trustline: {
-    address: string
-    symbol: string
-  }
 }
 
 export function useEscrowIntegration() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const initializeEscrow = async (payload: InitializeEscrowPayload) => {
+  const { deployEscrow } = useInitializeEscrow()
+  const { sendTransaction } = useSendTransaction()
+
+  const initializeAndDeployEscrow = async (
+    params: InitializeEscrowParams
+  ): Promise<{
+    success: boolean
+    escrowId?: string
+    contractAddress?: string
+    transactionHash?: string
+    error?: string
+  }> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // Get API key from environment
-      const apiKey = process.env.NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY
-
-      if (!apiKey) {
-        throw new Error('TrustlessWork API key not configured')
+      if (!MERCATO_PLATFORM_ADDRESS) {
+        throw new Error('MERCATO platform address not configured')
       }
 
-      // Call TrustlessWork API to deploy escrow
-      const response = await fetch('https://dev.api.trustlesswork.com/deployer/multi-release', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+      const payload: InitializeMultiReleaseEscrowPayload = {
+        signer: params.signer,
+        engagementId: params.engagementId,
+        title: params.title,
+        description: params.description,
+        roles: {
+          approver: params.approver,
+          serviceProvider: params.serviceProvider,
+          platformAddress: MERCATO_PLATFORM_ADDRESS,
+          releaseSigner: MERCATO_PLATFORM_ADDRESS,
+          disputeResolver: MERCATO_PLATFORM_ADDRESS,
         },
-        body: JSON.stringify(payload),
+        platformFee: params.platformFee,
+        milestones: params.milestones.map((m) => ({
+          description: m.description,
+          amount: m.amount,
+          receiver: m.receiver,
+        })),
+        trustline: {
+          address: USDC_TRUSTLINE.address,
+          symbol: USDC_TRUSTLINE.symbol,
+        },
+      }
+
+      const deployResponse = await deployEscrow(
+        payload,
+        'multi-release' as EscrowType
+      )
+
+      if (
+        deployResponse.status !== 'SUCCESS' ||
+        !deployResponse.unsignedTransaction
+      ) {
+        throw new Error('Failed to create escrow transaction')
+      }
+
+      const signedXdr = await signTransaction({
+        unsignedTransaction: deployResponse.unsignedTransaction,
+        address: params.signer,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `API error: ${response.status}`)
+      const sendResponse = await sendTransaction(signedXdr)
+
+      if (sendResponse.status !== 'SUCCESS') {
+        throw new Error(
+          'message' in sendResponse
+            ? sendResponse.message
+            : 'Failed to submit transaction'
+        )
       }
 
-      const data = await response.json()
-      
+      const contractId =
+        'contractId' in sendResponse ? sendResponse.contractId : undefined
+      const escrowData =
+        'escrow' in sendResponse ? sendResponse.escrow : undefined
+
       return {
-        unsignedTransaction: data.unsignedTransaction,
         success: true,
+        escrowId: params.engagementId,
+        contractAddress: contractId ?? escrowData?.contractId,
+        transactionHash: undefined,
       }
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to initialize escrow'
-      setError(errorMessage)
-      return {
-        success: false,
-        error: errorMessage,
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const sendSignedTransaction = async (signedXdr: string) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY
-
-      if (!apiKey) {
-        throw new Error('TrustlessWork API key not configured')
-      }
-
-      const response = await fetch('https://dev.api.trustlesswork.com/helper/send-transaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: JSON.stringify({ signedXdr }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to send transaction: ${response.status}`)
-      }
-
-      const data = await response.json()
-      
-      return {
-        status: data.status,
-        data: data,
-        success: data.status === 'SUCCESS',
-      }
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to send transaction'
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to initialize escrow'
       setError(errorMessage)
       return {
         success: false,
@@ -123,8 +130,7 @@ export function useEscrowIntegration() {
   }
 
   return {
-    initializeEscrow,
-    sendSignedTransaction,
+    initializeAndDeployEscrow,
     isLoading,
     error,
   }

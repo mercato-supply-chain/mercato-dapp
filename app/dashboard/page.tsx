@@ -295,7 +295,7 @@ export default async function DashboardPage() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-muted-foreground">
-                        ${deal.amount.toLocaleString()} • {deal.term_days} days • {deal.apr}% APR
+                        ${deal.amount.toLocaleString()} • {deal.term_days} days • {deal.interest_rate}% APR
                       </div>
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/deals/${deal.id}`}>

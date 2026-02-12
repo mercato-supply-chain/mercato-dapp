@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Navigation } from '@/components/navigation'
 import { DealCard } from '@/components/deal-card'
 import { Button } from '@/components/ui/button'
@@ -13,37 +14,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { mockDeals } from '@/lib/mock-data'
-import { DealStatus } from '@/lib/types'
+import { mapDealFromDb, type DealRow } from '@/lib/deals'
+import type { Deal, DealStatus } from '@/lib/types'
 import { Search, Filter } from 'lucide-react'
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<DealStatus | 'all'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Get unique categories
-  const categories = Array.from(new Set(mockDeals.map(d => d.category).filter(Boolean)))
+  useEffect(() => {
+    const supabase = createClient()
+    const fetchDeals = async () => {
+      const { data, error } = await supabase
+        .from('deals')
+        .select(
+          `
+          *,
+          milestones(*),
+          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)
+        `
+        )
+        .order('created_at', { ascending: false })
+      if (error) {
+        console.error('Error fetching deals:', error)
+        setDeals([])
+      } else {
+        const rows = (data ?? []) as DealRow[]
+        setDeals(rows.map(mapDealFromDb))
+      }
+      setIsLoading(false)
+    }
+    fetchDeals()
+  }, [])
+
+  // Get unique categories from loaded deals
+  const categories = Array.from(
+    new Set(deals.map((d) => d.category).filter(Boolean))
+  ).sort()
 
   // Filter deals
-  const filteredDeals = mockDeals.filter(deal => {
-    const matchesSearch = 
+  const filteredDeals = deals.filter((deal) => {
+    const matchesSearch =
       deal.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       deal.pymeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       deal.supplier.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || deal.status === statusFilter
-    const matchesCategory = categoryFilter === 'all' || deal.category === categoryFilter
+
+    const matchesStatus =
+      statusFilter === 'all' || deal.status === statusFilter
+    const matchesCategory =
+      categoryFilter === 'all' || deal.category === categoryFilter
 
     return matchesSearch && matchesStatus && matchesCategory
   })
 
   // Count deals by status
   const statusCounts = {
-    all: mockDeals.length,
-    awaiting_funding: mockDeals.filter(d => d.status === 'awaiting_funding').length,
-    funded: mockDeals.filter(d => d.status === 'funded').length,
-    in_progress: mockDeals.filter(d => d.status === 'in_progress').length,
+    all: deals.length,
+    awaiting_funding: deals.filter((d) => d.status === 'awaiting_funding')
+      .length,
+    funded: deals.filter((d) => d.status === 'funded').length,
+    in_progress: deals.filter((d) => d.status === 'in_progress').length,
   }
 
   return (
@@ -78,7 +111,11 @@ export default function MarketplacePage() {
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm text-muted-foreground">Total Value</p>
             <p className="text-3xl font-bold">
-              ${(mockDeals.reduce((sum, d) => sum + d.priceUSDC, 0) / 1000).toFixed(0)}K
+              $
+              {deals.length > 0
+                ? (deals.reduce((sum, d) => sum + d.priceUSDC, 0) / 1000).toFixed(0)
+                : '0'}
+              K
             </p>
           </div>
         </div>
@@ -134,6 +171,7 @@ export default function MarketplacePage() {
               <Badge variant="secondary" className="gap-1">
                 Status: {statusFilter}
                 <button
+                  type="button"
                   onClick={() => setStatusFilter('all')}
                   className="ml-1 hover:text-destructive"
                 >
@@ -145,6 +183,7 @@ export default function MarketplacePage() {
               <Badge variant="secondary" className="gap-1">
                 Category: {categoryFilter}
                 <button
+                  type="button"
                   onClick={() => setCategoryFilter('all')}
                   className="ml-1 hover:text-destructive"
                 >
@@ -156,6 +195,7 @@ export default function MarketplacePage() {
               <Badge variant="secondary" className="gap-1">
                 Search: {searchQuery}
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
                   className="ml-1 hover:text-destructive"
                 >
@@ -180,14 +220,25 @@ export default function MarketplacePage() {
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredDeals.length} {filteredDeals.length === 1 ? 'deal' : 'deals'}
+            {isLoading
+              ? 'Loading deals…'
+              : `Showing ${filteredDeals.length} ${filteredDeals.length === 1 ? 'deal' : 'deals'}`}
           </p>
         </div>
 
         {/* Deals Grid */}
-        {filteredDeals.length > 0 ? (
+        {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredDeals.map(deal => (
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-64 animate-pulse rounded-lg border border-border bg-muted/50"
+              />
+            ))}
+          </div>
+        ) : filteredDeals.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredDeals.map((deal) => (
               <DealCard key={deal.id} deal={deal} />
             ))}
           </div>
@@ -195,7 +246,9 @@ export default function MarketplacePage() {
           <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 text-center">
             <p className="mb-2 text-lg font-medium">No deals found</p>
             <p className="mb-4 text-sm text-muted-foreground">
-              Try adjusting your filters or search query
+              {deals.length === 0
+                ? 'Create your first deal from the dashboard or check back later.'
+                : 'Try adjusting your filters or search query'}
             </p>
             <Button
               variant="outline"

@@ -2,6 +2,9 @@ import type React from "react"
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
+import { TrustlessWorkProvider } from '@/lib/trustless/config'
+import { WalletProvider } from '@/providers/wallet-provider'
+import { Toaster } from '@/components/ui/sonner'
 
 import './globals.css'
 
@@ -27,7 +30,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <TrustlessWorkProvider>
+            <WalletProvider>
+              {children}
+              <Toaster />
+            </WalletProvider>
+          </TrustlessWorkProvider>
         </ThemeProvider>
       </body>
     </html>

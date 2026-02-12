@@ -1,7 +1,6 @@
 'use client'
 
-import React from "react"
-
+import type { FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,7 +29,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
     setIsLoading(true)
@@ -77,7 +76,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-2xl">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold">
-            <Package className="h-6 w-6" />
+            <Package className="h-6 w-6" aria-hidden />
             MERCATO
           </Link>
           <p className="mt-2 text-muted-foreground">Join the supply chain finance revolution</p>
@@ -96,7 +95,10 @@ export default function SignUpPage() {
                 {/* User Type Selection */}
                 <div className="grid gap-3">
                   <Label>I am a...</Label>
-                  <RadioGroup value={userType} onValueChange={(value: any) => setUserType(value)}>
+                  <RadioGroup
+                    value={userType}
+                    onValueChange={(v) => setUserType(v as 'pyme' | 'investor' | 'supplier')}
+                  >
                     <div className="grid gap-3 md:grid-cols-3">
                       <label
                         htmlFor="pyme"
@@ -107,7 +109,7 @@ export default function SignUpPage() {
                         }`}
                       >
                         <RadioGroupItem value="pyme" id="pyme" className="sr-only" />
-                        <Package className="h-8 w-8" />
+                        <Package className="h-8 w-8" aria-hidden />
                         <div className="text-center">
                           <div className="font-semibold">PyME</div>
                           <div className="text-xs text-muted-foreground">Need capital</div>
@@ -123,7 +125,7 @@ export default function SignUpPage() {
                         }`}
                       >
                         <RadioGroupItem value="investor" id="investor" className="sr-only" />
-                        <TrendingUp className="h-8 w-8" />
+                        <TrendingUp className="h-8 w-8" aria-hidden />
                         <div className="text-center">
                           <div className="font-semibold">Investor</div>
                           <div className="text-xs text-muted-foreground">Fund deals</div>
@@ -139,7 +141,7 @@ export default function SignUpPage() {
                         }`}
                       >
                         <RadioGroupItem value="supplier" id="supplier" className="sr-only" />
-                        <Users className="h-8 w-8" />
+                        <Users className="h-8 w-8" aria-hidden />
                         <div className="text-center">
                           <div className="font-semibold">Supplier</div>
                           <div className="text-xs text-muted-foreground">Get paid early</div>
@@ -155,8 +157,10 @@ export default function SignUpPage() {
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input
                       id="fullName"
+                      name="fullName"
                       type="text"
-                      placeholder="John Doe"
+                      autoComplete="name"
+                      placeholder="John Doe…"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -166,8 +170,10 @@ export default function SignUpPage() {
                     <Label htmlFor="companyName">Company Name</Label>
                     <Input
                       id="companyName"
+                      name="companyName"
                       type="text"
-                      placeholder="Acme Inc."
+                      autoComplete="organization"
+                      placeholder="Acme Inc.…"
                       required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
@@ -180,8 +186,11 @@ export default function SignUpPage() {
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
-                    placeholder="john@acme.com"
+                    autoComplete="email"
+                    spellCheck={false}
+                    placeholder="john@acme.com…"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -194,7 +203,9 @@ export default function SignUpPage() {
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
+                      name="password"
                       type="password"
+                      autoComplete="new-password"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -204,7 +215,9 @@ export default function SignUpPage() {
                     <Label htmlFor="repeat-password">Confirm Password</Label>
                     <Input
                       id="repeat-password"
+                      name="repeatPassword"
                       type="password"
+                      autoComplete="new-password"
                       required
                       value={repeatPassword}
                       onChange={(e) => setRepeatPassword(e.target.value)}
@@ -213,13 +226,17 @@ export default function SignUpPage() {
                 </div>
 
                 {error && (
-                  <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  <div
+                    className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+                    role="alert"
+                    aria-live="polite"
+                  >
                     {error}
                   </div>
                 )}
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  {isLoading ? 'Creating Account…' : 'Create Account'}
                 </Button>
               </div>
 
