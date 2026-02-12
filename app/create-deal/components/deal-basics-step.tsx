@@ -16,21 +16,42 @@ import { formatCurrency } from '@/lib/format'
 import { formatCategoryLabel } from '../types'
 import type { CreateDealFormData } from '../types'
 
+interface SupplierOption {
+  id: string
+  company_name: string
+  email?: string
+  address?: string
+}
+
+interface ProductOption {
+  id: string
+  name: string
+  category: string
+  price_per_unit: number
+  description?: string | null
+}
+
 interface DealBasicsStepProps {
   formData: Pick<
     CreateDealFormData,
-    'productName' | 'description' | 'category' | 'quantity' | 'pricePerUnit'
+    'category' | 'supplierId' | 'productId' | 'description' | 'quantity'
   >
   availableCategories: string[]
+  filteredSuppliers: SupplierOption[]
+  productsForSupplier: ProductOption[]
   totalAmount: number
   onUpdate: (field: keyof CreateDealFormData, value: string) => void
+  onSupplierSelect: (supplierId: string) => void
 }
 
 export function DealBasicsStep({
   formData,
   availableCategories,
+  filteredSuppliers,
+  productsForSupplier,
   totalAmount,
   onUpdate,
+  onSupplierSelect,
 }: DealBasicsStepProps) {
   return (
     <Card>
@@ -40,36 +61,10 @@ export function DealBasicsStep({
           Deal Basics
         </CardTitle>
         <CardDescription>
-          Provide details about the product you need to purchase
+          Choose a category, supplier, and product; price comes from the supplier catalog
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="productName">Product Name</Label>
-          <Input
-            id="productName"
-            name="productName"
-            autoComplete="off"
-            placeholder="e.g., Industrial LED Lighting Equipment…"
-            value={formData.productName}
-            onChange={(e) => onUpdate('productName', e.target.value)}
-            aria-required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            autoComplete="off"
-            placeholder="Brief description of the product and its intended use…"
-            value={formData.description}
-            onChange={(e) => onUpdate('description', e.target.value)}
-            rows={3}
-          />
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           <Select
@@ -88,8 +83,8 @@ export function DealBasicsStep({
             <SelectContent>
               {availableCategories.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No suppliers have added categories yet. Ask suppliers to add
-                  their products & categories in their profile.
+                  No products in catalog yet. Ask suppliers to add products in
+                  their profile.
                 </div>
               ) : (
                 availableCategories.map((cat) => (
@@ -100,41 +95,98 @@ export function DealBasicsStep({
               )}
             </SelectContent>
           </Select>
-          {availableCategories.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Categories shown are from suppliers who have added them to their
-              profile
-            </p>
-          )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity</Label>
-            <Input
-              id="quantity"
-              name="quantity"
-              type="number"
-              inputMode="numeric"
-              placeholder="500"
-              value={formData.quantity}
-              onChange={(e) => onUpdate('quantity', e.target.value)}
-              aria-required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pricePerUnit">Price per Unit (USDC)</Label>
-            <Input
-              id="pricePerUnit"
-              name="pricePerUnit"
-              type="number"
-              inputMode="decimal"
-              placeholder="90.00"
-              value={formData.pricePerUnit}
-              onChange={(e) => onUpdate('pricePerUnit', e.target.value)}
-              aria-required
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="supplier">Supplier</Label>
+          <Select
+            value={formData.supplierId}
+            onValueChange={(v) => {
+              onSupplierSelect(v)
+            }}
+          >
+            <SelectTrigger id="supplier">
+              <SelectValue
+                placeholder={
+                  filteredSuppliers.length > 0
+                    ? 'Select supplier'
+                    : 'Select a category first or no suppliers available'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredSuppliers.length === 0 ? (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  No suppliers with products in this category
+                </div>
+              ) : (
+                filteredSuppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.company_name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="product">Product</Label>
+          <Select
+            value={formData.productId}
+            onValueChange={(v) => onUpdate('productId', v)}
+          >
+            <SelectTrigger id="product">
+              <SelectValue
+                placeholder={
+                  productsForSupplier.length > 0
+                    ? 'Select product'
+                    : 'Select a supplier first'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {productsForSupplier.length === 0 ? (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  No products for this supplier
+                </div>
+              ) : (
+                productsForSupplier.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} — {formatCurrency(p.price_per_unit)} USDC/unit
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Quantity</Label>
+          <Input
+            id="quantity"
+            name="quantity"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            placeholder="e.g. 500"
+            value={formData.quantity}
+            onChange={(e) => onUpdate('quantity', e.target.value)}
+            aria-required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">Description (optional)</Label>
+          <Textarea
+            id="description"
+            name="description"
+            autoComplete="off"
+            placeholder="Brief description or notes for this order…"
+            value={formData.description}
+            onChange={(e) => onUpdate('description', e.target.value)}
+            rows={3}
+          />
         </div>
 
         {totalAmount > 0 && (

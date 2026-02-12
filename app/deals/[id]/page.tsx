@@ -1,8 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { mapDealFromDb, type DealRow } from '@/lib/deals'
+import type { Deal } from '@/lib/types'
+import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus } from '@trustless-work/escrow/hooks'
+import type { FundEscrowPayload, ChangeMilestoneStatusPayload } from '@trustless-work/escrow'
+import { signTransaction } from '@/lib/trustless/wallet-kit'
+import { useWallet } from '@/hooks/use-wallet'
+import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
+import { toast } from 'sonner'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { mockDeals } from '@/lib/mock-data'
+import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/lib/date-utils'
 import {
   Package,
@@ -27,15 +36,93 @@ import {
   ShieldCheck,
   ExternalLink,
   AlertCircle,
-  Upload
+  Upload,
 } from 'lucide-react'
 
 export default function DealDetailPage() {
   const params = useParams()
-  const deal = mockDeals.find(d => d.id === params.id)
+  const dealId = typeof params.id === 'string' ? params.id : params.id?.[0]
+  const [deal, setDeal] = useState<Deal | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false)
-  const [walletAddress, setWalletAddress] = useState('')
+  const [isFunding, setIsFunding] = useState(false)
   const [isSupplierView, setIsSupplierView] = useState(false)
+  const [userType, setUserType] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [proofDialogOpen, setProofDialogOpen] = useState(false)
+  const [proofMilestoneIndex, setProofMilestoneIndex] = useState<number | null>(null)
+  const [proofMilestoneId, setProofMilestoneId] = useState<string | null>(null)
+  const [proofNotes, setProofNotes] = useState('')
+  const [proofDocumentUrl, setProofDocumentUrl] = useState('')
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false)
+
+  const { fundEscrow } = useFundEscrow()
+  const { sendTransaction } = useSendTransaction()
+  const { changeMilestoneStatus } = useChangeMilestoneStatus()
+  const { walletInfo, isConnected, handleConnect } = useWallet()
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setUserType(null)
+        setUserId(null)
+        return
+      }
+      setUserId(user.id)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single()
+      setUserType(profile?.user_type ?? null)
+    }
+    loadUserProfile()
+  }, [supabase])
+
+  const isSupplier = Boolean(deal?.supplierId && userId && deal.supplierId === userId)
+
+  const fetchDeal = useCallback(async () => {
+    if (!dealId) return null
+    const { data, error } = await supabase
+      .from('deals')
+      .select(
+        `
+        *,
+        milestones(*),
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)
+      `
+      )
+      .eq('id', dealId)
+      .single()
+    if (error || !data) return null
+    return mapDealFromDb(data as DealRow)
+  }, [dealId, supabase])
+
+  useEffect(() => {
+    if (!dealId) {
+      setIsLoading(false)
+      return
+    }
+    fetchDeal().then((d) => {
+      setDeal(d)
+      setIsLoading(false)
+    })
+  }, [dealId, fetchDeal])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navigation />
+        <div className="container mx-auto flex flex-1 items-center justify-center px-4 py-16">
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading deal…</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!deal) {
     return (
@@ -44,7 +131,9 @@ export default function DealDetailPage() {
         <div className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">Deal Not Found</h1>
-            <p className="mb-4 text-muted-foreground">The deal you're looking for doesn't exist.</p>
+            <p className="mb-4 text-muted-foreground">
+              The deal you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
+            </p>
             <Button asChild>
               <Link href="/marketplace">Back to Marketplace</Link>
             </Button>
@@ -68,16 +157,147 @@ export default function DealDetailPage() {
   const completedMilestones = deal.milestones.filter(m => m.status === 'completed').length
   const progressPercentage = (completedMilestones / deal.milestones.length) * 100
 
-  const handleFundDeal = () => {
-    console.log('Funding deal with wallet:', walletAddress)
-    alert(`Deal funded successfully! Transaction being processed on Stellar.`)
-    setIsFundingDialogOpen(false)
+  const handleFundDeal = async () => {
+    if (!deal || !walletInfo?.address || !deal.escrowAddress) return
+    if (userType !== 'investor') {
+      toast.error('Only investors can fund deals.')
+      return
+    }
+
+    const investorAddress = walletInfo.address
+    setIsFunding(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be signed in to fund a deal.')
+        return
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single()
+      if (profile?.user_type !== 'investor') {
+        toast.error('Only investors can fund deals.')
+        return
+      }
+
+      const amountStroops = Math.round(deal.priceUSDC * USDC_TRUSTLINE.decimals)
+      const payload: FundEscrowPayload = {
+        contractId: deal.escrowAddress,
+        signer: investorAddress,
+        amount: amountStroops,
+      }
+
+      const fundResponse = await fundEscrow(payload, 'multi-release')
+      if (fundResponse.status !== 'SUCCESS' || !fundResponse.unsignedTransaction) {
+        throw new Error('Failed to build fund transaction')
+      }
+
+      const signedXdr = await signTransaction({
+        unsignedTransaction: fundResponse.unsignedTransaction,
+        address: investorAddress,
+      })
+      if (!signedXdr) throw new Error('Signed transaction is missing.')
+
+      const txResult = await sendTransaction(signedXdr)
+      if (txResult.status !== 'SUCCESS') {
+        const msg = 'message' in txResult ? (txResult as { message: string }).message : 'Transaction failed'
+        throw new Error(msg)
+      }
+
+      const { error: updateError } = await supabase
+        .from('deals')
+        .update({
+          investor_id: user.id,
+          status: 'funded',
+          funded_at: new Date().toISOString(),
+        })
+        .eq('id', deal.id)
+
+      if (updateError) throw updateError
+
+      const updated = await fetchDeal()
+      if (updated) setDeal(updated)
+      toast.success('Deal funded successfully!')
+      setIsFundingDialogOpen(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fund deal'
+      console.error('Fund deal error:', err)
+      toast.error(message)
+    } finally {
+      setIsFunding(false)
+    }
   }
 
-  const handleConnectWallet = () => {
-    // In real app, integrate with Stellar Wallet Kit (Freighter/Lobstr/Albedo)
-    alert('Opening wallet connection... (Freighter/Lobstr/Albedo)')
-    setWalletAddress('GB7XMNE...')
+  const openProofDialog = (index: number, milestoneId: string) => {
+    setProofMilestoneIndex(index)
+    setProofMilestoneId(milestoneId)
+    setProofNotes('')
+    setProofDocumentUrl('')
+    setProofDialogOpen(true)
+  }
+
+  const handleSubmitProof = async () => {
+    if (
+      !deal?.escrowAddress ||
+      proofMilestoneIndex == null ||
+      !proofMilestoneId ||
+      !walletInfo?.address
+    ) {
+      toast.error('Missing deal, milestone, or wallet. Connect your Stellar wallet.')
+      return
+    }
+    if (!isConnected) {
+      toast.error('Connect your Stellar wallet to submit proof.')
+      return
+    }
+    const newEvidence = [proofNotes, proofDocumentUrl].filter(Boolean).join(' | ') || 'Proof uploaded'
+    setIsSubmittingProof(true)
+    try {
+      const payload: ChangeMilestoneStatusPayload = {
+        contractId: deal.escrowAddress,
+        milestoneIndex: String(proofMilestoneIndex),
+        newStatus: 'proof_uploaded',
+        newEvidence,
+        serviceProvider: walletInfo.address,
+      }
+      const response = await changeMilestoneStatus(payload, 'multi-release')
+      if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
+        throw new Error('Failed to create milestone status transaction')
+      }
+      const signedXdr = await signTransaction({
+        unsignedTransaction: response.unsignedTransaction,
+        address: walletInfo.address,
+      })
+      if (!signedXdr) throw new Error('Failed to sign transaction')
+      const txResult = await sendTransaction(signedXdr)
+      if (txResult.status !== 'SUCCESS') {
+        throw new Error('message' in txResult ? (txResult as { message: string }).message : 'Transaction failed')
+      }
+      const { error: updateError } = await supabase
+        .from('milestones')
+        .update({
+          status: 'in_progress',
+          proof_notes: proofNotes || null,
+          proof_document_url: proofDocumentUrl || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', proofMilestoneId)
+      if (updateError) throw updateError
+      const updated = await fetchDeal()
+      if (updated) setDeal(updated)
+      toast.success('Delivery proof submitted. Awaiting admin approval.')
+      setProofDialogOpen(false)
+      setProofMilestoneIndex(null)
+      setProofMilestoneId(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to submit proof'
+      console.error('Submit proof error:', err)
+      toast.error(message)
+    } finally {
+      setIsSubmittingProof(false)
+    }
   }
 
   return (
@@ -89,7 +309,7 @@ export default function DealDetailPage() {
         <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/marketplace" className="hover:text-foreground">Marketplace</Link>
           <span>/</span>
-          <span>Deal #{deal.id}</span>
+          <span className="truncate">{deal.productName || 'Deal details'}</span>
         </div>
 
         {/* Header */}
@@ -111,63 +331,136 @@ export default function DealDetailPage() {
             </div>
 
             {deal.status === 'awaiting_funding' && (
-              <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2">
-                    <Wallet className="h-5 w-5" />
-                    Fund This Deal
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Fund Deal</DialogTitle>
-                    <DialogDescription>
-                      Connect your Stellar wallet to fund this deal with USDC
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Deal Amount</Label>
-                      <div className="rounded-lg border border-border bg-muted/50 p-3">
-                        <p className="text-2xl font-bold">${deal.priceUSDC.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">USDC on Stellar</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Expected Return</Label>
-                      <div className="rounded-lg border border-success bg-success/5 p-3">
-                        <p className="text-2xl font-bold text-success">
-                          {deal.yieldAPR}% APR
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          ${((deal.priceUSDC * (deal.yieldAPR || 0) / 100) * (deal.term / 365)).toFixed(2)} profit in {deal.term} days
-                        </p>
-                      </div>
-                    </div>
-
-                    {!walletAddress ? (
-                      <Button onClick={handleConnectWallet} className="w-full">
-                        <Wallet className="mr-2 h-4 w-4" />
-                        Connect Stellar Wallet
+              deal.escrowAddress ? (
+                userType === 'investor' ? (
+                  <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="lg" className="gap-2">
+                        <Wallet className="h-5 w-5" aria-hidden />
+                        Fund This Deal
                       </Button>
-                    ) : (
-                      <>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Fund Deal</DialogTitle>
+                        <DialogDescription>
+                          Connect your Stellar wallet to fund this deal with USDC. Your wallet will be recorded as the investor for this deal.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Connected Wallet</Label>
-                          <Input value={walletAddress} disabled />
+                          <Label>Deal Amount</Label>
+                          <div className="rounded-lg border border-border bg-muted/50 p-3">
+                            <p className="text-2xl font-bold">${deal.priceUSDC.toLocaleString()}</p>
+                            <p className="text-sm text-muted-foreground">USDC on Stellar</p>
+                          </div>
                         </div>
-                        <Button onClick={handleFundDeal} className="w-full">
-                          Confirm & Fund Deal
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
+
+                        <div className="space-y-2">
+                          <Label>Expected Return</Label>
+                          <div className="rounded-lg border border-success bg-success/5 p-3">
+                            <p className="text-2xl font-bold text-success">
+                              {deal.yieldAPR ?? 0}% APR
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              ${((deal.priceUSDC * ((deal.yieldAPR ?? 0) / 100) * (deal.term / 365))).toFixed(2)} profit in {deal.term} days
+                            </p>
+                          </div>
+                        </div>
+
+                        {!isConnected ? (
+                          <Button type="button" onClick={handleConnect} className="w-full">
+                            <Wallet className="mr-2 h-4 w-4" aria-hidden />
+                            Connect Stellar Wallet
+                          </Button>
+                        ) : (
+                          <>
+                            <div className="space-y-2">
+                              <Label>Funding from</Label>
+                              <Input
+                                value={walletInfo?.address ?? ''}
+                                disabled
+                                className="font-mono text-xs"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              onClick={handleFundDeal}
+                              className="w-full"
+                              disabled={isFunding}
+                            >
+                              {isFunding ? 'Funding…' : 'Confirm & Fund Deal'}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {userType
+                      ? 'Only investors can fund deals. This deal is open for funding by investors.'
+                      : 'Sign in with an investor account to fund this deal.'}
+                  </p>
+                )
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Escrow is being deployed. Refresh in a moment to fund this deal.
+                </p>
+              )
             )}
           </div>
         </div>
+
+        {/* Supplier: Upload delivery proof dialog */}
+        <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Upload delivery proof</DialogTitle>
+              <DialogDescription>
+                Add proof of shipment or delivery. This will update the milestone on-chain and
+                submit it for admin approval. Connect your Stellar wallet to sign the transaction.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="proof-notes">Notes</Label>
+                <Textarea
+                  id="proof-notes"
+                  placeholder="e.g. Tracking number, invoice reference…"
+                  value={proofNotes}
+                  onChange={(e) => setProofNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proof-url">Document URL (optional)</Label>
+                <Input
+                  id="proof-url"
+                  type="url"
+                  placeholder="https://…"
+                  value={proofDocumentUrl}
+                  onChange={(e) => setProofDocumentUrl(e.target.value)}
+                />
+              </div>
+              {!isConnected ? (
+                <Button type="button" onClick={handleConnect} className="w-full">
+                  <Wallet className="mr-2 h-4 w-4" aria-hidden />
+                  Connect Stellar wallet
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSubmitProof}
+                  disabled={isSubmittingProof}
+                  className="w-full"
+                >
+                  {isSubmittingProof ? 'Submitting…' : 'Submit proof'}
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Content */}
@@ -262,25 +555,39 @@ export default function DealDetailPage() {
                           <p className="mb-2 text-sm text-muted-foreground">
                             ${((deal.priceUSDC * milestone.percentage) / 100).toLocaleString()} USDC
                           </p>
+                          {milestone.status === 'in_progress' && (
+                            <p className="text-xs text-warning">
+                              Proof uploaded — awaiting admin approval
+                            </p>
+                          )}
                           {milestone.status === 'completed' && milestone.completedAt && (
                             <p className="text-xs text-muted-foreground">
                               Completed on {formatDate(milestone.completedAt)}
                             </p>
                           )}
-
-                          {/* Supplier Actions */}
-                          {milestone.status === 'pending' && deal.status !== 'awaiting_funding' && (
-                            <div className="mt-3">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setIsSupplierView(!isSupplierView)}
-                              >
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload Proof of {index === 0 ? 'Shipment' : 'Delivery'}
-                              </Button>
-                            </div>
+                          {milestone.proofNotes && milestone.status !== 'completed' && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Proof notes: {milestone.proofNotes}
+                            </p>
                           )}
+
+                          {/* Supplier: Upload delivery proof (calls useChangeMilestoneStatus) */}
+                          {isSupplier &&
+                            milestone.status === 'pending' &&
+                            deal.status !== 'awaiting_funding' &&
+                            deal.escrowAddress && (
+                              <div className="mt-3">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  type="button"
+                                  onClick={() => openProofDialog(index, milestone.id)}
+                                >
+                                  <Upload className="mr-2 h-4 w-4" aria-hidden />
+                                  Upload Proof of {index === 0 ? 'Shipment' : 'Delivery'}
+                                </Button>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>

@@ -6,6 +6,22 @@ export interface CreateDealProfile {
   [key: string]: unknown
 }
 
+/** Product from supplier catalog (supplier_products table) */
+export interface SupplierProductRow {
+  id: string
+  supplier_id: string
+  name: string
+  category: string
+  price_per_unit: number
+  description?: string | null
+  supplier?: {
+    id: string
+    company_name?: string
+    email?: string
+    address?: string
+  } | null
+}
+
 export interface CreateDealSupplier {
   id: string
   company_name: string
@@ -16,14 +32,13 @@ export interface CreateDealSupplier {
 }
 
 export interface CreateDealFormData {
-  productName: string
-  description: string
   category: string
-  quantity: string
-  pricePerUnit: string
   supplierId: string
   supplierName: string
   supplierContact: string
+  productId: string
+  description: string
+  quantity: string
   term: string
   milestone1Name: string
   milestone1Percentage: string
@@ -32,14 +47,13 @@ export interface CreateDealFormData {
 }
 
 export const DEFAULT_FORM_DATA: CreateDealFormData = {
-  productName: '',
-  description: '',
   category: '',
-  quantity: '',
-  pricePerUnit: '',
   supplierId: '',
   supplierName: '',
   supplierContact: '',
+  productId: '',
+  description: '',
+  quantity: '',
   term: '60',
   milestone1Name: 'Shipment Confirmation',
   milestone1Percentage: '50',

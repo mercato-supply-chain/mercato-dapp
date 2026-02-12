@@ -18,7 +18,7 @@ import {
   DEFAULT_FORM_DATA,
   type CreateDealFormData,
   type CreateDealProfile,
-  type CreateDealSupplier,
+  type SupplierProductRow,
   type FormStep,
 } from './types'
 import { DealBasicsStep } from './components/deal-basics-step'
@@ -38,21 +38,24 @@ export default function CreateDealPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<CreateDealProfile | null>(null)
-  const [suppliers, setSuppliers] = useState<CreateDealSupplier[]>([])
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProductRow[]>([])
   const [formData, setFormData] = useState<CreateDealFormData>(DEFAULT_FORM_DATA)
 
   useEffect(() => {
     const init = async () => {
-      const [authResult, suppliersResult] = await Promise.all([
+      const [authResult, productsResult] = await Promise.all([
         supabase.auth.getUser(),
         supabase
-          .from('profiles')
-          .select('id, company_name, email, address, categories, products')
-          .eq('user_type', 'supplier')
-          .order('company_name'),
+          .from('supplier_products')
+          .select(
+            'id, supplier_id, name, category, price_per_unit, description, supplier:profiles!supplier_products_supplier_id_fkey(id, company_name, email, address)'
+          )
+          .order('category'),
       ])
       const { data: { user } } = authResult
-      setSuppliers((suppliersResult.data as CreateDealSupplier[]) ?? [])
+      setSupplierProducts(
+        (productsResult.data as unknown as SupplierProductRow[]) ?? []
+      )
       if (!user) {
         router.push('/auth/login')
         return
@@ -68,38 +71,70 @@ export default function CreateDealPage() {
     init()
   }, [router, supabase])
 
-  const filteredSuppliers = suppliers.filter((s) =>
-    s.categories?.includes(formData.category)
-  )
   const availableCategories = Array.from(
-    new Set(suppliers.flatMap((s) => s.categories || []).filter(Boolean))
+    new Set(supplierProducts.map((p) => p.category).filter(Boolean))
   ).sort()
 
+  const supplierIdsInCategory = formData.category
+    ? [...new Set(supplierProducts.filter((p) => p.category === formData.category).map((p) => p.supplier_id))]
+    : [...new Set(supplierProducts.map((p) => p.supplier_id))]
+
+  const filteredSuppliers = supplierIdsInCategory
+    .map((sid) => {
+      const product = supplierProducts.find((p) => p.supplier_id === sid)
+      const sup = product?.supplier
+      return sup ? { id: sid, company_name: sup.company_name ?? '', email: sup.email, address: sup.address } : null
+    })
+    .filter(Boolean) as { id: string; company_name: string; email?: string; address?: string }[]
+
+  const productsForSupplier = formData.supplierId
+    ? supplierProducts.filter(
+        (p) => p.supplier_id === formData.supplierId && (!formData.category || p.category === formData.category)
+      )
+    : []
+
+  const selectedProduct = formData.productId
+    ? supplierProducts.find((p) => p.id === formData.productId)
+    : null
+
+  const totalAmount =
+    selectedProduct && formData.quantity
+      ? Number(formData.quantity) * Number(selectedProduct.price_per_unit)
+      : 0
+  const estimatedYield = totalAmount * 0.12 * (Number(formData.term) / 365)
+
   const updateFormData = (field: keyof CreateDealFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value }
+      if (field === 'category') {
+        next.supplierId = ''
+        next.supplierName = ''
+        next.supplierContact = ''
+        next.productId = ''
+      } else if (field === 'supplierId') {
+        next.productId = ''
+      }
+      return next
+    })
   }
 
   const handleSupplierSelect = (supplierId: string) => {
-    const supplier = suppliers.find((s) => s.id === supplierId)
-    if (supplier) {
+    const product = supplierProducts.find((p) => p.supplier_id === supplierId)
+    const sup = product?.supplier
+    if (sup) {
       setFormData((prev) => ({
         ...prev,
         supplierId,
-        supplierName: supplier.company_name,
-        supplierContact: supplier.email || supplier.address || '',
+        supplierName: sup.company_name ?? '',
+        supplierContact: sup.email ?? sup.address ?? '',
+        productId: '',
       }))
     }
   }
 
-  const totalAmount =
-    formData.quantity && formData.pricePerUnit
-      ? Number(formData.quantity) * Number(formData.pricePerUnit)
-      : 0
-  const estimatedYield = totalAmount * 0.12 * (Number(formData.term) / 365)
-
   const canProceedStep1 =
-    Boolean(formData.productName && formData.quantity && formData.pricePerUnit) &&
-    (availableCategories.length === 0 || formData.category)
+    Boolean(formData.category || availableCategories.length === 0) &&
+    Boolean(formData.supplierId && formData.productId && formData.quantity)
   const canProceedStep2 = Boolean(formData.supplierName && formData.term)
   const canSubmit = canProceedStep1 && canProceedStep2
 
@@ -123,32 +158,20 @@ export default function CreateDealPage() {
       return
     }
 
+    if (!selectedProduct) {
+      toast.error('Please select a product.')
+      return
+    }
+
     setIsLoading(true)
     try {
-      let selectedSupplier = formData.supplierId
-        ? suppliers.find((s) => s.id === formData.supplierId)
-        : suppliers.find((s) => s.company_name === formData.supplierName)
+      const { data: supplierProfile } = await supabase
+        .from('profiles')
+        .select('id, company_name, email, address')
+        .eq('id', formData.supplierId)
+        .single()
 
-      const supplierIdToFetch = formData.supplierId || selectedSupplier?.id
-      if (
-        supplierIdToFetch &&
-        (!selectedSupplier?.address || !selectedSupplier.address.trim())
-      ) {
-        const { data: freshSupplier } = await supabase
-          .from('profiles')
-          .select('id, company_name, email, address')
-          .eq('id', supplierIdToFetch)
-          .eq('user_type', 'supplier')
-          .single()
-        if (freshSupplier) {
-          selectedSupplier = {
-            ...selectedSupplier,
-            ...freshSupplier,
-          } as CreateDealSupplier
-        }
-      }
-
-      const supplierAddress = selectedSupplier?.address?.trim()
+      const supplierAddress = supplierProfile?.address?.trim()
       if (!supplierAddress) {
         toast.error(
           'Selected supplier does not have a Stellar wallet address configured.'
@@ -157,23 +180,26 @@ export default function CreateDealPage() {
         return
       }
 
+      const productName = selectedProduct.name
+      const productUnitPrice = Number(selectedProduct.price_per_unit)
+
       const { data: deal, error: dealError } = await supabase
         .from('deals')
         .insert({
           pyme_id: userId,
-          title: formData.productName,
-          description: formData.description || 'No description provided',
-          product_name: formData.productName,
+          title: productName,
+          description: formData.description || selectedProduct.description || 'No description provided',
+          product_name: productName,
           product_quantity: Number(formData.quantity),
-          product_unit_price: Number(formData.pricePerUnit),
+          product_unit_price: productUnitPrice,
           amount: totalAmount,
           term_days: Number(formData.term),
           interest_rate: 12,
-          category: formData.category || 'other',
+          category: formData.category || selectedProduct.category || 'other',
           status: 'seeking_funding',
-          supplier_id: selectedSupplier?.id ?? null,
+          supplier_id: formData.supplierId,
           supplier_name: formData.supplierName,
-          supplier_email: selectedSupplier?.email ?? null,
+          supplier_email: supplierProfile?.email ?? null,
           supplier_contact: formData.supplierContact || null,
           platform_fee: 2.5,
         })
@@ -215,8 +241,8 @@ export default function CreateDealPage() {
       const payload: InitializeMultiReleaseEscrowPayload = {
         signer: signerAddress,
         engagementId: deal.id,
-        title: formData.productName,
-        description: formData.description || 'No description provided',
+        title: productName,
+        description: formData.description || selectedProduct.description || 'No description provided',
         roles: {
           approver: signerAddress,
           serviceProvider: supplierAddress,
@@ -328,8 +354,11 @@ export default function CreateDealPage() {
               <DealBasicsStep
                 formData={formData}
                 availableCategories={availableCategories}
+                filteredSuppliers={filteredSuppliers}
+                productsForSupplier={productsForSupplier}
                 totalAmount={totalAmount}
                 onUpdate={updateFormData}
+                onSupplierSelect={handleSupplierSelect}
               />
             )}
             {currentStep === 2 && (
@@ -390,7 +419,11 @@ export default function CreateDealPage() {
           </div>
 
           <div className="space-y-6">
-            <DealSummaryCard formData={formData} totalAmount={totalAmount} />
+            <DealSummaryCard
+              formData={formData}
+              productName={selectedProduct?.name ?? ''}
+              totalAmount={totalAmount}
+            />
             <HowItWorksCard />
           </div>
         </div>

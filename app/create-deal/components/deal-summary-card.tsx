@@ -5,14 +5,16 @@ import { formatCurrency } from '@/lib/format'
 import type { CreateDealFormData } from '../types'
 
 interface DealSummaryCardProps {
-  formData: Pick<
-    CreateDealFormData,
-    'productName' | 'supplierName' | 'term'
-  >
+  formData: Pick<CreateDealFormData, 'supplierName' | 'term'>
+  productName: string
   totalAmount: number
 }
 
-export function DealSummaryCard({ formData, totalAmount }: DealSummaryCardProps) {
+export function DealSummaryCard({
+  formData,
+  productName,
+  totalAmount,
+}: DealSummaryCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -21,7 +23,7 @@ export function DealSummaryCard({ formData, totalAmount }: DealSummaryCardProps)
       <CardContent className="space-y-4">
         <div>
           <p className="text-sm text-muted-foreground">Product</p>
-          <p className="font-medium">{formData.productName || 'Not set'}</p>
+          <p className="font-medium">{productName || 'Not set'}</p>
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Total Amount</p>

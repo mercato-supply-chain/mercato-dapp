@@ -37,6 +37,8 @@ export interface MilestoneRow {
   percentage: number
   amount: number
   status: string
+  proof_notes?: string | null
+  proof_document_url?: string | null
   completed_at?: string | null
 }
 
@@ -63,8 +65,15 @@ export function mapDealFromDb(row: DealRow): Deal {
     id: m.id,
     name: m.title,
     percentage: Number(m.percentage),
-    status: m.status === 'completed' ? 'completed' : m.status === 'in_progress' ? 'pending' : 'pending',
+    status:
+      m.status === 'completed'
+        ? 'completed'
+        : m.status === 'in_progress'
+          ? 'in_progress'
+          : 'pending',
     completedAt: m.completed_at ?? undefined,
+    proofNotes: m.proof_notes ?? undefined,
+    proofDocumentUrl: m.proof_document_url ?? undefined,
   }))
 
   const status = DB_STATUS_TO_DEAL_STATUS[row.status] ?? 'awaiting_funding'
@@ -75,6 +84,7 @@ export function mapDealFromDb(row: DealRow): Deal {
     quantity: row.product_quantity ?? 0,
     priceUSDC: Number(row.amount),
     supplier: row.supplier_name,
+    supplierId: row.supplier_id ?? undefined,
     term: row.term_days ?? 0,
     status,
     createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : '',

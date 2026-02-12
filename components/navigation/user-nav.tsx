@@ -20,6 +20,7 @@ import {
   Plus,
   DollarSign,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react'
 
 export interface NavProfile {
@@ -109,6 +110,14 @@ export function UserNav({ user, profile, onLogout, variant }: UserNavProps) {
               Dashboard
             </Link>
           </DropdownMenuItem>
+          {userType === 'admin' && (
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/admin" className="cursor-pointer">
+                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                Milestone approvals
+              </Link>
+            </DropdownMenuItem>
+          )}
           {userType === 'pyme' && (
             <>
               <DropdownMenuItem asChild>
@@ -193,6 +202,12 @@ export function UserNav({ user, profile, onLogout, variant }: UserNavProps) {
         <LayoutDashboard className="h-4 w-4" aria-hidden />
         Dashboard
       </Link>
+      {userType === 'admin' && (
+        <Link href="/dashboard/admin" className={linkClass}>
+          <ShieldCheck className="h-4 w-4" aria-hidden />
+          Milestone approvals
+        </Link>
+      )}
       {userType === 'pyme' && (
         <>
           <Link href="/create-deal" className={linkClass}>

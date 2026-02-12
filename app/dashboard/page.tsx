@@ -5,15 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { 
-  Package, 
-  TrendingUp, 
-  Users, 
+import {
+  Package,
+  TrendingUp,
+  Users,
   Plus,
   ArrowRight,
   DollarSign,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react'
 
 export default async function DashboardPage() {
@@ -74,6 +75,8 @@ export default async function DashboardPage() {
         return <TrendingUp className="h-5 w-5" />
       case 'supplier':
         return <Users className="h-5 w-5" />
+      case 'admin':
+        return <ShieldCheck className="h-5 w-5" />
       default:
         return <Package className="h-5 w-5" />
     }
@@ -87,6 +90,8 @@ export default async function DashboardPage() {
         return 'Investor'
       case 'supplier':
         return 'Supplier'
+      case 'admin':
+        return 'Admin'
       default:
         return 'User'
     }
@@ -109,6 +114,10 @@ export default async function DashboardPage() {
           { label: 'Manage Products & Categories', href: '/dashboard/supplier-profile', icon: Package },
           { label: 'View Active Deals', href: '/dashboard/deals', icon: TrendingUp },
           { label: 'Upload Delivery Proof', href: '/dashboard/deliveries', icon: CheckCircle2 },
+        ]
+      case 'admin':
+        return [
+          { label: 'Milestone approvals', href: '/dashboard/admin', icon: ShieldCheck },
         ]
       default:
         return []

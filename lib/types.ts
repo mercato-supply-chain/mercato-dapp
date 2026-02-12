@@ -7,15 +7,17 @@ export type DealStatus =
   | 'disputed'
   | 'released'
 
-export type UserRole = 'pyme' | 'investor' | 'supplier'
+export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
 
 export interface Milestone {
   id: string
   name: string
   percentage: number
-  status: 'pending' | 'completed' | 'disputed'
+  status: 'pending' | 'in_progress' | 'completed' | 'disputed'
   completedAt?: string
   evidence?: string[]
+  proofNotes?: string
+  proofDocumentUrl?: string
 }
 
 export interface Deal {
@@ -24,6 +26,7 @@ export interface Deal {
   quantity: number
   priceUSDC: number
   supplier: string
+  supplierId?: string
   supplierAddress?: string
   term: number // days
   status: DealStatus

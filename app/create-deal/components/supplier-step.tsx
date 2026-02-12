@@ -11,14 +11,21 @@ import {
 } from '@/components/ui/select'
 import { Building2 } from 'lucide-react'
 import { formatCurrency, formatPercent } from '@/lib/format'
-import type { CreateDealFormData, CreateDealSupplier } from '../types'
+import type { CreateDealFormData } from '../types'
+
+interface SupplierOption {
+  id: string
+  company_name: string
+  email?: string
+  address?: string
+}
 
 interface SupplierStepProps {
   formData: Pick<
     CreateDealFormData,
     'supplierId' | 'supplierName' | 'supplierContact' | 'term' | 'category'
   >
-  filteredSuppliers: CreateDealSupplier[]
+  filteredSuppliers: SupplierOption[]
   totalAmount: number
   estimatedYield: number
   onUpdate: (field: keyof CreateDealFormData, value: string) => void
@@ -69,12 +76,6 @@ export function SupplierStep({
                 filteredSuppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.company_name}
-                    {supplier.products && supplier.products.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {' '}
-                        • {supplier.products.slice(0, 2).join(', ')}
-                      </span>
-                    )}
                   </SelectItem>
                 ))
               )}
