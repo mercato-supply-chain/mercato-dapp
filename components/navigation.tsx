@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Package, Menu } from 'lucide-react'
 import { NavLinks } from '@/components/navigation/nav-links'
-import { WalletNav } from '@/components/navigation/wallet-nav'
 import { UserNav, type NavProfile, type NavUser } from '@/components/navigation/user-nav'
 
 export function Navigation() {
@@ -82,19 +81,18 @@ export function Navigation() {
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
-            <WalletNav
-              variant="desktop"
-              isConnected={isConnected}
-              address={walletInfo?.address}
-              truncatedAddress={truncatedAddress}
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-            />
             <UserNav
               variant="desktop"
               user={user}
               profile={profile}
               onLogout={handleLogout}
+              wallet={{
+                isConnected,
+                address: walletInfo?.address,
+                truncatedAddress,
+                onConnect: handleConnect,
+                onDisconnect: handleDisconnect,
+              }}
             />
           </div>
 
@@ -110,19 +108,18 @@ export function Navigation() {
                 <nav className="flex flex-col gap-4" aria-label="Main">
                   <NavLinks variant="mobile" />
                   <div className="my-2 border-t border-border" />
-                  <WalletNav
-                    variant="mobile"
-                    isConnected={isConnected}
-                    address={walletInfo?.address}
-                    truncatedAddress={truncatedAddress}
-                    onConnect={handleConnect}
-                    onDisconnect={handleDisconnect}
-                  />
                   <UserNav
                     variant="mobile"
                     user={user}
                     profile={profile}
                     onLogout={handleLogout}
+                    wallet={{
+                      isConnected,
+                      address: walletInfo?.address,
+                      truncatedAddress,
+                      onConnect: handleConnect,
+                      onDisconnect: handleDisconnect,
+                    }}
                   />
                 </nav>
               </SheetContent>

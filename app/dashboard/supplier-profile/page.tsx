@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Navigation } from '@/components/navigation'
@@ -15,11 +15,63 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, Package, ArrowLeft, Trash2, DollarSign } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Loader2,
+  Package,
+  ArrowLeft,
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
+import { PRODUCT_CATEGORIES, getCategoryLabel } from '@/lib/categories'
+
+const PAGE_SIZE = 20
+const SORT_OPTIONS = [
+  { value: 'name_asc', label: 'Name A–Z' },
+  { value: 'name_desc', label: 'Name Z–A' },
+  { value: 'category_asc', label: 'Category' },
+  { value: 'price_asc', label: 'Price (low to high)' },
+  { value: 'price_desc', label: 'Price (high to low)' },
+] as const
 
 interface SupplierProduct {
   id: string
@@ -30,12 +82,6 @@ interface SupplierProduct {
   description: string | null
 }
 
-function formatCategoryLabel(cat: string): string {
-  return cat
-    .split(/[\s_-]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
-}
 
 export default function SupplierProfilePage() {
   const router = useRouter()
@@ -46,18 +92,26 @@ export default function SupplierProfilePage() {
   const [profile, setProfile] = useState<{ bio?: string; user_type?: string } | null>(null)
   const [products, setProducts] = useState<SupplierProduct[]>([])
   const [bio, setBio] = useState('')
-  const [newProduct, setNewProduct] = useState({
+
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [sort, setSort] = useState<string>('name_asc')
+  const [page, setPage] = useState(0)
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<SupplierProduct | null>(null)
+  const [deleteProduct, setDeleteProduct] = useState<SupplierProduct | null>(null)
+  const [formProduct, setFormProduct] = useState({
     name: '',
     category: '',
     price_per_unit: '',
     description: '',
   })
+  const [formSaving, setFormSaving] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const {
-        data: { user: u },
-      } = await supabase.auth.getUser()
+      const { data: { user: u } } = await supabase.auth.getUser()
       if (!u) {
         router.push('/auth/login')
         return
@@ -88,6 +142,55 @@ export default function SupplierProfilePage() {
     load()
   }, [router, supabase])
 
+  const categoriesFromProducts = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
+    [products]
+  )
+
+  const filteredAndSorted = useMemo(() => {
+    let list = [...products]
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description?.toLowerCase().includes(q) ?? false) ||
+          p.category.toLowerCase().includes(q)
+      )
+    }
+    if (categoryFilter !== 'all') {
+      list = list.filter((p) => p.category === categoryFilter)
+    }
+    const [field, dir] = sort.includes('_') ? sort.split('_') : ['name', 'asc']
+    list.sort((a, b) => {
+      if (field === 'name') {
+        const cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        return dir === 'asc' ? cmp : -cmp
+      }
+      if (field === 'category') {
+        const cmp = a.category.localeCompare(b.category, undefined, { sensitivity: 'base' })
+        return dir === 'asc' ? cmp : -cmp
+      }
+      if (field === 'price') {
+        const cmp = Number(a.price_per_unit) - Number(b.price_per_unit)
+        return dir === 'asc' ? cmp : -cmp
+      }
+      return 0
+    })
+    return list
+  }, [products, search, categoryFilter, sort])
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages - 1)
+  const paginatedProducts = useMemo(
+    () =>
+      filteredAndSorted.slice(
+        currentPage * PAGE_SIZE,
+        currentPage * PAGE_SIZE + PAGE_SIZE
+      ),
+    [filteredAndSorted, currentPage]
+  )
+
   const handleSaveBio = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
@@ -107,16 +210,35 @@ export default function SupplierProfilePage() {
     }
   }
 
+  const openAddDialog = () => {
+    setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
+    setAddDialogOpen(true)
+  }
+
+  const openEditDialog = (p: SupplierProduct) => {
+    const categoryValue = PRODUCT_CATEGORIES.some((c) => c.value === p.category)
+      ? p.category
+      : 'other'
+    setFormProduct({
+      name: p.name,
+      category: categoryValue,
+      price_per_unit: String(p.price_per_unit),
+      description: p.description ?? '',
+    })
+    setEditingProduct(p)
+  }
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
-    const name = newProduct.name.trim()
-    const category = newProduct.category.trim().toLowerCase()
-    const price = Number.parseFloat(newProduct.price_per_unit)
+    const name = formProduct.name.trim()
+    const category = formProduct.category.trim().toLowerCase()
+    const price = Number.parseFloat(formProduct.price_per_unit)
     if (!name || !category || Number.isNaN(price) || price <= 0) {
-      toast.error('Please enter product name, category, and a valid price.')
+      toast.error('Enter product name, category, and a valid price.')
       return
     }
+    setFormSaving(true)
     try {
       const { data, error } = await supabase
         .from('supplier_products')
@@ -125,25 +247,80 @@ export default function SupplierProfilePage() {
           name,
           category,
           price_per_unit: price,
-          description: newProduct.description.trim() || null,
+          description: formProduct.description.trim() || null,
         })
         .select()
         .single()
       if (error) throw error
       setProducts((prev) => [...prev, data as SupplierProduct])
-      setNewProduct({ name: '', category: '', price_per_unit: '', description: '' })
+      setAddDialogOpen(false)
+      setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
       toast.success('Product added.')
     } catch (err) {
       console.error(err)
       toast.error('Failed to add product.')
+    } finally {
+      setFormSaving(false)
     }
   }
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProduct) return
+    const name = formProduct.name.trim()
+    const category = formProduct.category.trim().toLowerCase()
+    const price = Number.parseFloat(formProduct.price_per_unit)
+    if (!name || !category || Number.isNaN(price) || price <= 0) {
+      toast.error('Enter product name, category, and a valid price.')
+      return
+    }
+    setFormSaving(true)
     try {
-      const { error } = await supabase.from('supplier_products').delete().eq('id', id)
+      const { error } = await supabase
+        .from('supplier_products')
+        .update({
+          name,
+          category,
+          price_per_unit: price,
+          description: formProduct.description.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingProduct.id)
       if (error) throw error
-      setProducts((prev) => prev.filter((p) => p.id !== id))
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === editingProduct.id
+            ? {
+                ...p,
+                name,
+                category,
+                price_per_unit: price,
+                description: formProduct.description.trim() || null,
+              }
+            : p
+        )
+      )
+      setEditingProduct(null)
+      setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
+      toast.success('Product updated.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to update product.')
+    } finally {
+      setFormSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async () => {
+    if (!deleteProduct) return
+    try {
+      const { error } = await supabase
+        .from('supplier_products')
+        .delete()
+        .eq('id', deleteProduct.id)
+      if (error) throw error
+      setProducts((prev) => prev.filter((p) => p.id !== deleteProduct.id))
+      setDeleteProduct(null)
       toast.success('Product removed.')
     } catch (err) {
       console.error(err)
@@ -162,199 +339,417 @@ export default function SupplierProfilePage() {
     )
   }
 
-  const categoriesFromProducts = Array.from(
-    new Set(products.map((p) => p.category).filter(Boolean))
-  ).sort()
+  const productForm = (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="form-name">Product name</Label>
+          <Input
+            id="form-name"
+            value={formProduct.name}
+            onChange={(e) => setFormProduct((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Organic Flour 25kg"
+            autoComplete="off"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="form-category">Category</Label>
+          <Select
+            value={formProduct.category || undefined}
+            onValueChange={(v) => setFormProduct((prev) => ({ ...prev, category: v }))}
+          >
+            <SelectTrigger id="form-category">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="form-price">Price per unit (USDC)</Label>
+        <Input
+          id="form-price"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          value={formProduct.price_per_unit}
+          onChange={(e) =>
+            setFormProduct((prev) => ({ ...prev, price_per_unit: e.target.value }))
+          }
+          placeholder="90.00"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="form-desc">Description (optional)</Label>
+        <Textarea
+          id="form-desc"
+          value={formProduct.description}
+          onChange={(e) =>
+            setFormProduct((prev) => ({ ...prev, description: e.target.value }))
+          }
+          placeholder="Short description for PyMEs"
+          rows={3}
+          className="resize-none"
+        />
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto max-w-2xl">
-          <div className="mb-6 flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Products & Pricing</h1>
-              <p className="text-muted-foreground">
-                Add products with prices. PyMEs will select from your catalog and only choose quantity when creating a deal.
-              </p>
-            </div>
+        <div className="mb-6 flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild aria-label="Back to dashboard">
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Supplier profile</h1>
+            <p className="text-muted-foreground">
+              Company bio and product catalog. PyMEs select from your catalog when creating deals.
+            </p>
           </div>
+        </div>
 
-          {/* Company bio */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Company Bio</CardTitle>
-              <CardDescription>
-                Tell PyMEs about your business and what you offer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveBio} className="space-y-4">
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="e.g., We supply wholesale ingredients to bakeries and restaurants…"
-                  rows={4}
-                  className="resize-none"
-                />
-                <Button type="submit" disabled={isSavingBio}>
-                  {isSavingBio ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                      Saving…
-                    </>
-                  ) : (
-                    'Save Bio'
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+        {/* Company bio */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg">Company bio</CardTitle>
+            <CardDescription>
+              Tell PyMEs about your business. Shown alongside your catalog.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveBio} className="space-y-4">
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="e.g., We supply wholesale ingredients to bakeries and restaurants…"
+                rows={4}
+                className="resize-none"
+              />
+              <Button type="submit" disabled={isSavingBio}>
+                {isSavingBio ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  'Save bio'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-          {/* Product catalog */}
-          <Card className="mb-6">
-            <CardHeader>
+        {/* Product catalog */}
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" aria-hidden />
-                Product Catalog
+                Product catalog
               </CardTitle>
               <CardDescription>
-                Each product needs a name, category, and price per unit (USDC). PyMEs see this when creating a deal and only set the quantity.
+                Add and manage products with name, category, and price. PyMEs choose quantity when creating a deal.
               </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* List */}
-              {products.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Your products ({products.length})
-                  </p>
-                  <ul className="space-y-2">
-                    {products.map((p) => (
-                      <li
-                        key={p.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3"
-                      >
-                        <div>
-                          <p className="font-medium">{p.name}</p>
-                          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                            <Badge variant="secondary" className="capitalize">
-                              {formatCategoryLabel(p.category)}
-                            </Badge>
-                            <span className="flex items-center gap-1 tabular-nums">
-                              <DollarSign className="h-3 w-3" aria-hidden />
-                              {formatCurrency(Number(p.price_per_unit))} USDC / unit
-                            </span>
-                          </div>
-                          {p.description && (
-                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                              {p.description}
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteProduct(p.id)}
-                          aria-label={`Remove ${p.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </Button>
-                      </li>
+            </div>
+            <Button onClick={openAddDialog} className="shrink-0 gap-2">
+              <Plus className="h-4 w-4" aria-hidden />
+              Add product
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Toolbar: search, filter, sort */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input
+                  type="search"
+                  placeholder="Search products…"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setPage(0)
+                  }}
+                  className="pl-9"
+                  aria-label="Search products"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={categoryFilter}
+                  onValueChange={(v) => {
+                    setCategoryFilter(v)
+                    setPage(0)
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {categoriesFromProducts.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {getCategoryLabel(c)}
+                      </SelectItem>
                     ))}
-                  </ul>
-                </div>
-              )}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={sort}
+                  onValueChange={(v) => {
+                    setSort(v)
+                    setPage(0)
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-              {/* Add product form */}
-              <form onSubmit={handleAddProduct} className="space-y-4 rounded-lg border border-dashed border-border p-4">
-                <p className="text-sm font-medium">Add a product</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="product-name">Product name</Label>
-                    <Input
-                      id="product-name"
-                      value={newProduct.name}
-                      onChange={(e) =>
-                        setNewProduct((prev) => ({ ...prev, name: e.target.value }))
-                      }
-                      placeholder="e.g., Organic Flour 25kg"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="product-category">Category</Label>
-                    <Input
-                      id="product-category"
-                      value={newProduct.category}
-                      onChange={(e) =>
-                        setNewProduct((prev) => ({ ...prev, category: e.target.value }))
-                      }
-                      placeholder="e.g., food & beverage"
-                      list="categories-list"
-                      autoComplete="off"
-                    />
-                    {categoriesFromProducts.length > 0 && (
-                      <datalist id="categories-list">
-                        {categoriesFromProducts.map((c) => (
-                          <option key={c} value={c} />
-                        ))}
-                      </datalist>
-                    )}
-                  </div>
+            {/* Table */}
+            {filteredAndSorted.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-muted/20 py-12 text-center">
+                {products.length === 0 ? (
+                  <>
+                    <Package className="mx-auto mb-3 h-12 w-12 text-muted-foreground" aria-hidden />
+                    <p className="font-medium">No products yet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Add your first product so PyMEs can select from your catalog.
+                    </p>
+                    <Button onClick={openAddDialog} className="mt-4 gap-2">
+                      <Plus className="h-4 w-4" aria-hidden />
+                      Add product
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">No matches</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try a different search or category filter.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => {
+                        setSearch('')
+                        setCategoryFilter('all')
+                        setPage(0)
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="rounded-md border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Price / unit</TableHead>
+                        <TableHead className="max-w-[200px]">Description</TableHead>
+                        <TableHead className="w-[100px] text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedProducts.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell>{getCategoryLabel(p.category)}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(Number(p.price_per_unit))} USDC
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                            {p.description || '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(p)}
+                                aria-label={`Edit ${p.name}`}
+                              >
+                                <Pencil className="h-4 w-4" aria-hidden />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteProduct(p)}
+                                aria-label={`Delete ${p.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="product-price">Price per unit (USDC)</Label>
-                    <Input
-                      id="product-price"
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      value={newProduct.price_per_unit}
-                      onChange={(e) =>
-                        setNewProduct((prev) => ({ ...prev, price_per_unit: e.target.value }))
-                      }
-                      placeholder="90.00"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="product-desc">Description (optional)</Label>
-                  <Textarea
-                    id="product-desc"
-                    value={newProduct.description}
-                    onChange={(e) =>
-                      setNewProduct((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                    placeholder="Short description for PyMEs"
-                    rows={2}
-                    className="resize-none"
-                  />
-                </div>
-                <Button type="submit">Add product</Button>
-              </form>
-            </CardContent>
-          </Card>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Need to update your contact info or wallet address?{' '}
-            <Link href="/settings" className="underline hover:text-foreground">
-              Go to Settings
-            </Link>
-          </p>
-        </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, filteredAndSorted.length)} of {filteredAndSorted.length}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden />
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage + 1} of {totalPages}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={currentPage >= totalPages - 1}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Contact info and wallet address?{' '}
+          <Link href="/settings" className="underline hover:text-foreground">
+            Settings
+          </Link>
+        </p>
       </div>
+
+      {/* Add product dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add product</DialogTitle>
+            <DialogDescription>
+              Name, category, and price per unit (USDC) are required. PyMEs will set quantity when creating a deal.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddProduct}>
+            {productForm}
+            <DialogFooter className="mt-6 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={formSaving}>
+                {formSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Adding…
+                  </>
+                ) : (
+                  'Add product'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit product dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit product</DialogTitle>
+            <DialogDescription>
+              Update name, category, price, or description.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProduct}>
+            {productForm}
+            <DialogFooter className="mt-6 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingProduct(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={formSaving}>
+                {formSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteProduct} onOpenChange={(open) => !open && setDeleteProduct(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove &quot;{deleteProduct?.name}&quot; from your catalog. PyMEs will no longer see it when creating deals. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -46,27 +46,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold">
-            <Package className="h-6 w-6" aria-hidden />
-            MERCATO
+    <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[400px]">
+          <Link
+            href="/"
+            className="mb-10 flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Package className="h-5 w-5" aria-hidden />
+            </span>
+            <span>MERCATO</span>
           </Link>
-          <p className="mt-2 text-muted-foreground">Supply chain finance platform</p>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>
-              Sign in to your MERCATO account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
+          <Card className="border-border/80 shadow-lg shadow-black/5">
+            <CardHeader className="space-y-1 pb-6 text-center sm:text-left">
+              <CardTitle className="text-2xl font-semibold tracking-tight">
+                Welcome back
+              </CardTitle>
+              <CardDescription className="text-base">
+                Sign in to your account to continue
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -74,18 +78,19 @@ export default function LoginPage() {
                     type="email"
                     autoComplete="email"
                     spellCheck={false}
-                    placeholder="john@acme.com…"
+                    placeholder="you@company.com"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="h-11"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     <Link
                       href="/auth/forgot-password"
-                      className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground"
                     >
                       Forgot password?
                     </Link>
@@ -99,12 +104,13 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="h-11"
                   />
                 </div>
 
                 {error && (
                   <div
-                    className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+                    className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
                     role="alert"
                     aria-live="polite"
                   >
@@ -112,23 +118,32 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? 'Signing in…' : 'Sign In'}
+                <Button
+                  type="submit"
+                  className="h-11 w-full font-medium"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Signing in…' : 'Sign in'}
                 </Button>
-              </div>
+              </form>
 
-              <div className="mt-6 text-center text-sm">
+              <p className="mt-6 text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{' '}
                 <Link
                   href="/auth/sign-up"
-                  className="font-medium text-accent underline underline-offset-4"
+                  className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
                 >
                   Sign up
                 </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </p>
+            </CardContent>
+          </Card>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Supply chain finance for PyMEs, investors, and suppliers
+          </p>
+        </div>
       </div>
     </div>
   )

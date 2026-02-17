@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
-import { formatCategoryLabel } from '../types'
+import { getCategoryLabel } from '@/lib/categories'
 import type { CreateDealFormData } from '../types'
 
 interface SupplierOption {
@@ -89,7 +89,7 @@ export function DealBasicsStep({
               ) : (
                 availableCategories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {formatCategoryLabel(cat)}
+                    {getCategoryLabel(cat)}
                   </SelectItem>
                 ))
               )}

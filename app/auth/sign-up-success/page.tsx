@@ -1,13 +1,24 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { CheckCircle2, Mail } from 'lucide-react'
+import { CheckCircle2, Mail, Package } from 'lucide-react'
 
 export default function SignUpSuccessPage() {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-md">
-        <Card>
+    <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md">
+          <Link
+            href="/"
+            className="mb-10 flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Package className="h-5 w-5" aria-hidden />
+            </span>
+            MERCATO
+          </Link>
+
+          <Card className="border-border/80 shadow-lg shadow-black/5">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
               <CheckCircle2 className="h-8 w-8 text-success" />
@@ -35,11 +46,16 @@ export default function SignUpSuccessPage() {
               <p>The link will expire in 24 hours.</p>
             </div>
 
-            <Button asChild className="w-full">
-              <Link href="/auth/login">Return to Login</Link>
+            <Button asChild className="h-11 w-full font-medium">
+              <Link href="/auth/login">Return to login</Link>
             </Button>
           </CardContent>
         </Card>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Supply chain finance for PyMEs, investors, and suppliers
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -25,6 +25,8 @@ export interface DealRow {
   milestones?: MilestoneRow[] | null
   /** From Supabase select with alias: pyme:profiles!deals_pyme_id_fkey(...) */
   pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
+  /** From Supabase select with alias: investor:profiles!deals_investor_id_fkey(...) */
+  investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
   /** Fallback if relation is returned as table name */
   profiles?: { company_name?: string; full_name?: string; contact_name?: string } | null
 }
@@ -61,6 +63,12 @@ export function mapDealFromDb(row: DealRow): Deal {
     pymeProfile?.contact_name ||
     'PyME'
 
+  const investorName =
+    row.investor?.company_name ||
+    row.investor?.full_name ||
+    row.investor?.contact_name ||
+    undefined
+
   const milestones: Milestone[] = (row.milestones ?? []).map((m) => ({
     id: m.id,
     name: m.title,
@@ -93,6 +101,7 @@ export function mapDealFromDb(row: DealRow): Deal {
     milestones,
     escrowAddress: row.escrow_contract_address ?? row.escrow_address ?? undefined,
     pymeName,
+    investorName: investorName ?? undefined,
     description: row.description ?? undefined,
     category: row.category ?? undefined,
     yieldAPR: row.interest_rate != null ? Number(row.interest_rate) : undefined,

@@ -72,117 +72,111 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-2xl">
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold">
-            <Package className="h-6 w-6" aria-hidden />
-            MERCATO
+    <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[520px]">
+          <Link
+            href="/"
+            className="mb-10 flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Package className="h-5 w-5" aria-hidden />
+            </span>
+            <span>MERCATO</span>
           </Link>
-          <p className="mt-2 text-muted-foreground">Join the supply chain finance revolution</p>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Create Your Account</CardTitle>
-            <CardDescription>
-              Choose your role and get started with MERCATO
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignUp}>
-              <div className="flex flex-col gap-6">
-                {/* User Type Selection */}
-                <div className="grid gap-3">
-                  <Label>I am a...</Label>
+          <Card className="border-border/80 shadow-lg shadow-black/5">
+            <CardHeader className="space-y-1 pb-6 text-center sm:text-left">
+              <CardTitle className="text-2xl font-semibold tracking-tight">
+                Create your account
+              </CardTitle>
+              <CardDescription className="text-base">
+                Choose your role and fill in your details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSignUp} className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">I am a…</Label>
                   <RadioGroup
                     value={userType}
                     onValueChange={(v) => setUserType(v as 'pyme' | 'investor' | 'supplier')}
+                    className="grid grid-cols-3 gap-3"
                   >
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <label
-                        htmlFor="pyme"
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                          userType === 'pyme'
-                            ? 'border-accent bg-accent/5'
-                            : 'border-border hover:border-accent/50'
-                        }`}
-                      >
-                        <RadioGroupItem value="pyme" id="pyme" className="sr-only" />
-                        <Package className="h-8 w-8" aria-hidden />
-                        <div className="text-center">
-                          <div className="font-semibold">PyME</div>
-                          <div className="text-xs text-muted-foreground">Need capital</div>
-                        </div>
-                      </label>
-
-                      <label
-                        htmlFor="investor"
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                          userType === 'investor'
-                            ? 'border-success bg-success/5'
-                            : 'border-border hover:border-success/50'
-                        }`}
-                      >
-                        <RadioGroupItem value="investor" id="investor" className="sr-only" />
-                        <TrendingUp className="h-8 w-8" aria-hidden />
-                        <div className="text-center">
-                          <div className="font-semibold">Investor</div>
-                          <div className="text-xs text-muted-foreground">Fund deals</div>
-                        </div>
-                      </label>
-
-                      <label
-                        htmlFor="supplier"
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                          userType === 'supplier'
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <RadioGroupItem value="supplier" id="supplier" className="sr-only" />
-                        <Users className="h-8 w-8" aria-hidden />
-                        <div className="text-center">
-                          <div className="font-semibold">Supplier</div>
-                          <div className="text-xs text-muted-foreground">Get paid early</div>
-                        </div>
-                      </label>
-                    </div>
+                    <label
+                      htmlFor="pyme"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
+                        userType === 'pyme'
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
+                      }`}
+                    >
+                      <RadioGroupItem value="pyme" id="pyme" className="sr-only" />
+                      <Package className="h-7 w-7 shrink-0" aria-hidden />
+                      <span className="text-sm font-medium">PyME</span>
+                      <span className="text-xs text-muted-foreground">Need capital</span>
+                    </label>
+                    <label
+                      htmlFor="investor"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
+                        userType === 'investor'
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
+                      }`}
+                    >
+                      <RadioGroupItem value="investor" id="investor" className="sr-only" />
+                      <TrendingUp className="h-7 w-7 shrink-0" aria-hidden />
+                      <span className="text-sm font-medium">Investor</span>
+                      <span className="text-xs text-muted-foreground">Fund deals</span>
+                    </label>
+                    <label
+                      htmlFor="supplier"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
+                        userType === 'supplier'
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
+                      }`}
+                    >
+                      <RadioGroupItem value="supplier" id="supplier" className="sr-only" />
+                      <Users className="h-7 w-7 shrink-0" aria-hidden />
+                      <span className="text-sm font-medium">Supplier</span>
+                      <span className="text-xs text-muted-foreground">Get paid early</span>
+                    </label>
                   </RadioGroup>
                 </div>
 
-                {/* Personal Info */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full name</Label>
                     <Input
                       id="fullName"
                       name="fullName"
                       type="text"
                       autoComplete="name"
-                      placeholder="John Doe…"
+                      placeholder="John Doe"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
+                      className="h-11"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="companyName">Company Name</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company name</Label>
                     <Input
                       id="companyName"
                       name="companyName"
                       type="text"
                       autoComplete="organization"
-                      placeholder="Acme Inc.…"
+                      placeholder="Acme Inc."
                       required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
+                      className="h-11"
                     />
                   </div>
                 </div>
 
-                {/* Email */}
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -190,44 +184,48 @@ export default function SignUpPage() {
                     type="email"
                     autoComplete="email"
                     spellCheck={false}
-                    placeholder="john@acme.com…"
+                    placeholder="you@company.com"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="h-11"
                   />
                 </div>
 
-                {/* Password */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
                       name="password"
                       type="password"
                       autoComplete="new-password"
+                      placeholder="Min. 6 characters"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="h-11"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="repeat-password">Confirm Password</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="repeat-password">Confirm password</Label>
                     <Input
                       id="repeat-password"
                       name="repeatPassword"
                       type="password"
                       autoComplete="new-password"
+                      placeholder="Repeat password"
                       required
                       value={repeatPassword}
                       onChange={(e) => setRepeatPassword(e.target.value)}
+                      className="h-11"
                     />
                   </div>
                 </div>
 
                 {error && (
                   <div
-                    className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+                    className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
                     role="alert"
                     aria-live="polite"
                   >
@@ -235,23 +233,32 @@ export default function SignUpPage() {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? 'Creating Account…' : 'Create Account'}
+                <Button
+                  type="submit"
+                  className="h-11 w-full font-medium"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Creating account…' : 'Create account'}
                 </Button>
-              </div>
+              </form>
 
-              <div className="mt-6 text-center text-sm">
+              <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link
                   href="/auth/login"
-                  className="font-medium text-accent underline underline-offset-4"
+                  className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
                 >
                   Log in
                 </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </p>
+            </CardContent>
+          </Card>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Supply chain finance for PyMEs, investors, and suppliers
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -11,14 +11,17 @@ const isTestnet =
 
 /**
  * Stellar Wallet Kit configuration for signing transactions.
- * Supports Freighter and Albedo wallets.
+ * Supports Freighter and Albedo wallets. Only created in the browser to avoid "window is not defined" during SSR.
  * @see https://docs.trustlesswork.com/trustless-work/pt/developer-resources/stellar-wallet-kit-integracao-rapida
  */
-export const stellarWalletKit = new StellarWalletsKit({
-  network: isTestnet ? WalletNetwork.TESTNET : WalletNetwork.PUBLIC,
-  selectedWalletId: FREIGHTER_ID,
-  modules: [new FreighterModule(), new AlbedoModule()],
-})
+export const stellarWalletKit =
+  typeof window !== 'undefined'
+    ? new StellarWalletsKit({
+        network: isTestnet ? WalletNetwork.TESTNET : WalletNetwork.PUBLIC,
+        selectedWalletId: FREIGHTER_ID,
+        modules: [new FreighterModule(), new AlbedoModule()],
+      })
+    : (null as unknown as InstanceType<typeof StellarWalletsKit>)
 
 export const NETWORK_PASSPHRASE = isTestnet
   ? WalletNetwork.TESTNET
@@ -39,6 +42,9 @@ export const signTransaction = async ({
   unsignedTransaction,
   address,
 }: SignTransactionParams): Promise<string> => {
+  if (!stellarWalletKit) {
+    throw new Error('Wallet kit is not available (e.g. in server context).')
+  }
   const { signedTxXdr } = await stellarWalletKit.signTransaction(unsignedTransaction, {
     address,
     networkPassphrase: NETWORK_PASSPHRASE,

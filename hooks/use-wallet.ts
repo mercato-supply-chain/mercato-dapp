@@ -9,6 +9,7 @@ export const useWallet = () => {
     useWalletContext()
 
   const connectWallet = async () => {
+    if (!stellarWalletKit) return
     await stellarWalletKit.openModal({
       modalTitle: 'Connect Your Stellar Wallet',
       onWalletSelected: async (option: ISupportedWallet) => {
@@ -20,7 +21,7 @@ export const useWallet = () => {
   }
 
   const disconnectWallet = async () => {
-    await stellarWalletKit.disconnect()
+    if (stellarWalletKit) await stellarWalletKit.disconnect()
     clearWalletInfo()
   }
 

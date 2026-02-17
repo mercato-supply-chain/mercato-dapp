@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
-import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus } from '@trustless-work/escrow/hooks'
+import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { FundEscrowPayload, ChangeMilestoneStatusPayload } from '@trustless-work/escrow'
+import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
-import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
 import { toast } from 'sonner'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
@@ -55,12 +55,17 @@ export default function DealDetailPage() {
   const [proofNotes, setProofNotes] = useState('')
   const [proofDocumentUrl, setProofDocumentUrl] = useState('')
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
+  const [acceptingMilestoneId, setAcceptingMilestoneId] = useState<string | null>(null)
+  const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
 
   const { fundEscrow } = useFundEscrow()
   const { sendTransaction } = useSendTransaction()
   const { changeMilestoneStatus } = useChangeMilestoneStatus()
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { walletInfo, isConnected, handleConnect } = useWallet()
   const supabase = useMemo(() => createClient(), [])
+  const searchParams = useSearchParams()
+  const hasHandledAction = useRef(false)
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -91,7 +96,8 @@ export default function DealDetailPage() {
         `
         *,
         milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
+        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name)
       `
       )
       .eq('id', dealId)
@@ -110,6 +116,42 @@ export default function DealDetailPage() {
       setIsLoading(false)
     })
   }, [dealId, fetchDeal])
+
+  // Fetch on-chain escrow state from indexer when deal has escrow
+  useEffect(() => {
+    if (!deal?.escrowAddress) {
+      setIndexerEscrow(null)
+      return
+    }
+    let cancelled = false
+    getEscrowByContractIds({ contractIds: [deal.escrowAddress] })
+      .then((escrows) => {
+        if (!cancelled && escrows?.length) setIndexerEscrow(escrows[0])
+        else if (!cancelled) setIndexerEscrow(null)
+      })
+      .catch(() => {
+        if (!cancelled) setIndexerEscrow(null)
+      })
+    return () => { cancelled = true }
+  }, [deal?.escrowAddress, getEscrowByContractIds])
+
+  // Open delivery-proof dialog only when arriving with ?action=delivery (milestone 1)
+  useEffect(() => {
+    if (!deal || isLoading || !userId || hasHandledAction.current) return
+    const supplierMatch = deal.supplierId && deal.supplierId === userId
+    if (!supplierMatch) return
+    const action = searchParams.get('action')
+    if (action !== 'delivery') return
+    const milestone = deal.milestones[1]
+    if (!milestone || milestone.status !== 'pending') return
+    hasHandledAction.current = true
+    setProofMilestoneIndex(1)
+    setProofMilestoneId(milestone.id)
+    setProofNotes('')
+    setProofDocumentUrl('')
+    setProofDialogOpen(true)
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash)
+  }, [deal, isLoading, userId, searchParams])
 
   if (isLoading) {
     return (
@@ -182,11 +224,11 @@ export default function DealDetailPage() {
         return
       }
 
-      const amountStroops = Math.round(deal.priceUSDC * USDC_TRUSTLINE.decimals)
+      // Trustless fund-escrow API expects human-readable amount (e.g. 51 for $51 USDC), not stroops.
       const payload: FundEscrowPayload = {
         contractId: deal.escrowAddress,
         signer: investorAddress,
-        amount: amountStroops,
+        amount: deal.priceUSDC,
       }
 
       const fundResponse = await fundEscrow(payload, 'multi-release')
@@ -218,7 +260,12 @@ export default function DealDetailPage() {
       if (updateError) throw updateError
 
       const updated = await fetchDeal()
-      if (updated) setDeal(updated)
+      if (!updated || updated.status !== 'funded') {
+        throw new Error(
+          'Funding succeeded on-chain but the deal could not be updated. Please refresh the page or contact support.'
+        )
+      }
+      setDeal(updated)
       toast.success('Deal funded successfully!')
       setIsFundingDialogOpen(false)
     } catch (err) {
@@ -236,6 +283,61 @@ export default function DealDetailPage() {
     setProofNotes('')
     setProofDocumentUrl('')
     setProofDialogOpen(true)
+  }
+
+  const handleAcceptOrder = async (milestoneIndex: number, milestoneId: string) => {
+    if (
+      !deal?.escrowAddress ||
+      !walletInfo?.address
+    ) {
+      toast.error('Missing deal or wallet. Connect your Stellar wallet.')
+      return
+    }
+    if (!isConnected) {
+      toast.error('Connect your Stellar wallet to accept the order.')
+      return
+    }
+    setAcceptingMilestoneId(milestoneId)
+    try {
+      const payload: ChangeMilestoneStatusPayload = {
+        contractId: deal.escrowAddress,
+        milestoneIndex: String(milestoneIndex),
+        newStatus: 'release_requested',
+        newEvidence: 'Order accepted by supplier',
+        serviceProvider: walletInfo.address,
+      }
+      const response = await changeMilestoneStatus(payload, 'multi-release')
+      if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
+        throw new Error('Failed to create milestone status transaction')
+      }
+      const signedXdr = await signTransaction({
+        unsignedTransaction: response.unsignedTransaction,
+        address: walletInfo.address,
+      })
+      if (!signedXdr) throw new Error('Failed to sign transaction')
+      const txResult = await sendTransaction(signedXdr)
+      if (txResult.status !== 'SUCCESS') {
+        throw new Error('message' in txResult ? (txResult as { message: string }).message : 'Transaction failed')
+      }
+      const { error: updateError } = await supabase
+        .from('milestones')
+        .update({
+          status: 'in_progress',
+          proof_notes: 'Order accepted by supplier',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', milestoneId)
+      if (updateError) throw updateError
+      const updated = await fetchDeal()
+      if (updated) setDeal(updated)
+      toast.success('Order accepted. Admin will release the milestone to unlock 50%.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to accept order'
+      console.error('Accept order error:', err)
+      toast.error(message)
+    } finally {
+      setAcceptingMilestoneId(null)
+    }
   }
 
   const handleSubmitProof = async () => {
@@ -412,14 +514,14 @@ export default function DealDetailPage() {
           </div>
         </div>
 
-        {/* Supplier: Upload delivery proof dialog */}
+        {/* Supplier: Upload delivery proof dialog (second milestone only) */}
         <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Upload delivery proof</DialogTitle>
               <DialogDescription>
-                Add proof of shipment or delivery. This will update the milestone on-chain and
-                submit it for admin approval. Connect your Stellar wallet to sign the transaction.
+                Add proof of delivery for the remaining 50%. This updates the milestone on-chain;
+                admin will then approve to release the funds. Connect your Stellar wallet to sign.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -557,7 +659,9 @@ export default function DealDetailPage() {
                           </p>
                           {milestone.status === 'in_progress' && (
                             <p className="text-xs text-warning">
-                              Proof uploaded — awaiting admin approval
+                              {index === 0
+                                ? 'Release requested — awaiting admin approval'
+                                : 'Proof uploaded — awaiting admin approval'}
                             </p>
                           )}
                           {milestone.status === 'completed' && milestone.completedAt && (
@@ -567,25 +671,39 @@ export default function DealDetailPage() {
                           )}
                           {milestone.proofNotes && milestone.status !== 'completed' && (
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Proof notes: {milestone.proofNotes}
+                              {milestone.proofNotes}
                             </p>
                           )}
 
-                          {/* Supplier: Upload delivery proof (calls useChangeMilestoneStatus) */}
+                          {/* Supplier: First milestone = Accept order (change status only). Second = Upload delivery proof. */}
                           {isSupplier &&
                             milestone.status === 'pending' &&
                             deal.status !== 'awaiting_funding' &&
                             deal.escrowAddress && (
                               <div className="mt-3">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  type="button"
-                                  onClick={() => openProofDialog(index, milestone.id)}
-                                >
-                                  <Upload className="mr-2 h-4 w-4" aria-hidden />
-                                  Upload Proof of {index === 0 ? 'Shipment' : 'Delivery'}
-                                </Button>
+                                {index === 0 ? (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    type="button"
+                                    onClick={() => handleAcceptOrder(index, milestone.id)}
+                                    disabled={acceptingMilestoneId === milestone.id}
+                                  >
+                                    {acceptingMilestoneId === milestone.id
+                                      ? 'Accepting…'
+                                      : 'Accept order (request milestone release)'}
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => openProofDialog(index, milestone.id)}
+                                  >
+                                    <Upload className="mr-2 h-4 w-4" aria-hidden />
+                                    Upload delivery proof
+                                  </Button>
+                                )}
                               </div>
                             )}
                         </div>
@@ -679,6 +797,28 @@ export default function DealDetailPage() {
                             </code>
                           </div>
                         )}
+                        {indexerEscrow && (
+                          <>
+                            <Separator className="my-4" />
+                            <div>
+                              <p className="mb-2 text-sm font-medium">From indexer (on-chain state)</p>
+                              {indexerEscrow.balance != null && (
+                                <p className="text-sm text-muted-foreground">
+                                  Balance: {indexerEscrow.balance.toLocaleString()} (trustline units)
+                                </p>
+                              )}
+                              {indexerEscrow.milestones?.length ? (
+                                <div className="mt-2 space-y-1">
+                                  {indexerEscrow.milestones.map((m: { status?: string; amount?: number; description?: string }, i: number) => (
+                                    <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="text-xs text-muted-foreground">
+                                      Milestone {i}: {m.status ?? '—'} {m.amount != null ? `(${m.amount})` : ''}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </>
+                        )}
                       </>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -735,7 +875,7 @@ export default function DealDetailPage() {
                   <div>
                     <p className="text-sm font-medium">Investor</p>
                     <p className="text-sm text-muted-foreground">
-                      {deal.investorAddress ? deal.investorAddress : 'Awaiting funding'}
+                      {deal.investorName ?? 'Awaiting funding'}
                     </p>
                   </div>
                 </div>

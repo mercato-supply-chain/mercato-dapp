@@ -14,6 +14,7 @@ import {
   Package,
   TrendingUp,
   User,
+  UserPlus,
   LogOut,
   Settings,
   LayoutDashboard,
@@ -21,7 +22,15 @@ import {
   DollarSign,
   CheckCircle2,
   ShieldCheck,
+  Wallet,
+  Copy,
+  ExternalLink,
+  Unplug,
 } from 'lucide-react'
+import { toast } from 'sonner'
+
+const EXPLORER_NETWORK =
+  process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK === 'mainnet' ? 'public' : 'testnet'
 
 export interface NavProfile {
   full_name?: string
@@ -35,10 +44,20 @@ export interface NavUser {
   email?: string
 }
 
+export interface WalletNavProps {
+  isConnected: boolean
+  address: string | undefined
+  truncatedAddress: string | null
+  onConnect: () => void
+  onDisconnect: () => void
+}
+
 interface UserNavProps {
   user: NavUser | null
   profile: NavProfile | null
   onLogout: () => void
+  /** Wallet state and handlers; when provided, wallet is shown inside the user menu */
+  wallet?: WalletNavProps
   /** Desktop: dropdown. Mobile: vertical links. */
   variant: 'desktop' | 'mobile'
 }
@@ -46,21 +65,39 @@ interface UserNavProps {
 const displayName = (profile: NavProfile | null, email?: string) =>
   profile?.full_name || profile?.contact_name || profile?.company_name || email
 
-export function UserNav({ user, profile, onLogout, variant }: UserNavProps) {
+export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavProps) {
+  const copyAddress = () => {
+    if (wallet?.address) {
+      navigator.clipboard.writeText(wallet.address)
+      toast.success('Wallet address copied')
+    }
+  }
+
   if (!user) {
     if (variant === 'desktop') {
       return (
-        <>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/auth/login">
-              <User className="mr-2 h-4 w-4" aria-hidden />
-              Login
-            </Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/auth/sign-up">Get Started</Link>
-          </Button>
-        </>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <User className="h-4 w-4" aria-hidden />
+              Account
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem asChild>
+              <Link href="/auth/login" className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" aria-hidden />
+                Login
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/auth/sign-up" className="cursor-pointer">
+              <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+                Sign up
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )
     }
     return (
@@ -103,6 +140,50 @@ export function UserNav({ user, profile, onLogout, variant }: UserNavProps) {
               )}
             </div>
           </DropdownMenuLabel>
+          {wallet && (
+            <>
+              <DropdownMenuSeparator />
+              {wallet.isConnected && wallet.address ? (
+                <>
+                  <DropdownMenuLabel>
+                    <p className="text-xs font-medium leading-none text-muted-foreground">
+                      Stellar Wallet
+                    </p>
+                    <p className="mt-0.5 text-xs font-mono break-all">
+                      {wallet.address}
+                    </p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
+                    <Copy className="mr-2 h-4 w-4" aria-hidden />
+                    Copy Address
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={`https://stellar.expert/explorer/${EXPLORER_NETWORK}/account/${wallet.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cursor-pointer"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
+                      View on Explorer
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={wallet.onDisconnect}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <Unplug className="mr-2 h-4 w-4" aria-hidden />
+                    Disconnect Wallet
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem onClick={wallet.onConnect} className="cursor-pointer">
+                  <Wallet className="mr-2 h-4 w-4" aria-hidden />
+                  Connect Wallet
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/dashboard" className="cursor-pointer">
@@ -198,6 +279,37 @@ export function UserNav({ user, profile, onLogout, variant }: UserNavProps) {
         <p className="text-sm font-medium">{displayName(profile, user.email)}</p>
         <p className="text-xs text-muted-foreground">{user.email}</p>
       </div>
+      {wallet && (
+        <>
+          <div className="my-2 border-t border-border" />
+          {wallet.isConnected && wallet.address ? (
+            <div className="flex flex-col gap-2 px-2">
+              <p className="text-xs font-medium text-muted-foreground">Stellar Wallet</p>
+              <p className="text-xs font-mono break-all">{wallet.address}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={copyAddress}>
+                  <Copy className="mr-2 h-3 w-3" aria-hidden />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={wallet.onDisconnect}
+                >
+                  <Unplug className="mr-2 h-3 w-3" aria-hidden />
+                  Disconnect
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-2 justify-start w-full" onClick={wallet.onConnect}>
+              <Wallet className="h-4 w-4" aria-hidden />
+              Connect Wallet
+            </Button>
+          )}
+        </>
+      )}
       <Link href="/dashboard" className={linkClass}>
         <LayoutDashboard className="h-4 w-4" aria-hidden />
         Dashboard
