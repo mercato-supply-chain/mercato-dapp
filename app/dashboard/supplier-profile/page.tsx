@@ -80,6 +80,8 @@ interface SupplierProduct {
   category: string
   price_per_unit: number
   description: string | null
+  minimum_order: number | null
+  delivery_time: string | null
 }
 
 
@@ -106,6 +108,8 @@ export default function SupplierProfilePage() {
     category: '',
     price_per_unit: '',
     description: '',
+    minimum_order: '',
+    delivery_time: '',
   })
   const [formSaving, setFormSaving] = useState(false)
 
@@ -211,7 +215,14 @@ export default function SupplierProfilePage() {
   }
 
   const openAddDialog = () => {
-    setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
+    setFormProduct({
+      name: '',
+      category: '',
+      price_per_unit: '',
+      description: '',
+      minimum_order: '',
+      delivery_time: '',
+    })
     setAddDialogOpen(true)
   }
 
@@ -224,6 +235,8 @@ export default function SupplierProfilePage() {
       category: categoryValue,
       price_per_unit: String(p.price_per_unit),
       description: p.description ?? '',
+      minimum_order: p.minimum_order != null ? String(p.minimum_order) : '',
+      delivery_time: p.delivery_time ?? '',
     })
     setEditingProduct(p)
   }
@@ -240,6 +253,10 @@ export default function SupplierProfilePage() {
     }
     setFormSaving(true)
     try {
+      const minOrder = formProduct.minimum_order.trim()
+        ? Number.parseFloat(formProduct.minimum_order)
+        : null
+      const deliveryTime = formProduct.delivery_time.trim() || null
       const { data, error } = await supabase
         .from('supplier_products')
         .insert({
@@ -248,13 +265,22 @@ export default function SupplierProfilePage() {
           category,
           price_per_unit: price,
           description: formProduct.description.trim() || null,
+          minimum_order: minOrder != null && !Number.isNaN(minOrder) && minOrder >= 0 ? minOrder : null,
+          delivery_time: deliveryTime,
         })
         .select()
         .single()
       if (error) throw error
       setProducts((prev) => [...prev, data as SupplierProduct])
       setAddDialogOpen(false)
-      setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
+      setFormProduct({
+        name: '',
+        category: '',
+        price_per_unit: '',
+        description: '',
+        minimum_order: '',
+        delivery_time: '',
+      })
       toast.success('Product added.')
     } catch (err) {
       console.error(err)
@@ -276,6 +302,10 @@ export default function SupplierProfilePage() {
     }
     setFormSaving(true)
     try {
+      const minOrder = formProduct.minimum_order.trim()
+        ? Number.parseFloat(formProduct.minimum_order)
+        : null
+      const deliveryTime = formProduct.delivery_time.trim() || null
       const { error } = await supabase
         .from('supplier_products')
         .update({
@@ -283,6 +313,8 @@ export default function SupplierProfilePage() {
           category,
           price_per_unit: price,
           description: formProduct.description.trim() || null,
+          minimum_order: minOrder != null && !Number.isNaN(minOrder) && minOrder >= 0 ? minOrder : null,
+          delivery_time: deliveryTime,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingProduct.id)
@@ -296,12 +328,21 @@ export default function SupplierProfilePage() {
                 category,
                 price_per_unit: price,
                 description: formProduct.description.trim() || null,
+                minimum_order: minOrder != null && !Number.isNaN(minOrder) && minOrder >= 0 ? minOrder : null,
+                delivery_time: deliveryTime,
               }
             : p
         )
       )
       setEditingProduct(null)
-      setFormProduct({ name: '', category: '', price_per_unit: '', description: '' })
+      setFormProduct({
+        name: '',
+        category: '',
+        price_per_unit: '',
+        description: '',
+        minimum_order: '',
+        delivery_time: '',
+      })
       toast.success('Product updated.')
     } catch (err) {
       console.error(err)
@@ -386,6 +427,35 @@ export default function SupplierProfilePage() {
           placeholder="90.00"
         />
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="form-min-order">Minimum order (USD, optional)</Label>
+          <Input
+            id="form-min-order"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="1"
+            value={formProduct.minimum_order}
+            onChange={(e) =>
+              setFormProduct((prev) => ({ ...prev, minimum_order: e.target.value }))
+            }
+            placeholder="e.g. 8000"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="form-delivery">Typical delivery time (optional)</Label>
+          <Input
+            id="form-delivery"
+            value={formProduct.delivery_time}
+            onChange={(e) =>
+              setFormProduct((prev) => ({ ...prev, delivery_time: e.target.value }))
+            }
+            placeholder="e.g. 7–10 days"
+            autoComplete="off"
+          />
+        </div>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="form-desc">Description (optional)</Label>
         <Textarea
@@ -394,7 +464,7 @@ export default function SupplierProfilePage() {
           onChange={(e) =>
             setFormProduct((prev) => ({ ...prev, description: e.target.value }))
           }
-          placeholder="Short description for PyMEs"
+          placeholder="e.g. Industrial wheat flour (25kg & 50kg sacks)"
           rows={3}
           className="resize-none"
         />
@@ -572,6 +642,8 @@ export default function SupplierProfilePage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Price / unit</TableHead>
+                        <TableHead className="text-right">Min. order</TableHead>
+                        <TableHead>Delivery</TableHead>
                         <TableHead className="max-w-[200px]">Description</TableHead>
                         <TableHead className="w-[100px] text-right">Actions</TableHead>
                       </TableRow>
@@ -583,6 +655,14 @@ export default function SupplierProfilePage() {
                           <TableCell>{getCategoryLabel(p.category)}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             {formatCurrency(Number(p.price_per_unit))} USDC
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {p.minimum_order != null
+                              ? formatCurrency(p.minimum_order)
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {p.delivery_time || '—'}
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate text-muted-foreground">
                             {p.description || '—'}

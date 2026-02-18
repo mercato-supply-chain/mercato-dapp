@@ -1,7 +1,5 @@
 'use client'
 
-import React from "react"
-
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -13,7 +11,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
+import { LATAM_COUNTRIES, SECTORS } from '@/lib/constants'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -28,6 +34,8 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     bio: '',
+    country: '',
+    sector: '',
   })
 
   useEffect(() => {
@@ -55,6 +63,8 @@ export default function SettingsPage() {
           phone: profile.phone || '',
           address: profile.address || '',
           bio: profile.bio || '',
+          country: profile.country || '',
+          sector: profile.sector || '',
         })
       }
 
@@ -75,6 +85,8 @@ export default function SettingsPage() {
         phone: formData.phone,
         address: formData.address,
         bio: formData.bio,
+        country: formData.country || null,
+        sector: formData.sector || null,
         updated_at: new Date().toISOString(),
       }
 
@@ -173,6 +185,50 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Select
+                    value={formData.country || undefined}
+                    onValueChange={(v) => setFormData({ ...formData, country: v })}
+                  >
+                    <SelectTrigger id="country" aria-label="Country">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LATAM_COUNTRIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Your business or primary operation country (LATAM)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sector">Sector</Label>
+                  <Select
+                    value={formData.sector || undefined}
+                    onValueChange={(v) => setFormData({ ...formData, sector: v })}
+                  >
+                    <SelectTrigger id="sector" aria-label="Sector">
+                      <SelectValue placeholder="Select sector" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECTORS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Industry sector (e.g. Food Manufacturing, Agriculture)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
@@ -222,7 +278,7 @@ export default function SettingsPage() {
                     {isSaving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
+                        Saving…
                       </>
                     ) : (
                       'Save Changes'

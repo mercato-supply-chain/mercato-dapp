@@ -285,16 +285,16 @@ export default async function DashboardPage() {
                   <CardTitle className="text-3xl tabular-nums">{adminStats.completedDeals}</CardTitle>
                 </CardHeader>
               </Card>
-              <Card className="border-primary/20 bg-primary/5">
+              <Card className="border-primary/20 bg-primary/5 min-w-0">
                 <CardHeader className="pb-3">
                   <CardDescription>Pending milestone approvals</CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.pendingApprovals}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Button asChild size="sm" variant={adminStats.pendingApprovals > 0 ? 'default' : 'secondary'}>
+                <CardContent className="min-w-0">
+                  <Button asChild size="sm" variant={adminStats.pendingApprovals > 0 ? 'default' : 'secondary'} className="w-full min-w-0 justify-center">
                     <Link href="/dashboard/admin">
-                      Review & approve
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Approve
+                      <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                     </Link>
                   </Button>
                 </CardContent>

@@ -1,21 +1,32 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Building2, 
-  Mail, 
-  MapPin, 
-  Phone, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Building2,
+  Mail,
+  Phone,
   Search,
   Package,
-  Wallet
+  Wallet,
+  ArrowRight,
+  Globe,
+  Briefcase,
 } from 'lucide-react'
+import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
 
 type Supplier = {
   id: string
@@ -27,6 +38,8 @@ type Supplier = {
   categories: string[] | null
   products: string[] | null
   verified: boolean
+  country: string | null
+  sector: string | null
 }
 
 const CATEGORIES = [
@@ -46,6 +59,8 @@ export default function SuppliersPage() {
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All Categories')
+  const [selectedCountry, setSelectedCountry] = useState<string>('all')
+  const [selectedSector, setSelectedSector] = useState<string>('all')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -54,13 +69,13 @@ export default function SuppliersPage() {
 
   useEffect(() => {
     filterSuppliers()
-  }, [suppliers, searchQuery, selectedCategory])
+  }, [suppliers, searchQuery, selectedCategory, selectedCountry, selectedSector])
 
   const loadSuppliers = async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, company_name, bio, address, phone, categories, products, verified')
+        .select('id, company_name, bio, address, phone, categories, products, verified, country, sector')
         .eq('user_type', 'supplier')
         .order('company_name')
 
@@ -88,20 +103,27 @@ export default function SuppliersPage() {
   const filterSuppliers = () => {
     let filtered = [...suppliers]
 
-    // Filter by search query
     if (searchQuery) {
-      filtered = filtered.filter(supplier => 
-        supplier.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        supplier.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        supplier.products?.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
+      filtered = filtered.filter(
+        (supplier) =>
+          supplier.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          supplier.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          supplier.products?.some((p) => p.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     }
 
-    // Filter by category
     if (selectedCategory !== 'All Categories') {
-      filtered = filtered.filter(supplier => 
+      filtered = filtered.filter((supplier) =>
         supplier.categories?.includes(selectedCategory)
       )
+    }
+
+    if (selectedCountry !== 'all') {
+      filtered = filtered.filter((supplier) => supplier.country === selectedCountry)
+    }
+
+    if (selectedSector !== 'all') {
+      filtered = filtered.filter((supplier) => supplier.sector === selectedSector)
     }
 
     setFilteredSuppliers(filtered)
@@ -132,18 +154,46 @@ export default function SuppliersPage() {
             />
           </div>
           
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {CATEGORIES.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-                className="whitespace-nowrap capitalize"
-              >
-                {category}
-              </Button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+              <SelectTrigger className="w-[160px]" aria-label="Filter by country">
+                <SelectValue placeholder="Country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All countries</SelectItem>
+                {LATAM_COUNTRIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedSector} onValueChange={setSelectedSector}>
+              <SelectTrigger className="w-[180px]" aria-label="Filter by sector">
+                <SelectValue placeholder="Sector" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sectors</SelectItem>
+                {SECTORS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-1 overflow-x-auto pb-2">
+              {CATEGORIES.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category)}
+                  className="whitespace-nowrap capitalize"
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -158,7 +208,7 @@ export default function SuppliersPage() {
         {/* Suppliers Grid */}
         {isLoading ? (
           <div className="flex min-h-[400px] items-center justify-center">
-            <p className="text-muted-foreground">Loading suppliers...</p>
+            <p className="text-muted-foreground">Loading suppliers…</p>
           </div>
         ) : filteredSuppliers.length === 0 ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center">
@@ -171,72 +221,95 @@ export default function SuppliersPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredSuppliers.map((supplier) => (
-              <Card key={supplier.id} className="hover:border-accent transition-colors">
-                <CardHeader>
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Building2 className="h-5 w-5 text-primary" />
+              <Link key={supplier.id} href={`/suppliers/${supplier.id}`}>
+                <Card className="h-full transition-colors hover:border-accent hover:bg-muted/30">
+                  <CardHeader>
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Building2 className="h-5 w-5 text-primary" />
+                        </div>
                       </div>
-                    </div>
-                    {supplier.verified && (
-                      <Badge variant="secondary" className="bg-success/10 text-success">
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-lg">{supplier.company_name}</CardTitle>
-                  {supplier.bio && (
-                    <CardDescription className="line-clamp-2">
-                      {supplier.bio}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Categories */}
-                  {supplier.categories && supplier.categories.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {supplier.categories.map((cat) => (
-                        <Badge key={cat} variant="secondary" className="text-xs capitalize">
-                          {cat}
+                      {supplier.verified && (
+                        <Badge variant="secondary" className="bg-success/10 text-success">
+                          Verified
                         </Badge>
-                      ))}
+                      )}
                     </div>
-                  )}
+                    <CardTitle className="text-lg">{supplier.company_name}</CardTitle>
+                    {(supplier.country || supplier.sector) && (
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        {supplier.sector && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            {getSectorLabel(supplier.sector)}
+                          </span>
+                        )}
+                        {supplier.country && (
+                          <span className="flex items-center gap-1">
+                            <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            {getCountryLabel(supplier.country)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {supplier.bio && (
+                      <CardDescription className="line-clamp-2 mt-1">
+                        {supplier.bio}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Categories */}
+                    {supplier.categories && supplier.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {supplier.categories.map((cat) => (
+                          <Badge key={cat} variant="secondary" className="text-xs capitalize">
+                            {cat}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Products */}
-                  {supplier.products && supplier.products.length > 0 && (
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">Products</p>
-                      <p className="text-sm">{supplier.products.join(', ')}</p>
+                    {/* Products */}
+                    {supplier.products && supplier.products.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">Products</p>
+                        <p className="text-sm line-clamp-2">{supplier.products.join(', ')}</p>
+                      </div>
+                    )}
+
+                    {/* Contact Info */}
+                    <div className="space-y-2 border-t border-border pt-3 text-sm">
+                      {supplier.email && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Mail className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{supplier.email}</span>
+                        </div>
+                      )}
+                      {supplier.phone && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4 shrink-0" />
+                          <span>{supplier.phone}</span>
+                        </div>
+                      )}
+                      {supplier.address && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Wallet className="h-4 w-4 shrink-0" />
+                          <span className="truncate font-mono text-xs">
+                            {supplier.address.slice(0, 6)}...{supplier.address.slice(-4)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Contact Info */}
-                  <div className="space-y-2 border-t border-border pt-3 text-sm">
-                    {supplier.email && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{supplier.email}</span>
-                      </div>
-                    )}
-                    {supplier.phone && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4 shrink-0" />
-                        <span>{supplier.phone}</span>
-                      </div>
-                    )}
-                    {supplier.address && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Wallet className="h-4 w-4 shrink-0" />
-                        <span className="truncate font-mono text-xs">
-                          {supplier.address.slice(0, 6)}...{supplier.address.slice(-4)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="flex items-center gap-2 pt-2 text-primary text-sm font-medium">
+                      View details
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
