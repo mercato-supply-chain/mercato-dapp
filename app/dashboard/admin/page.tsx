@@ -60,7 +60,7 @@ export default async function AdminDashboardPage() {
     .select(
       `id, title, product_name, amount, escrow_contract_address,
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-      supplier:profiles!deals_supplier_id_fkey(company_name, full_name, contact_name)`
+      supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name)`
     )
     .not('escrow_contract_address', 'is', null)
 

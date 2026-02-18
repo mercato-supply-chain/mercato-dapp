@@ -86,7 +86,7 @@ export default function DealDetailPage() {
     loadUserProfile()
   }, [supabase])
 
-  const isSupplier = Boolean(deal?.supplierId && userId && deal.supplierId === userId)
+  const isSupplier = Boolean(deal?.supplierOwnerId && userId && deal.supplierOwnerId === userId)
 
   const fetchDeal = useCallback(async () => {
     if (!dealId) return null
@@ -97,7 +97,8 @@ export default function DealDetailPage() {
         *,
         milestones(*),
         pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name)
+        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
+        supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `
       )
       .eq('id', dealId)
@@ -138,7 +139,7 @@ export default function DealDetailPage() {
   // Open delivery-proof dialog only when arriving with ?action=delivery (milestone 1)
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
-    const supplierMatch = deal.supplierId && deal.supplierId === userId
+    const supplierMatch = deal.supplierOwnerId && deal.supplierOwnerId === userId
     if (!supplierMatch) return
     const action = searchParams.get('action')
     if (action !== 'delivery') return
@@ -772,9 +773,20 @@ export default function DealDetailPage() {
                             </code>
                             <Button size="sm" variant="ghost" asChild>
                               <a
+                                href={`https://viewer.trustlesswork.com/${deal.escrowAddress}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View escrow in TrustlessWork"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button size="sm" variant="ghost" asChild>
+                              <a
                                 href={`https://stellar.expert/explorer/public/contract/${deal.escrowAddress}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                title="View on Stellar Expert"
                               >
                                 <ExternalLink className="h-4 w-4" />
                               </a>

@@ -73,24 +73,64 @@ export default function SuppliersPage() {
 
   const loadSuppliers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, company_name, bio, address, phone, categories, products, verified, country, sector')
-        .eq('user_type', 'supplier')
+      const { data: companies, error } = await supabase
+        .from('supplier_companies')
+        .select('id, company_name, bio, address, phone, verified, country, sector, owner_id')
         .order('company_name')
 
       if (error) throw error
 
-      // Join with auth.users to get email
-      const suppliersWithEmail = await Promise.all(
-        (data || []).map(async (supplier) => {
-          const { data: { user } } = await supabase.auth.admin.getUserById(supplier.id)
-          return {
-            ...supplier,
-            email: user?.email || ''
-          }
-        })
-      )
+      const companyIds = (companies ?? []).map((c) => c.id)
+      const ownerIds = [...new Set((companies ?? []).map((c) => c.owner_id).filter(Boolean))]
+
+      const [profilesRes, productsRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', ownerIds.length ? ownerIds : ['00000000-0000-0000-0000-000000000000']),
+        companyIds.length > 0
+          ? supabase
+              .from('supplier_products')
+              .select('supplier_id, name, category')
+              .in('supplier_id', companyIds)
+          : Promise.resolve({ data: [] as { supplier_id: string; name: string; category: string }[] }),
+      ])
+
+      const emailByOwner: Record<string, string> = {}
+      for (const p of profilesRes.data ?? []) {
+        emailByOwner[p.id] = p.email ?? ''
+      }
+
+      const productsBySupplier: Record<string, { categories: string[]; products: string[] }> = {}
+      for (const row of productsRes.data ?? []) {
+        const sid = row.supplier_id
+        if (!productsBySupplier[sid]) {
+          productsBySupplier[sid] = { categories: [], products: [] }
+        }
+        if (row.category && !productsBySupplier[sid].categories.includes(row.category)) {
+          productsBySupplier[sid].categories.push(row.category)
+        }
+        if (row.name) {
+          productsBySupplier[sid].products.push(row.name)
+        }
+      }
+
+      const suppliersWithEmail = (companies ?? []).map((c) => {
+        const fromProducts = productsBySupplier[c.id]
+        return {
+          id: c.id,
+          company_name: c.company_name ?? '',
+          bio: c.bio ?? null,
+          address: c.address ?? null,
+          phone: c.phone ?? null,
+          categories: fromProducts?.categories.length ? fromProducts.categories : null,
+          products: fromProducts?.products.length ? fromProducts.products : null,
+          verified: c.verified ?? false,
+          country: c.country ?? null,
+          sector: c.sector ?? null,
+          email: emailByOwner[c.owner_id] ?? '',
+        }
+      })
 
       setSuppliers(suppliersWithEmail as Supplier[])
     } catch (error) {

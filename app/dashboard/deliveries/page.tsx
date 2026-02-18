@@ -22,9 +22,16 @@ export default async function DeliveriesPage() {
     redirect('/dashboard')
   }
 
-  const { data: deals } = await supabase
-    .from('deals')
-    .select(`
+  const { data: myCompanies } = await supabase
+    .from('supplier_companies')
+    .select('id')
+    .eq('owner_id', user.id)
+  const companyIds = (myCompanies ?? []).map((c) => c.id)
+
+  const { data: deals } = companyIds.length > 0
+    ? await supabase
+        .from('deals')
+        .select(`
       id,
       title,
       product_name,
@@ -32,9 +39,10 @@ export default async function DeliveriesPage() {
       escrow_contract_address,
       milestones(id, title, status, percentage)
     `)
-    .eq('supplier_id', user.id)
-    .in('status', ['funded', 'in_progress'])
-    .order('created_at', { ascending: false })
+        .in('supplier_id', companyIds)
+        .in('status', ['funded', 'in_progress'])
+        .order('created_at', { ascending: false })
+    : { data: null }
 
   const dealsWithPendingMilestones = (deals ?? []).filter((d) => {
     const milestones = (d as { milestones?: { status: string }[] }).milestones ?? []

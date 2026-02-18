@@ -63,6 +63,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
 import { PRODUCT_CATEGORIES, getCategoryLabel } from '@/lib/categories'
+import { LATAM_COUNTRIES, SECTORS } from '@/lib/constants'
 
 const PAGE_SIZE = 20
 const SORT_OPTIONS = [
@@ -85,6 +86,15 @@ interface SupplierProduct {
 }
 
 
+type SupplierCompany = {
+  id: string
+  company_name: string | null
+  bio: string | null
+  country: string | null
+  sector: string | null
+  phone: string | null
+}
+
 export default function SupplierProfilePage() {
   const router = useRouter()
   const supabase = createClient()
@@ -92,8 +102,13 @@ export default function SupplierProfilePage() {
   const [isSavingBio, setIsSavingBio] = useState(false)
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [profile, setProfile] = useState<{ bio?: string; user_type?: string } | null>(null)
+  const [companies, setCompanies] = useState<SupplierCompany[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
   const [products, setProducts] = useState<SupplierProduct[]>([])
   const [bio, setBio] = useState('')
+  const [companyCountry, setCompanyCountry] = useState('')
+  const [companySector, setCompanySector] = useState('')
+  const [companyPhone, setCompanyPhone] = useState('')
 
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -112,6 +127,12 @@ export default function SupplierProfilePage() {
     delivery_time: '',
   })
   const [formSaving, setFormSaving] = useState(false)
+  const [addCompanyOpen, setAddCompanyOpen] = useState(false)
+  const [newCompanyName, setNewCompanyName] = useState('')
+  const [newCompanyCountry, setNewCompanyCountry] = useState('')
+  const [newCompanySector, setNewCompanySector] = useState('')
+  const [newCompanyPhone, setNewCompanyPhone] = useState('')
+  const [addCompanySaving, setAddCompanySaving] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -124,7 +145,7 @@ export default function SupplierProfilePage() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('bio, user_type')
+        .select('user_type')
         .eq('id', u.id)
         .single()
 
@@ -133,18 +154,40 @@ export default function SupplierProfilePage() {
         return
       }
       setProfile(profileData)
-      setBio(profileData?.bio ?? '')
 
-      const { data: productsData } = await supabase
-        .from('supplier_products')
-        .select('*')
-        .eq('supplier_id', u.id)
-        .order('name')
-      setProducts((productsData as SupplierProduct[]) ?? [])
+      const { data: companiesData } = await supabase
+        .from('supplier_companies')
+        .select('id, company_name, bio, country, sector, phone')
+        .eq('owner_id', u.id)
+        .order('company_name')
+
+      const companiesList = (companiesData ?? []) as SupplierCompany[]
+      setCompanies(companiesList)
+      if (companiesList.length > 0) {
+        setSelectedCompanyId((prev) => prev || companiesList[0].id)
+      }
       setIsLoading(false)
     }
     load()
   }, [router, supabase])
+
+  useEffect(() => {
+    if (!selectedCompanyId || !user) return
+    const loadProducts = async () => {
+      const { data: productsData } = await supabase
+        .from('supplier_products')
+        .select('*')
+        .eq('supplier_id', selectedCompanyId)
+        .order('name')
+      setProducts((productsData as SupplierProduct[]) ?? [])
+    }
+    loadProducts()
+    const company = companies.find((c) => c.id === selectedCompanyId)
+    setBio(company?.bio ?? '')
+    setCompanyCountry(company?.country ?? '')
+    setCompanySector(company?.sector ?? '')
+    setCompanyPhone(company?.phone ?? '')
+  }, [selectedCompanyId, user, companies])
 
   const categoriesFromProducts = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
@@ -197,15 +240,29 @@ export default function SupplierProfilePage() {
 
   const handleSaveBio = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!user || !selectedCompanyId) return
     setIsSavingBio(true)
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ bio, updated_at: new Date().toISOString() })
-        .eq('id', user.id)
+        .from('supplier_companies')
+        .update({
+          bio,
+          country: companyCountry || null,
+          sector: companySector || null,
+          phone: companyPhone.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedCompanyId)
+        .eq('owner_id', user.id)
       if (error) throw error
-      toast.success('Bio saved.')
+      setCompanies((prev) =>
+        prev.map((c) =>
+          c.id === selectedCompanyId
+            ? { ...c, bio, country: companyCountry || null, sector: companySector || null, phone: companyPhone.trim() || null }
+            : c
+        )
+      )
+      toast.success('Company details saved.')
     } catch (err) {
       console.error(err)
       toast.error('Failed to save bio.')
@@ -257,10 +314,15 @@ export default function SupplierProfilePage() {
         ? Number.parseFloat(formProduct.minimum_order)
         : null
       const deliveryTime = formProduct.delivery_time.trim() || null
+      if (!selectedCompanyId) {
+        toast.error('Select a company first.')
+        setFormSaving(false)
+        return
+      }
       const { data, error } = await supabase
         .from('supplier_products')
         .insert({
-          supplier_id: user.id,
+          supplier_id: selectedCompanyId,
           name,
           category,
           price_per_unit: price,
@@ -491,51 +553,243 @@ export default function SupplierProfilePage() {
           </div>
         </div>
 
-        {/* Company bio */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Company bio</CardTitle>
-            <CardDescription>
-              Tell PyMEs about your business. Shown alongside your catalog.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSaveBio} className="space-y-4">
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="e.g., We supply wholesale ingredients to bakeries and restaurants…"
-                rows={4}
-                className="resize-none"
-              />
-              <Button type="submit" disabled={isSavingBio}>
-                {isSavingBio ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                    Saving…
-                  </>
-                ) : (
-                  'Save bio'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Product catalog */}
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" aria-hidden />
-                Product catalog
-              </CardTitle>
+        {companies.length === 0 ? (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="text-lg">Create your first company</CardTitle>
               <CardDescription>
-                Add and manage products with name, category, and price. PyMEs choose quantity when creating a deal.
+                You can add multiple supplier companies under one account. Start with one.
               </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  if (!user || !newCompanyName.trim()) return
+                  setAddCompanySaving(true)
+                  try {
+                    const { data, error } = await supabase
+                      .from('supplier_companies')
+                      .insert({
+                        owner_id: user.id,
+                        company_name: newCompanyName.trim(),
+                        country: newCompanyCountry || null,
+                        sector: newCompanySector || null,
+                        phone: newCompanyPhone.trim() || null,
+                        updated_at: new Date().toISOString(),
+                      })
+                      .select('id, company_name, bio, country, sector, phone')
+                      .single()
+                    if (error) throw error
+                    setCompanies((prev) => [...prev, data as SupplierCompany])
+                    setSelectedCompanyId(data.id)
+                    setNewCompanyName('')
+                    setNewCompanyCountry('')
+                    setNewCompanySector('')
+                    setNewCompanyPhone('')
+                    setAddCompanyOpen(false)
+                    toast.success('Company created.')
+                  } catch (err) {
+                    console.error(err)
+                    toast.error('Failed to create company.')
+                  } finally {
+                    setAddCompanySaving(false)
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="new-company-name">Company name</Label>
+                  <Input
+                    id="new-company-name"
+                    value={newCompanyName}
+                    onChange={(e) => setNewCompanyName(e.target.value)}
+                    placeholder="e.g. Acme Supplies"
+                    autoComplete="organization"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-company-phone">Phone</Label>
+                    <Input
+                      id="new-company-phone"
+                      type="tel"
+                      value={newCompanyPhone}
+                      onChange={(e) => setNewCompanyPhone(e.target.value)}
+                      placeholder="e.g. +595 21 123 456"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-company-country">Country</Label>
+                    <Select value={newCompanyCountry || undefined} onValueChange={setNewCompanyCountry}>
+                      <SelectTrigger id="new-company-country" aria-label="Country">
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LATAM_COUNTRIES.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="new-company-sector">Sector</Label>
+                    <Select value={newCompanySector || undefined} onValueChange={setNewCompanySector}>
+                      <SelectTrigger id="new-company-sector" aria-label="Sector">
+                        <SelectValue placeholder="Select sector" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SECTORS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" disabled={addCompanySaving || !newCompanyName.trim()}>
+                  {addCompanySaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                      Creating…
+                    </>
+                  ) : (
+                    'Create company'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="company-select" className="text-sm text-muted-foreground">
+                  Company
+                </Label>
+                <Select
+                  value={selectedCompanyId ?? ''}
+                  onValueChange={(id) => setSelectedCompanyId(id)}
+                >
+                  <SelectTrigger id="company-select" className="w-[220px]">
+                    <SelectValue placeholder="Select company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.company_name || 'Unnamed company'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setAddCompanyOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
+                Add company
+              </Button>
             </div>
-            <Button onClick={openAddDialog} className="shrink-0 gap-2">
+
+            {/* Company bio & details */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-lg">Company details</CardTitle>
+                <CardDescription>
+                  Country, sector, phone, and bio for this company. Shown to PyMEs when they browse suppliers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSaveBio} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="company-phone">Phone</Label>
+                      <Input
+                        id="company-phone"
+                        type="tel"
+                        value={companyPhone}
+                        onChange={(e) => setCompanyPhone(e.target.value)}
+                        placeholder="e.g. +595 21 123 456"
+                        autoComplete="tel"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-country">Country</Label>
+                      <Select
+                        value={companyCountry || undefined}
+                        onValueChange={setCompanyCountry}
+                      >
+                        <SelectTrigger id="company-country" aria-label="Company country">
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LATAM_COUNTRIES.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>
+                              {c.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-sector">Sector</Label>
+                      <Select
+                        value={companySector || undefined}
+                        onValueChange={setCompanySector}
+                      >
+                        <SelectTrigger id="company-sector" aria-label="Company sector">
+                          <SelectValue placeholder="Select sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SECTORS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="e.g., We supply wholesale ingredients to bakeries and restaurants…"
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={isSavingBio}>
+                    {isSavingBio ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                        Saving…
+                      </>
+                    ) : (
+                      'Save details'
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Product catalog */}
+            <Card>
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" aria-hidden />
+                    Product catalog
+                  </CardTitle>
+                  <CardDescription>
+                    Add and manage products for this company. PyMEs choose quantity when creating a deal.
+                  </CardDescription>
+                </div>
+                <Button onClick={openAddDialog} className="shrink-0 gap-2">
               <Plus className="h-4 w-4" aria-hidden />
               Add product
             </Button>
@@ -734,13 +988,134 @@ export default function SupplierProfilePage() {
           </CardContent>
         </Card>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Contact info and wallet address?{' '}
-          <Link href="/settings" className="underline hover:text-foreground">
-            Settings
-          </Link>
-        </p>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Contact info and wallet address?{' '}
+              <Link href="/settings" className="underline hover:text-foreground">
+                Settings
+              </Link>
+            </p>
+          </>
+        )}
+
       </div>
+
+      {/* Add company dialog */}
+      <Dialog open={addCompanyOpen} onOpenChange={setAddCompanyOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add company</DialogTitle>
+            <DialogDescription>
+              Add another supplier company to your account. Each company has its own catalog and bio.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!user || !newCompanyName.trim()) return
+              setAddCompanySaving(true)
+              try {
+                const { data, error } = await supabase
+                  .from('supplier_companies')
+                  .insert({
+                    owner_id: user.id,
+                    company_name: newCompanyName.trim(),
+                    country: newCompanyCountry || null,
+                    sector: newCompanySector || null,
+                    phone: newCompanyPhone.trim() || null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .select('id, company_name, bio, country, sector, phone')
+                  .single()
+                if (error) throw error
+                setCompanies((prev) => [...prev, data as SupplierCompany])
+                setSelectedCompanyId(data.id)
+                setNewCompanyName('')
+                setNewCompanyCountry('')
+                setNewCompanySector('')
+                setNewCompanyPhone('')
+                setAddCompanyOpen(false)
+                toast.success('Company added.')
+              } catch (err) {
+                console.error(err)
+                toast.error('Failed to add company.')
+              } finally {
+                setAddCompanySaving(false)
+              }
+            }}
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="dialog-company-name">Company name</Label>
+                <Input
+                  id="dialog-company-name"
+                  value={newCompanyName}
+                  onChange={(e) => setNewCompanyName(e.target.value)}
+                  placeholder="e.g. Acme Supplies"
+                  autoComplete="organization"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dialog-company-phone">Phone</Label>
+                <Input
+                  id="dialog-company-phone"
+                  type="tel"
+                  value={newCompanyPhone}
+                  onChange={(e) => setNewCompanyPhone(e.target.value)}
+                  placeholder="e.g. +595 21 123 456"
+                  autoComplete="tel"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-company-country">Country</Label>
+                  <Select value={newCompanyCountry || undefined} onValueChange={setNewCompanyCountry}>
+                    <SelectTrigger id="dialog-company-country" aria-label="Country">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LATAM_COUNTRIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-company-sector">Sector</Label>
+                  <Select value={newCompanySector || undefined} onValueChange={setNewCompanySector}>
+                    <SelectTrigger id="dialog-company-sector" aria-label="Sector">
+                      <SelectValue placeholder="Select sector" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECTORS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => setAddCompanyOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addCompanySaving || !newCompanyName.trim()}>
+                {addCompanySaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Adding…
+                  </>
+                ) : (
+                  'Add company'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Add product dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

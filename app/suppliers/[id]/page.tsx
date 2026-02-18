@@ -54,26 +54,24 @@ export default async function SupplierDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, categories, products, verified, user_type, country, sector')
+  const { data: company, error: companyError } = await supabase
+    .from('supplier_companies')
+    .select('id, owner_id, company_name, bio, full_name, contact_name, phone, address, categories, products, verified, country, sector')
     .eq('id', id)
     .single()
 
-  if (profileError || !profile || profile.user_type !== 'supplier') {
+  if (companyError || !company) {
     notFound()
   }
 
-  const [{ data: products }, { count: dealsCount }, { data: recentDeals }] = await Promise.all([
+  const [{ data: ownerProfile }, { data: products }, { count: dealsCount }, { data: recentDeals }] = await Promise.all([
+    supabase.from('profiles').select('email').eq('id', company.owner_id).single(),
     supabase
       .from('supplier_products')
       .select('id, name, category, price_per_unit, description, minimum_order, delivery_time')
       .eq('supplier_id', id)
       .order('name'),
-    supabase
-      .from('deals')
-      .select('id', { count: 'exact', head: true })
-      .eq('supplier_id', id),
+    supabase.from('deals').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
     supabase
       .from('deals')
       .select('id, title, product_name, status, amount, created_at')
@@ -85,8 +83,12 @@ export default async function SupplierDetailPage({
   const productList = (products ?? []) as ProductRow[]
   const dealsList = (recentDeals ?? []) as DealRow[]
   const totalDeals = dealsCount ?? 0
+  const profile = {
+    ...company,
+    email: ownerProfile?.email ?? null,
+  }
 
-  const displayName = profile.company_name || profile.full_name || profile.contact_name || 'Supplier'
+  const displayName = company.company_name || company.full_name || company.contact_name || 'Supplier'
 
   const formatPrice = (value: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)

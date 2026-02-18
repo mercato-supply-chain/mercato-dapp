@@ -27,6 +27,14 @@ export interface DealRow {
   pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
   /** From Supabase select with alias: investor:profiles!deals_investor_id_fkey(...) */
   investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
+  /** From Supabase select: supplier_companies!deals_supplier_id_fkey(...) */
+  supplier?: {
+    company_name?: string
+    full_name?: string
+    contact_name?: string
+    owner_id?: string
+    address?: string
+  } | null
   /** Fallback if relation is returned as table name */
   profiles?: { company_name?: string; full_name?: string; contact_name?: string } | null
 }
@@ -86,13 +94,23 @@ export function mapDealFromDb(row: DealRow): Deal {
 
   const status = DB_STATUS_TO_DEAL_STATUS[row.status] ?? 'awaiting_funding'
 
+  const supplierCompany = row.supplier
+  const supplierName =
+    row.supplier_name ||
+    supplierCompany?.company_name ||
+    supplierCompany?.full_name ||
+    supplierCompany?.contact_name ||
+    'Supplier'
+
   return {
     id: row.id,
     productName: row.product_name || row.title,
     quantity: row.product_quantity ?? 0,
     priceUSDC: Number(row.amount),
-    supplier: row.supplier_name,
+    supplier: supplierName,
     supplierId: row.supplier_id ?? undefined,
+    supplierOwnerId: supplierCompany?.owner_id ?? undefined,
+    supplierAddress: supplierCompany?.address?.trim() || row.escrow_contract_address?.trim() || row.escrow_address?.trim() || undefined,
     term: row.term_days ?? 0,
     status,
     createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : '',

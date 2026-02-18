@@ -27,6 +27,8 @@ export interface Deal {
   priceUSDC: number
   supplier: string
   supplierId?: string
+  /** Owner (user) id of the supplier company; used to check "am I the supplier" */
+  supplierOwnerId?: string
   supplierAddress?: string
   term: number // days
   status: DealStatus

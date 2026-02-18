@@ -16,11 +16,25 @@ import {
   CheckCircle2,
   ShieldCheck,
   ExternalLink,
+  Building2,
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
 
-export default async function DashboardPage() {
+type DashboardSearchParams = Promise<{ company?: string }> | { company?: string }
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: DashboardSearchParams
+}) {
   const supabase = await createClient()
+
+  const params = searchParams
+    ? typeof (searchParams as Promise<{ company?: string }>).then === 'function'
+      ? await (searchParams as Promise<{ company?: string }>)
+      : (searchParams as { company?: string })
+    : {}
+  const companyFilterId = params.company ?? null
 
   const {
     data: { user },
@@ -59,6 +73,8 @@ export default async function DashboardPage() {
   }
 
   let deals: DealRow[] = []
+  let supplierCompanies: { id: string; company_name: string | null }[] = []
+  let supplierProductsForCard: { categories: string[]; products: string[] } | null = null
   let adminStats: {
     totalDeals: number
     seekingFunding: number
@@ -84,13 +100,46 @@ export default async function DashboardPage() {
       .limit(5)
     deals = (data || []) as typeof deals
   } else if (userType === 'supplier') {
-    const { data } = await supabase
-      .from('deals')
-      .select('*')
-      .eq('supplier_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-    deals = (data || []) as typeof deals
+    const { data: myCompanies } = await supabase
+      .from('supplier_companies')
+      .select('id, company_name')
+      .eq('owner_id', user.id)
+    supplierCompanies = myCompanies ?? []
+    const companyIds = supplierCompanies.map((c) => c.id)
+    if (companyIds.length > 0) {
+      const filterByCompany =
+        companyFilterId && companyIds.includes(companyFilterId)
+          ? companyFilterId
+          : null
+      const query = supabase
+        .from('deals')
+        .select(
+          `id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at,
+          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
+          supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name),
+          milestones(id, status)`
+        )
+        .order('created_at', { ascending: false })
+        .limit(10)
+      const { data } = filterByCompany
+        ? await query.eq('supplier_id', filterByCompany)
+        : await query.in('supplier_id', companyIds)
+      deals = (data || []) as typeof deals
+
+      // Products & categories for the card: selected company or single company
+      const companyForCard =
+        filterByCompany ?? (supplierCompanies.length === 1 ? supplierCompanies[0].id : null)
+      if (companyForCard) {
+        const { data: products } = await supabase
+          .from('supplier_products')
+          .select('name, category')
+          .eq('supplier_id', companyForCard)
+        const productList = products ?? []
+        const categories = [...new Set(productList.map((p) => (p as { category: string }).category).filter(Boolean))]
+        const productNames = productList.map((p) => (p as { name: string }).name).filter(Boolean)
+        supplierProductsForCard = { categories, products: productNames }
+      }
+    }
   } else if (userType === 'admin') {
     const [
       { count: totalDeals },
@@ -111,7 +160,7 @@ export default async function DashboardPage() {
         .select(
           `id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at,
           pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-          supplier:profiles!deals_supplier_id_fkey(company_name, full_name, contact_name),
+          supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name),
           investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
           milestones(id, status)`
         )
@@ -173,7 +222,7 @@ export default async function DashboardPage() {
         ]
       case 'supplier':
         return [
-          { label: 'Manage Products & Categories', href: '/dashboard/supplier-profile', icon: Package },
+          { label: 'Manage companies', href: '/dashboard/supplier-profile', icon: Building2 },
           { label: 'View Active Deals', href: '/dashboard/deals', icon: TrendingUp },
           { label: 'Upload Delivery Proof', href: '/dashboard/deliveries', icon: CheckCircle2 },
         ]
@@ -208,8 +257,36 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Supplier: My Products & Categories */}
-        {userType === 'supplier' && (profile?.products?.length > 0 || profile?.categories?.length > 0) && (
+        {/* Supplier: Company filter */}
+        {userType === 'supplier' && supplierCompanies.length > 1 && (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">Viewing:</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                asChild
+                variant={!companyFilterId ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Link href="/dashboard">All companies</Link>
+              </Button>
+              {supplierCompanies.map((c) => (
+                <Button
+                  key={c.id}
+                  asChild
+                  variant={companyFilterId === c.id ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Link href={`/dashboard?company=${c.id}`}>
+                    {c.company_name || 'Unnamed company'}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Supplier: My Products & Categories (per selected company) */}
+        {userType === 'supplier' && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -217,36 +294,47 @@ export default async function DashboardPage() {
                 My Products & Categories
               </CardTitle>
               <CardDescription>
-                Your catalog that PyMEs see when creating deals
+                {companyFilterId || supplierCompanies.length === 1
+                  ? 'Your catalog that PyMEs see when creating deals'
+                  : 'Select a company above to see its products and categories'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {profile?.categories && profile.categories.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-muted-foreground">Categories</p>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.categories.map((cat: string) => (
-                        <Badge key={cat} variant="secondary" className="capitalize">
-                          {cat}
-                        </Badge>
-                      ))}
+              {supplierProductsForCard ? (
+                <div className="space-y-4">
+                  {supplierProductsForCard.categories.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">Categories</p>
+                      <div className="flex flex-wrap gap-2">
+                        {supplierProductsForCard.categories.map((cat) => (
+                          <Badge key={cat} variant="secondary" className="capitalize">
+                            {cat}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {profile?.products && profile.products.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-muted-foreground">Products</p>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.products.map((product: string) => (
-                        <Badge key={product} variant="outline">
-                          {product}
-                        </Badge>
-                      ))}
+                  )}
+                  {supplierProductsForCard.products.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">Products</p>
+                      <div className="flex flex-wrap gap-2">
+                        {supplierProductsForCard.products.map((product) => (
+                          <Badge key={product} variant="outline">
+                            {product}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                  {supplierProductsForCard.categories.length === 0 && supplierProductsForCard.products.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No products or categories yet for this company.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Select a company above to see its products and categories, or add products in Manage companies.
+                </p>
+              )}
               <Button asChild variant="outline" size="sm" className="mt-4">
                 <Link href="/dashboard/supplier-profile">
                   Manage Products & Categories
@@ -329,7 +417,14 @@ export default async function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-3 mb-8">
             <Card>
               <CardHeader className="pb-3">
-                <CardDescription>Total Deals</CardDescription>
+                <CardDescription>
+                  Total Deals
+                  {userType === 'supplier' && !companyFilterId && supplierCompanies.length > 1 && (
+                    <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                      Across {supplierCompanies.length} companies
+                    </span>
+                  )}
+                </CardDescription>
                 <CardTitle className="text-3xl">{deals.length}</CardTitle>
               </CardHeader>
             </Card>
@@ -380,7 +475,7 @@ export default async function DashboardPage() {
               {userType === 'admin' ? 'Recent platform deals' : 'Recent Deals'}
             </h2>
             <Button asChild variant="ghost" size="sm">
-              <Link href={userType === 'admin' ? '/marketplace' : '/marketplace'}>
+              <Link href={userType === 'admin' ? '/marketplace' : userType === 'supplier' ? '/dashboard/deals' : '/marketplace'}>
                 View All
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -413,7 +508,7 @@ export default async function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          ) : userType === 'admin' ? (
+          ) : userType === 'admin' || userType === 'supplier' ? (
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -423,10 +518,21 @@ export default async function DashboardPage() {
                         <th className="text-left font-medium p-4">Deal</th>
                         <th className="text-left font-medium p-4">Status</th>
                         <th className="text-right font-medium p-4">Amount</th>
-                        <th className="text-left font-medium p-4 hidden lg:table-cell">PyME (Buyer)</th>
-                        <th className="text-left font-medium p-4 hidden lg:table-cell">Supplier</th>
-                        <th className="text-left font-medium p-4 hidden xl:table-cell">Investor</th>
-                        <th className="text-left font-medium p-4 hidden xl:table-cell">Funded</th>
+                        {userType === 'admin' ? (
+                          <>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">PyME (Buyer)</th>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">Supplier</th>
+                            <th className="text-left font-medium p-4 hidden xl:table-cell">Investor</th>
+                            <th className="text-left font-medium p-4 hidden xl:table-cell">Funded</th>
+                          </>
+                        ) : userType === 'supplier' ? (
+                          <>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">Company</th>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">PyME (Buyer)</th>
+                          </>
+                        ) : (
+                          <th className="text-left font-medium p-4 hidden lg:table-cell">PyME (Buyer)</th>
+                        )}
                         <th className="text-center font-medium p-4">Milestones</th>
                         <th className="text-right font-medium p-4 w-32">Action</th>
                       </tr>
@@ -484,18 +590,34 @@ export default async function DashboardPage() {
                             <td className="p-4 text-right tabular-nums font-medium">
                               ${Number(deal.amount).toLocaleString()}
                             </td>
-                            <td className="p-4 hidden lg:table-cell text-muted-foreground" title="PyME (Buyer)">
-                              {pymeName}
-                            </td>
-                            <td className="p-4 hidden lg:table-cell text-muted-foreground">
-                              {supplierName}
-                            </td>
-                            <td className="p-4 hidden xl:table-cell text-muted-foreground">
-                              {investorName}
-                            </td>
-                            <td className="p-4 hidden xl:table-cell text-muted-foreground text-xs">
-                              {deal.funded_at ? formatDate(deal.funded_at) : '—'}
-                            </td>
+                            {userType === 'supplier' && (
+                              <>
+                                <td className="p-4 hidden lg:table-cell font-medium" title="Your company on this deal">
+                                  {supplierName}
+                                </td>
+                                <td className="p-4 hidden lg:table-cell text-muted-foreground" title="PyME (Buyer)">
+                                  {pymeName}
+                                </td>
+                              </>
+                            )}
+                            {userType !== 'supplier' && (
+                              <td className="p-4 hidden lg:table-cell text-muted-foreground" title="PyME (Buyer)">
+                                {pymeName}
+                              </td>
+                            )}
+                            {userType === 'admin' && (
+                              <>
+                                <td className="p-4 hidden lg:table-cell text-muted-foreground">
+                                  {supplierName}
+                                </td>
+                                <td className="p-4 hidden xl:table-cell text-muted-foreground">
+                                  {investorName}
+                                </td>
+                                <td className="p-4 hidden xl:table-cell text-muted-foreground text-xs">
+                                  {deal.funded_at ? formatDate(deal.funded_at) : '—'}
+                                </td>
+                              </>
+                            )}
                             <td className="p-4 text-center">
                               {total > 0 ? (
                                 <span className={hasPendingApproval ? 'text-amber-600 dark:text-amber-400 font-medium' : ''} title={hasPendingApproval ? 'Has milestone(s) awaiting approval' : ''}>
@@ -510,11 +632,11 @@ export default async function DashboardPage() {
                               <div className="flex items-center justify-end gap-1">
                                 <Button asChild variant="ghost" size="sm">
                                   <Link href={`/deals/${deal.id}`}>
-                                    View
+                                    {userType === 'supplier' && hasPendingApproval ? 'View & act' : 'View'}
                                     <ExternalLink className="ml-1 h-3.5 w-3.5 opacity-70" />
                                   </Link>
                                 </Button>
-                                {hasPendingApproval && (
+                                {userType === 'admin' && hasPendingApproval && (
                                   <Button asChild size="sm">
                                     <Link href="/dashboard/admin">Approve</Link>
                                   </Button>
@@ -529,11 +651,11 @@ export default async function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3 bg-muted/20">
                   <p className="text-xs text-muted-foreground">
-                    Last {deals.length} deals • Created date order
+                    {userType === 'supplier' ? `Your last ${deals.length} deals` : `Last ${deals.length} deals`} • Created date order
                   </p>
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/marketplace">
-                      View all in marketplace
+                    <Link href={userType === 'supplier' ? '/dashboard/deals' : '/marketplace'}>
+                      {userType === 'supplier' ? 'View all my deals' : 'View all in marketplace'}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

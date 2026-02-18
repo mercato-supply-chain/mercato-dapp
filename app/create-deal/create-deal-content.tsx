@@ -43,19 +43,51 @@ export default function CreateDealContent() {
 
   useEffect(() => {
     const init = async () => {
-      const [authResult, productsResult] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase
+      const authResult = supabase.auth.getUser()
+      let products: SupplierProductRow[] = []
+      try {
+        const res = await fetch('/api/catalog')
+        if (res.ok) {
+          const data = await res.json()
+          products = data as SupplierProductRow[]
+        }
+      } catch {
+        // fallback: load via client (requires RLS policy supplier_products_select_all)
+      }
+      if (products.length === 0) {
+        const productsResult = await supabase
           .from('supplier_products')
           .select(
-            'id, supplier_id, name, category, price_per_unit, description, supplier:profiles!supplier_products_supplier_id_fkey(id, company_name, email, address)'
+            'id, supplier_id, name, category, price_per_unit, description, supplier:supplier_companies(id, company_name, address, owner_id)'
           )
-          .order('category'),
-      ])
-      const { data: { user } } = authResult
-      setSupplierProducts(
-        (productsResult.data as unknown as SupplierProductRow[]) ?? []
-      )
+          .order('category')
+        const raw = (productsResult.data ?? []) as Array<{
+          id: string
+          supplier_id: string
+          name: string
+          category: string
+          price_per_unit: number
+          description?: string | null
+          supplier?: { id: string; company_name?: string; address?: string; owner_id?: string } | null
+        }>
+        const ownerIds = [...new Set(raw.map((p) => p.supplier?.owner_id).filter(Boolean))] as string[]
+        const { data: ownerProfiles } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', ownerIds.length ? ownerIds : ['00000000-0000-0000-0000-000000000000'])
+        const emailByOwner: Record<string, string> = {}
+        for (const p of ownerProfiles ?? []) {
+          emailByOwner[p.id] = p.email ?? ''
+        }
+        products = raw.map((p) => ({
+          ...p,
+          supplier: p.supplier
+            ? { ...p.supplier, email: emailByOwner[p.supplier.owner_id ?? ''] }
+            : p.supplier,
+        })) as unknown as SupplierProductRow[]
+      }
+      setSupplierProducts(products)
+      const { data: { user } } = await authResult
       if (!user) {
         router.push('/auth/login')
         return
@@ -165,20 +197,26 @@ export default function CreateDealContent() {
 
     setIsLoading(true)
     try {
-      const { data: supplierProfile } = await supabase
-        .from('profiles')
-        .select('id, company_name, email, address')
+      const { data: company } = await supabase
+        .from('supplier_companies')
+        .select('id, address, owner_id')
         .eq('id', formData.supplierId)
         .single()
 
-      const supplierAddress = supplierProfile?.address?.trim()
+      const supplierAddress = company?.address?.trim()
       if (!supplierAddress) {
         toast.error(
-          'Selected supplier does not have a Stellar wallet address configured.'
+          'Selected supplier company does not have a Stellar wallet address. Ask the supplier to add it in Settings.'
         )
         setIsLoading(false)
         return
       }
+
+      const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', company?.owner_id)
+        .single()
 
       const productName = selectedProduct.name
       const productUnitPrice = Number(selectedProduct.price_per_unit)
@@ -199,7 +237,7 @@ export default function CreateDealContent() {
           status: 'seeking_funding',
           supplier_id: formData.supplierId,
           supplier_name: formData.supplierName,
-          supplier_email: supplierProfile?.email ?? null,
+          supplier_email: ownerProfile?.email ?? null,
           supplier_contact: formData.supplierContact || null,
           platform_fee: 2.5,
         })
@@ -257,7 +295,7 @@ export default function CreateDealContent() {
         },
         milestones: milestones.map((m) => ({
           description: m.title,
-          amount: Math.round(m.amount * USDC_TRUSTLINE.decimals),
+          amount: Math.round(m.amount * 100) / 100, // human-readable (e.g. 100 for $100 USDC); API applies decimals
           receiver: supplierAddress,
         })),
       }

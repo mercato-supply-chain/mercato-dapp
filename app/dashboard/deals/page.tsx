@@ -63,10 +63,17 @@ export default async function DashboardDealsPage() {
     redirect('/dashboard')
   }
 
-  const { data: deals } = await supabase
-    .from('deals')
-    .select(
-      `
+  const { data: myCompanies } = await supabase
+    .from('supplier_companies')
+    .select('id')
+    .eq('owner_id', user.id)
+  const companyIds = (myCompanies ?? []).map((c) => c.id)
+
+  const { data: deals } = companyIds.length > 0
+    ? await supabase
+        .from('deals')
+        .select(
+          `
       id,
       title,
       product_name,
@@ -80,9 +87,10 @@ export default async function DashboardDealsPage() {
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
       investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name)
     `
-    )
-    .eq('supplier_id', user.id)
-    .order('created_at', { ascending: false })
+        )
+        .in('supplier_id', companyIds)
+        .order('created_at', { ascending: false })
+    : { data: null }
 
   const list = (deals ?? []) as DealRow[]
 
