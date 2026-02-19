@@ -116,7 +116,7 @@ export default async function DashboardPage({
         .select(
           `id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at,
           pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-          supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name),
+          supplier:supplier_companies(company_name, full_name, contact_name),
           milestones(id, status)`
         )
         .order('created_at', { ascending: false })
@@ -160,7 +160,7 @@ export default async function DashboardPage({
         .select(
           `id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at,
           pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-          supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name),
+          supplier:supplier_companies(company_name, full_name, contact_name),
           investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
           milestones(id, status)`
         )
@@ -224,7 +224,7 @@ export default async function DashboardPage({
         return [
           { label: 'Manage companies', href: '/dashboard/supplier-profile', icon: Building2 },
           { label: 'View Active Deals', href: '/dashboard/deals', icon: TrendingUp },
-          { label: 'Upload Delivery Proof', href: '/dashboard/deliveries', icon: CheckCircle2 },
+          { label: 'Accept orders & deliveries', href: '/dashboard/deliveries', icon: CheckCircle2 },
         ]
       case 'admin':
         return [
@@ -490,7 +490,10 @@ export default async function DashboardPage({
                 <p className="mb-4 text-sm text-muted-foreground">
                   {userType === 'pyme' && 'Create your first deal to get started'}
                   {userType === 'investor' && 'Browse the marketplace to fund your first deal'}
-                  {userType === 'supplier' && 'Wait for PyMEs to create deals with you'}
+                  {userType === 'supplier' &&
+                    (supplierCompanies.length === 0
+                      ? 'Add a company and products in Manage companies so PyMEs can create deals with you.'
+                      : "Deals where you're the supplier will appear here when PyMEs create orders and investors fund them.")}
                   {userType === 'admin' && 'No deals on the platform yet'}
                 </p>
                 {userType === 'pyme' && (
@@ -498,6 +501,14 @@ export default async function DashboardPage({
                     <Link href="/create-deal">
                       <Plus className="mr-2 h-4 w-4" />
                       Create Deal
+                    </Link>
+                  </Button>
+                )}
+                {userType === 'supplier' && supplierCompanies.length === 0 && (
+                  <Button asChild>
+                    <Link href="/dashboard/supplier-profile">
+                      Add Company & Products
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 )}

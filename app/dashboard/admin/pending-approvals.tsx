@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { useApproveMilestone, useReleaseFunds, useSendTransaction } from '@trustless-work/escrow/hooks'
+import { useApproveMilestone, useReleaseFunds, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { ApproveMilestonePayload, MultiReleaseReleaseFundsPayload } from '@trustless-work/escrow'
+import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
 import { createClient } from '@/lib/supabase/client'
@@ -16,17 +17,73 @@ import type { PendingApprovalItem } from './page'
 
 interface PendingApprovalsProps {
   items: PendingApprovalItem[]
+  /** When provided (from AdminEscrowsProvider), skip internal fetch to avoid duplicate API calls */
+  escrowsByContractId?: Map<string, GetEscrowsFromIndexerResponse>
 }
 
-export function PendingApprovals({ items }: PendingApprovalsProps) {
+function isMilestoneReleased(
+  escrow: GetEscrowsFromIndexerResponse | undefined,
+  milestoneIndex: number
+): boolean {
+  const m = escrow?.milestones?.[milestoneIndex] as { status?: string; released?: boolean } | undefined
+  if (!m) return false
+  if (m.released === true) return true
+  const s = (m.status ?? '').toLowerCase()
+  return s === 'released' || s === 'completed'
+}
+
+/** Release only allowed if all previous milestones are released (order: 0 → 1 → 2 …) */
+function canReleaseMilestoneInOrder(
+  escrow: GetEscrowsFromIndexerResponse | undefined,
+  milestoneIndex: number
+): boolean {
+  if (milestoneIndex === 0) return true
+  for (let i = 0; i < milestoneIndex; i++) {
+    if (!isMilestoneReleased(escrow, i)) return false
+  }
+  return true
+}
+
+export function PendingApprovals({ items, escrowsByContractId: escrowsFromParent }: PendingApprovalsProps) {
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [releasingId, setReleasingId] = useState<string | null>(null)
+  const [localEscrows, setLocalEscrows] = useState<Map<string, GetEscrowsFromIndexerResponse>>(new Map())
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { approveMilestone } = useApproveMilestone()
   const { releaseFunds } = useReleaseFunds()
   const { sendTransaction } = useSendTransaction()
   const { walletInfo, isConnected, handleConnect } = useWallet()
   const supabase = createClient()
 
-  const handleApprove = async (item: PendingApprovalItem) => {
+  const escrowsByContractId = escrowsFromParent ?? localEscrows
+
+  const contractIds = useMemo(() => [...new Set(items.map((i) => i.escrowContractAddress).filter(Boolean))], [items])
+  const contractIdsKey = useMemo(() => (contractIds.length ? contractIds.slice().sort().join(',') : ''), [contractIds])
+  const getEscrowRef = useRef(getEscrowByContractIds)
+  getEscrowRef.current = getEscrowByContractIds
+
+  useEffect(() => {
+    if (escrowsFromParent !== undefined) return
+    if (!contractIdsKey) {
+      setLocalEscrows(new Map())
+      return
+    }
+    let cancelled = false
+    const ids = contractIdsKey.split(',').filter(Boolean)
+    getEscrowRef.current({ contractIds: ids })
+      .then((escrows) => {
+        if (cancelled || !escrows) return
+        const map = new Map<string, GetEscrowsFromIndexerResponse>()
+        for (const e of escrows) {
+          if (e.contractId) map.set(e.contractId, e)
+        }
+        setLocalEscrows(map)
+      })
+      .catch(() => setLocalEscrows(new Map()))
+    return () => { cancelled = true }
+  }, [contractIdsKey, escrowsFromParent])
+
+  const handleApproveOnly = async (item: PendingApprovalItem) => {
     if (!walletInfo?.address) {
       toast.error('Connect your Stellar wallet to approve.')
       return
@@ -37,7 +94,6 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
     }
     setApprovingId(item.milestoneId)
     try {
-      // 1. Approve the milestone (records approval on-chain)
       const approvePayload: ApproveMilestonePayload = {
         contractId: item.escrowContractAddress,
         milestoneIndex: String(item.milestoneIndex),
@@ -58,8 +114,33 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
           'message' in approveTx ? (approveTx as { message: string }).message : 'Approval transaction failed'
         )
       }
+      toast.success(`Milestone "${item.milestoneTitle}" approved on-chain. Click Release to send funds.`)
+      window.location.reload()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Approval failed'
+      console.error('Approve milestone error:', err)
+      toast.error(message)
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
-      // 2. Release the funds for this milestone to the supplier (releaseSigner = admin/platform wallet)
+  const handleReleaseOnly = async (item: PendingApprovalItem) => {
+    if (!walletInfo?.address) {
+      toast.error('Connect your Stellar wallet to release funds.')
+      return
+    }
+    if (!item.escrowContractAddress) {
+      toast.error('Deal has no escrow contract.')
+      return
+    }
+    const escrow = escrowsByContractId.get(item.escrowContractAddress)
+    if (!canReleaseMilestoneInOrder(escrow, item.milestoneIndex)) {
+      toast.error('Release the previous milestone first (Shipment → Delivery).')
+      return
+    }
+    setReleasingId(item.milestoneId)
+    try {
       const releasePayload: MultiReleaseReleaseFundsPayload = {
         contractId: item.escrowContractAddress,
         releaseSigner: walletInfo.address,
@@ -80,8 +161,6 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
           'message' in releaseTx ? (releaseTx as { message: string }).message : 'Release transaction failed'
         )
       }
-
-      // 3. Update DB so UI shows milestone as completed
       const { error } = await supabase
         .from('milestones')
         .update({
@@ -91,14 +170,14 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
         })
         .eq('id', item.milestoneId)
       if (error) throw error
-      toast.success(`Milestone "${item.milestoneTitle}" approved and funds released.`)
+      toast.success(`Funds released for "${item.milestoneTitle}".`)
       window.location.reload()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Approval failed'
-      console.error('Approve milestone error:', err)
+      const message = err instanceof Error ? err.message : 'Release failed'
+      console.error('Release funds error:', err)
       toast.error(message)
     } finally {
-      setApprovingId(null)
+      setReleasingId(null)
     }
   }
 
@@ -110,7 +189,11 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
 
   return (
     <div className="space-y-4">
-      {items.map((item) => (
+      {items.map((item) => {
+        const escrow = escrowsByContractId.get(item.escrowContractAddress)
+        const alreadyReleased = isMilestoneReleased(escrow, item.milestoneIndex)
+        const canReleaseInOrder = canReleaseMilestoneInOrder(escrow, item.milestoneIndex)
+        return (
         <div
           key={item.milestoneId}
           className="rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
@@ -125,6 +208,11 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
                   {item.dealProductName || item.dealTitle || 'Deal'}
                 </Link>
                 <Badge variant="secondary">{item.milestoneTitle}</Badge>
+                {alreadyReleased && (
+                  <Badge variant="secondary" className="bg-success/10 text-success">
+                    Released
+                  </Badge>
+                )}
               </div>
 
               <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -178,15 +266,28 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
                   Connect wallet
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => handleApprove(item)}
-                  disabled={approvingId === item.milestoneId}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                  {approvingId === item.milestoneId ? 'Approving…' : 'Approve & release'}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleApproveOnly(item)}
+                    disabled={approvingId === item.milestoneId || alreadyReleased}
+                  >
+                    <FileText className="mr-2 h-4 w-4" aria-hidden />
+                    {approvingId === item.milestoneId ? 'Approving…' : 'Approve'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleReleaseOnly(item)}
+                    disabled={releasingId === item.milestoneId || alreadyReleased || !canReleaseInOrder}
+                    title={!canReleaseInOrder ? 'Release the previous milestone first (Shipment → Delivery)' : undefined}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                    {releasingId === item.milestoneId ? 'Releasing…' : alreadyReleased ? 'Released' : 'Release'}
+                  </Button>
+                </div>
               )}
               <Button variant="ghost" size="sm" asChild>
                 <Link href={`/deals/${item.dealId}`}>
@@ -196,7 +297,8 @@ export function PendingApprovals({ items }: PendingApprovalsProps) {
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

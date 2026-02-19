@@ -38,7 +38,9 @@ export interface Deal {
   milestones: Milestone[]
   escrowAddress?: string
   pymeName: string
+  pymeId?: string
   investorName?: string
+  investorId?: string
   investorAddress?: string
   description?: string
   category?: string

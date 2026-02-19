@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
-import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
-import type { FundEscrowPayload, ChangeMilestoneStatusPayload } from '@trustless-work/escrow'
+import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useApproveMilestone, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
+import type { FundEscrowPayload, ChangeMilestoneStatusPayload, ApproveMilestonePayload } from '@trustless-work/escrow'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
@@ -36,8 +36,24 @@ import {
   ShieldCheck,
   ExternalLink,
   AlertCircle,
-  Upload,
+  ChevronRight,
 } from 'lucide-react'
+
+/** Match "Shipment Confirmation" milestone (supplier accepts order) */
+function isShipmentMilestone(name: string, index: number, total: number): boolean {
+  const n = (name || '').toLowerCase().trim()
+  if (n.includes('shipment')) return true
+  if (n.includes('delivery')) return false
+  return total === 2 && index === 0
+}
+
+/** Match "Delivery Confirmation" milestone (PyME confirms receipt) */
+function isDeliveryMilestone(name: string, index: number, total: number): boolean {
+  const n = (name || '').toLowerCase().trim()
+  if (n.includes('delivery')) return true
+  if (n.includes('shipment')) return false
+  return total === 2 && index === 1
+}
 
 export default function DealDetailPage() {
   const params = useParams()
@@ -56,11 +72,13 @@ export default function DealDetailPage() {
   const [proofDocumentUrl, setProofDocumentUrl] = useState('')
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
   const [acceptingMilestoneId, setAcceptingMilestoneId] = useState<string | null>(null)
+  const [confirmingDeliveryMilestoneId, setConfirmingDeliveryMilestoneId] = useState<string | null>(null)
   const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
 
   const { fundEscrow } = useFundEscrow()
   const { sendTransaction } = useSendTransaction()
   const { changeMilestoneStatus } = useChangeMilestoneStatus()
+  const { approveMilestone } = useApproveMilestone()
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { walletInfo, isConnected, handleConnect } = useWallet()
   const supabase = useMemo(() => createClient(), [])
@@ -87,6 +105,8 @@ export default function DealDetailPage() {
   }, [supabase])
 
   const isSupplier = Boolean(deal?.supplierOwnerId && userId && deal.supplierOwnerId === userId)
+  const isPyme = Boolean(deal?.pymeId && userId && deal.pymeId === userId)
+  const isAdmin = userType === 'admin'
 
   const fetchDeal = useCallback(async () => {
     if (!dealId) return null
@@ -119,13 +139,16 @@ export default function DealDetailPage() {
   }, [dealId, fetchDeal])
 
   // Fetch on-chain escrow state from indexer when deal has escrow
+  const escrowAddress = deal?.escrowAddress ?? ''
+  const getEscrowRef = useRef(getEscrowByContractIds)
+  getEscrowRef.current = getEscrowByContractIds
   useEffect(() => {
-    if (!deal?.escrowAddress) {
+    if (!escrowAddress) {
       setIndexerEscrow(null)
       return
     }
     let cancelled = false
-    getEscrowByContractIds({ contractIds: [deal.escrowAddress] })
+    getEscrowRef.current({ contractIds: [escrowAddress] })
       .then((escrows) => {
         if (!cancelled && escrows?.length) setIndexerEscrow(escrows[0])
         else if (!cancelled) setIndexerEscrow(null)
@@ -134,20 +157,23 @@ export default function DealDetailPage() {
         if (!cancelled) setIndexerEscrow(null)
       })
     return () => { cancelled = true }
-  }, [deal?.escrowAddress, getEscrowByContractIds])
+  }, [escrowAddress])
 
-  // Open delivery-proof dialog only when arriving with ?action=delivery (milestone 1)
+  // Open confirm-delivery dialog when arriving with ?action=delivery (Delivery Confirmation milestone)
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
-    const supplierMatch = deal.supplierOwnerId && deal.supplierOwnerId === userId
-    if (!supplierMatch) return
+    const pymeMatch = deal.pymeId && deal.pymeId === userId
+    if (!pymeMatch) return
     const action = searchParams.get('action')
     if (action !== 'delivery') return
-    const milestone = deal.milestones[1]
-    if (!milestone || milestone.status !== 'pending') return
+    const deliveryMilestone = deal.milestones.find((m) =>
+      (m.name || '').toLowerCase().includes('delivery')
+    )
+    if (!deliveryMilestone || deliveryMilestone.status !== 'pending') return
+    const milestoneIndex = deal.milestones.findIndex((m) => m.id === deliveryMilestone.id)
     hasHandledAction.current = true
-    setProofMilestoneIndex(1)
-    setProofMilestoneId(milestone.id)
+    setProofMilestoneIndex(milestoneIndex >= 0 ? milestoneIndex : 1)
+    setProofMilestoneId(deliveryMilestone.id)
     setProofNotes('')
     setProofDocumentUrl('')
     setProofDialogOpen(true)
@@ -341,7 +367,7 @@ export default function DealDetailPage() {
     }
   }
 
-  const handleSubmitProof = async () => {
+  const handleConfirmDelivery = async () => {
     if (
       !deal?.escrowAddress ||
       proofMilestoneIndex == null ||
@@ -352,22 +378,25 @@ export default function DealDetailPage() {
       return
     }
     if (!isConnected) {
-      toast.error('Connect your Stellar wallet to submit proof.')
+      toast.error('Connect your Stellar wallet to confirm delivery.')
       return
     }
-    const newEvidence = [proofNotes, proofDocumentUrl].filter(Boolean).join(' | ') || 'Proof uploaded'
+    if (!isPyme && !isAdmin) {
+      toast.error('Only the PyME (buyer) or admin can confirm delivery.')
+      return
+    }
+    const evidence = [proofNotes, proofDocumentUrl].filter(Boolean).join(' | ') || 'Delivery confirmed by PyME'
     setIsSubmittingProof(true)
+    setConfirmingDeliveryMilestoneId(proofMilestoneId)
     try {
-      const payload: ChangeMilestoneStatusPayload = {
+      const payload: ApproveMilestonePayload = {
         contractId: deal.escrowAddress,
         milestoneIndex: String(proofMilestoneIndex),
-        newStatus: 'proof_uploaded',
-        newEvidence,
-        serviceProvider: walletInfo.address,
+        approver: walletInfo.address,
       }
-      const response = await changeMilestoneStatus(payload, 'multi-release')
+      const response = await approveMilestone(payload, 'multi-release')
       if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
-        throw new Error('Failed to create milestone status transaction')
+        throw new Error('Failed to create approval transaction')
       }
       const signedXdr = await signTransaction({
         unsignedTransaction: response.unsignedTransaction,
@@ -382,7 +411,7 @@ export default function DealDetailPage() {
         .from('milestones')
         .update({
           status: 'in_progress',
-          proof_notes: proofNotes || null,
+          proof_notes: evidence || null,
           proof_document_url: proofDocumentUrl || null,
           updated_at: new Date().toISOString(),
         })
@@ -390,16 +419,17 @@ export default function DealDetailPage() {
       if (updateError) throw updateError
       const updated = await fetchDeal()
       if (updated) setDeal(updated)
-      toast.success('Delivery proof submitted. Awaiting admin approval.')
+      toast.success('Delivery confirmed. Admin will release the final 50% to the supplier.')
       setProofDialogOpen(false)
       setProofMilestoneIndex(null)
       setProofMilestoneId(null)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to submit proof'
-      console.error('Submit proof error:', err)
+      const message = err instanceof Error ? err.message : 'Failed to confirm delivery'
+      console.error('Confirm delivery error:', err)
       toast.error(message)
     } finally {
       setIsSubmittingProof(false)
+      setConfirmingDeliveryMilestoneId(null)
     }
   }
 
@@ -515,22 +545,24 @@ export default function DealDetailPage() {
           </div>
         </div>
 
-        {/* Supplier: Upload delivery proof dialog (second milestone only) */}
+        {/* PyME: Confirm delivery dialog (second milestone only) */}
         <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Upload delivery proof</DialogTitle>
+              <DialogTitle>Confirm delivery</DialogTitle>
               <DialogDescription>
-                Add proof of delivery for the remaining 50%. This updates the milestone on-chain;
-                admin will then approve to release the funds. Connect your Stellar wallet to sign.
+                Confirm that you received the product. This approves the final 50% milestone on-chain;
+                admin will then release the funds to the supplier. The PyME (buyer) confirms delivery;
+                admin can release funds from the admin panel after confirmation.
+                Connect your Stellar wallet to sign.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="proof-notes">Notes</Label>
+                <Label htmlFor="proof-notes">Notes (optional)</Label>
                 <Textarea
                   id="proof-notes"
-                  placeholder="e.g. Tracking number, invoice reference…"
+                  placeholder="e.g. Received in good condition, date received…"
                   value={proofNotes}
                   onChange={(e) => setProofNotes(e.target.value)}
                   rows={3}
@@ -554,11 +586,11 @@ export default function DealDetailPage() {
               ) : (
                 <Button
                   type="button"
-                  onClick={handleSubmitProof}
+                  onClick={handleConfirmDelivery}
                   disabled={isSubmittingProof}
                   className="w-full"
                 >
-                  {isSubmittingProof ? 'Submitting…' : 'Submit proof'}
+                  {isSubmittingProof ? 'Confirming…' : 'Confirm delivery'}
                 </Button>
               )}
             </div>
@@ -660,9 +692,9 @@ export default function DealDetailPage() {
                           </p>
                           {milestone.status === 'in_progress' && (
                             <p className="text-xs text-warning">
-                              {index === 0
+                              {isShipmentMilestone(milestone.name, index, deal.milestones.length)
                                 ? 'Release requested — awaiting admin approval'
-                                : 'Proof uploaded — awaiting admin approval'}
+                                : 'Delivery confirmed — awaiting admin release'}
                             </p>
                           )}
                           {milestone.status === 'completed' && milestone.completedAt && (
@@ -676,13 +708,17 @@ export default function DealDetailPage() {
                             </p>
                           )}
 
-                          {/* Supplier: First milestone = Accept order (change status only). Second = Upload delivery proof. */}
-                          {isSupplier &&
-                            milestone.status === 'pending' &&
+                          {/* Supplier: Shipment Confirmation = Accept order. PyME/Admin: Delivery Confirmation = Confirm delivery. */}
+                          {milestone.status === 'pending' &&
                             deal.status !== 'awaiting_funding' &&
                             deal.escrowAddress && (
                               <div className="mt-3">
-                                {index === 0 ? (
+                                {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
+                                  <p className="text-xs text-muted-foreground">
+                                    The PyME (buyer) will confirm this milestone when they have the order in hand.
+                                  </p>
+                                )}
+                                {isShipmentMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
                                   <Button
                                     size="sm"
                                     variant="default"
@@ -694,15 +730,19 @@ export default function DealDetailPage() {
                                       ? 'Accepting…'
                                       : 'Accept order (request milestone release)'}
                                   </Button>
-                                ) : (
+                                )}
+                                {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && (isPyme || isAdmin) && (
                                   <Button
                                     size="sm"
-                                    variant="outline"
+                                    variant={isPyme ? 'default' : 'outline'}
                                     type="button"
                                     onClick={() => openProofDialog(index, milestone.id)}
+                                    disabled={confirmingDeliveryMilestoneId === milestone.id}
                                   >
-                                    <Upload className="mr-2 h-4 w-4" aria-hidden />
-                                    Upload delivery proof
+                                    <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                                    {confirmingDeliveryMilestoneId === milestone.id
+                                      ? 'Confirming…'
+                                      : 'Confirm delivery'}
                                   </Button>
                                 )}
                               </div>
@@ -732,11 +772,29 @@ export default function DealDetailPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <p className="mb-1 text-sm font-medium">PyME (Buyer)</p>
-                        <p className="text-sm text-muted-foreground">{deal.pymeName}</p>
+                        {deal.pymeId ? (
+                          <Link
+                            href={`/pymes/${deal.pymeId}`}
+                            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            {deal.pymeName}
+                          </Link>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{deal.pymeName}</p>
+                        )}
                       </div>
                       <div>
                         <p className="mb-1 text-sm font-medium">Supplier</p>
-                        <p className="text-sm text-muted-foreground">{deal.supplier}</p>
+                        {deal.supplierId ? (
+                          <Link
+                            href={`/suppliers/${deal.supplierId}`}
+                            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            {deal.supplier}
+                          </Link>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{deal.supplier}</p>
+                        )}
                       </div>
                       <div>
                         <p className="mb-1 text-sm font-medium">Created</p>
@@ -866,15 +924,28 @@ export default function DealDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Stakeholders</CardTitle>
+                <CardDescription>
+                  Click a name to view profile and reputation
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10">
                     <Package className="h-5 w-5 text-accent" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">PyME (Buyer)</p>
-                    <p className="text-sm text-muted-foreground">{deal.pymeName}</p>
+                    {deal.pymeId ? (
+                      <Link
+                        href={`/pymes/${deal.pymeId}`}
+                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        {deal.pymeName}
+                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{deal.pymeName}</p>
+                    )}
                   </div>
                 </div>
 
@@ -884,11 +955,21 @@ export default function DealDetailPage() {
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/10">
                     <TrendingUp className="h-5 w-5 text-success" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">Investor</p>
-                    <p className="text-sm text-muted-foreground">
-                      {deal.investorName ?? 'Awaiting funding'}
-                    </p>
+                    {deal.investorId && deal.investorName ? (
+                      <Link
+                        href={`/investors/${deal.investorId}`}
+                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        {deal.investorName}
+                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {deal.investorName ?? 'Awaiting funding'}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -898,9 +979,19 @@ export default function DealDetailPage() {
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                     <Building2 className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">Supplier</p>
-                    <p className="text-sm text-muted-foreground">{deal.supplier}</p>
+                    {deal.supplierId ? (
+                      <Link
+                        href={`/suppliers/${deal.supplierId}`}
+                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        {deal.supplier}
+                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{deal.supplier}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>

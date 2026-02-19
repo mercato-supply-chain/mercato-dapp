@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ShieldCheck, ArrowLeft, FileCheck } from 'lucide-react'
 import { PendingApprovals } from './pending-approvals'
 import { ReleaseFundsFallback } from './release-funds-fallback'
+import { AdminEscrowsProvider } from './admin-escrows-provider'
 
 /** Milestone awaiting approval + release (in_progress) */
 export interface PendingApprovalItem {
@@ -60,7 +61,7 @@ export default async function AdminDashboardPage() {
     .select(
       `id, title, product_name, amount, escrow_contract_address,
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
-      supplier:supplier_companies!deals_supplier_id_fkey(company_name, full_name, contact_name)`
+      supplier:supplier_companies(company_name, full_name, contact_name)`
     )
     .not('escrow_contract_address', 'is', null)
 
@@ -209,35 +210,7 @@ export default async function AdminDashboardPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5" aria-hidden />
-              Pending approvals
-            </CardTitle>
-            <CardDescription>
-              First 50%: supplier accepted order. Remaining: delivery proof uploaded. Approve each to release funds to the supplier on-chain.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PendingApprovals items={items} />
-          </CardContent>
-        </Card>
-
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5" aria-hidden />
-              Release funds (fallback)
-            </CardTitle>
-            <CardDescription>
-              Milestones already marked completed (e.g. approved earlier). If funds were not released (e.g. before we added the release step), trigger release here. Safe to click even if already released — the contract will reject a duplicate.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ReleaseFundsFallback items={releaseFallbackItems} />
-          </CardContent>
-        </Card>
+        <AdminEscrowsProvider items={items} releaseFallbackItems={releaseFallbackItems} />
       </div>
     </div>
   )
