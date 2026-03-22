@@ -150,15 +150,14 @@ export default function SmbsPage() {
         }
       })
 
-      // Sort: by reputation tier, then by deal count desc
-      enriched.sort((a, b) => {
-        const tierDiff =
-          TIER_ORDER[a.reputationTier ?? 'new'] - TIER_ORDER[b.reputationTier ?? 'new']
-        if (tierDiff !== 0) return tierDiff
-        return (b.deal_count ?? 0) - (a.deal_count ?? 0)
-      })
-
-      setSmbs(enriched)
+      setSmbs(
+        enriched.toSorted((a, b) => {
+          const tierDiff =
+            TIER_ORDER[a.reputationTier ?? 'new'] - TIER_ORDER[b.reputationTier ?? 'new']
+          if (tierDiff !== 0) return tierDiff
+          return (b.deal_count ?? 0) - (a.deal_count ?? 0)
+        }),
+      )
     } catch (err) {
       console.error('Error loading SMBs:', err)
     } finally {
@@ -334,7 +333,7 @@ export default function SmbsPage() {
                       {/* Active deals */}
                       {typeof smb.active_deals === 'number' && smb.active_deals > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                          <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           {smb.active_deals} active deal{smb.active_deals !== 1 ? 's' : ''}
                         </div>
                       )}
@@ -342,7 +341,7 @@ export default function SmbsPage() {
                       {/* Total repaid */}
                       {typeof smb.totalRepaid === 'number' && smb.totalRepaid > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           {new Intl.NumberFormat('en-US', {
                             style: 'currency',
                             currency: 'USD',

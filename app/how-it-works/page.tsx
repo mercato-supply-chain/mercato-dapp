@@ -447,7 +447,7 @@ export default function HowItWorksPage() {
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">
               <Link href="/dashboard/ramp">
-                Add funds
+                Add Funds
                 <ArrowRight className="ml-2 h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -466,12 +466,12 @@ export default function HowItWorksPage() {
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
               <Link href="/auth/sign-up">
-                Create account
+                Create Account
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/deals">Browse open deals</Link>
+              <Link href="/deals">Browse Open Deals</Link>
             </Button>
           </div>
         </div>
