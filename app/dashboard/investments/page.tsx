@@ -115,13 +115,13 @@ export default async function DashboardInvestmentsPage() {
                 No investments yet
               </CardTitle>
               <CardDescription>
-                Deals you fund will appear here. Browse the marketplace to find deals to fund.
+                Deals you fund will appear here. Browse open deals to find opportunities to fund.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline">
-                <Link href="/marketplace">
-                  Browse marketplace
+                <Link href="/deals">
+                  Browse deals
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                 </Link>
               </Button>

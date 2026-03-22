@@ -20,6 +20,7 @@ import {
   type CreateDealProfile,
   type SupplierProductRow,
   type FormStep,
+  isMilestonesValid,
 } from './types'
 import { DealBasicsStep } from './components/deal-basics-step'
 import { SupplierStep } from './components/supplier-step'
@@ -27,7 +28,13 @@ import { MilestonesStep } from './components/milestones-step'
 import { StepProgress } from './components/step-progress'
 import { DealSummaryCard } from './components/deal-summary-card'
 import { HowItWorksCard } from './components/how-it-works-card'
-import { calculateYieldAPR } from '@/lib/yield'
+import {
+  calculateYieldAPR,
+  calculateYieldAmount,
+  clampYieldBonusApr,
+  effectiveInvestorApr,
+  MAX_YIELD_BONUS_APR,
+} from '@/lib/yield'
 
 export default function CreateDealContent() {
   const router = useRouter()
@@ -135,8 +142,20 @@ export default function CreateDealContent() {
       ? Number(formData.quantity) * Number(selectedProduct.price_per_unit)
       : 0
   const termDays = Number(formData.term || 60)
-  const calculatedAPR = calculateYieldAPR(termDays, totalAmount)
-  const estimatedYield = totalAmount * (calculatedAPR / 100) * (termDays / 365)
+  const parsedBonus = parseFloat(
+    String(formData.yieldBonusApr ?? '0').replace(',', '.')
+  )
+  const yieldBonusApr = clampYieldBonusApr(
+    Number.isFinite(parsedBonus) ? parsedBonus : 0
+  )
+  const baseAPR =
+    totalAmount > 0 ? calculateYieldAPR(termDays, totalAmount) : 0
+  const effectiveAPR =
+    totalAmount > 0 ? effectiveInvestorApr(baseAPR, yieldBonusApr) : 0
+  const estimatedYield =
+    totalAmount > 0
+      ? calculateYieldAmount(totalAmount, termDays, effectiveAPR)
+      : 0
 
   const updateFormData = (field: keyof CreateDealFormData, value: string) => {
     setFormData((prev) => {
@@ -171,7 +190,8 @@ export default function CreateDealContent() {
     Boolean(formData.category || availableCategories.length === 0) &&
     Boolean(formData.supplierId && formData.productId && formData.quantity)
   const canProceedStep2 = Boolean(formData.supplierName && formData.term)
-  const canSubmit = canProceedStep1 && canProceedStep2
+  const milestonesOk = isMilestonesValid(formData.milestones)
+  const canSubmit = canProceedStep1 && canProceedStep2 && milestonesOk
 
   const handleSubmit = async () => {
     if (!userId || !userProfile) return
@@ -195,6 +215,13 @@ export default function CreateDealContent() {
 
     if (!selectedProduct) {
       toast.error('Please select a product.')
+      return
+    }
+
+    if (!isMilestonesValid(formData.milestones)) {
+      toast.error(
+        'Set each milestone name and adjust percentages so they total 100%.',
+      )
       return
     }
 
@@ -235,7 +262,8 @@ export default function CreateDealContent() {
           product_unit_price: productUnitPrice,
           amount: totalAmount,
           term_days: Number(formData.term),
-          interest_rate: calculatedAPR,
+          interest_rate: effectiveAPR,
+          yield_bonus_apr: yieldBonusApr,
           category: formData.category || selectedProduct.category || 'other',
           status: 'seeking_funding',
           supplier_id: formData.supplierId,
@@ -249,29 +277,18 @@ export default function CreateDealContent() {
 
       if (dealError) throw dealError
 
-      const milestone1Amount =
-        (totalAmount * Number(formData.milestone1Percentage)) / 100
-      const milestone2Amount =
-        (totalAmount * Number(formData.milestone2Percentage)) / 100
-
-      const milestones = [
-        {
+      const milestones = formData.milestones.map((m) => {
+        const pct = Number(m.percentage)
+        const amount = (totalAmount * pct) / 100
+        return {
           deal_id: deal.id,
-          title: formData.milestone1Name,
-          description: `${formData.milestone1Name} — ${formData.milestone1Percentage}% of deal amount`,
-          percentage: Number(formData.milestone1Percentage),
-          amount: milestone1Amount,
-          status: 'pending',
-        },
-        {
-          deal_id: deal.id,
-          title: formData.milestone2Name,
-          description: `${formData.milestone2Name} — ${formData.milestone2Percentage}% of deal amount`,
-          percentage: Number(formData.milestone2Percentage),
-          amount: milestone2Amount,
-          status: 'pending',
-        },
-      ]
+          title: m.name.trim(),
+          description: `${m.name.trim()} — ${m.percentage}% of deal amount`,
+          percentage: pct,
+          amount,
+          status: 'pending' as const,
+        }
+      })
 
       const { error: milestonesError } = await supabase
         .from('milestones')
@@ -408,16 +425,21 @@ export default function CreateDealContent() {
                 filteredSuppliers={filteredSuppliers}
                 totalAmount={totalAmount}
                 estimatedYield={estimatedYield}
-                calculatedAPR={calculatedAPR}
+                baseAPR={totalAmount > 0 ? baseAPR : undefined}
+                effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
+                yieldBonusApr={yieldBonusApr}
+                maxYieldBonusApr={MAX_YIELD_BONUS_APR}
                 onUpdate={updateFormData}
                 onSupplierSelect={handleSupplierSelect}
               />
             )}
             {currentStep === 3 && (
               <MilestonesStep
-                formData={formData}
+                milestones={formData.milestones}
                 totalAmount={totalAmount}
-                onUpdate={updateFormData}
+                onMilestonesChange={(milestones) =>
+                  setFormData((prev) => ({ ...prev, milestones }))
+                }
               />
             )}
 
@@ -447,6 +469,11 @@ export default function CreateDealContent() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={!canSubmit || isLoading}
+                  title={
+                    !milestonesOk
+                      ? 'Set milestone names and percentages to total 100%'
+                      : undefined
+                  }
                 >
                   {isLoading
                     ? 'Creating Deal & Deploying Escrow…'
@@ -465,7 +492,9 @@ export default function CreateDealContent() {
               formData={formData}
               productName={selectedProduct?.name ?? ''}
               totalAmount={totalAmount}
-              calculatedAPR={totalAmount > 0 ? calculatedAPR : undefined}
+              baseAPR={totalAmount > 0 ? baseAPR : undefined}
+              effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
+              yieldBonusApr={yieldBonusApr}
             />
             <HowItWorksCard />
           </div>

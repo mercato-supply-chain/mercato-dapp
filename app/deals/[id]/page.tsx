@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/lib/date-utils'
+import { formatCurrency } from '@/lib/format'
 import {
   Package,
   Building2,
@@ -33,10 +34,12 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  ShieldCheck,
   ExternalLink,
   AlertCircle,
   ChevronRight,
+  Sparkles,
+  Lock,
+  ArrowLeft,
 } from 'lucide-react'
 
 /** Match "Shipment Confirmation" milestone (supplier accepts order) */
@@ -184,9 +187,29 @@ export default function DealDetailPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4 py-16">
-          <div className="text-center">
-            <p className="text-muted-foreground">Loading deal…</p>
+        <div className="container mx-auto px-4 py-10">
+          <div className="mb-8 h-4 w-36 animate-pulse rounded-full bg-muted" />
+          <div className="mb-3 flex gap-2">
+            <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
+            <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
+          </div>
+          <div className="mb-2 h-10 w-2/3 animate-pulse rounded-lg bg-muted" />
+          <div className="mb-8 h-5 w-1/2 animate-pulse rounded-lg bg-muted" />
+          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <div className="h-72 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-48 animate-pulse rounded-2xl bg-muted" />
+            </div>
+            <div className="space-y-6">
+              <div className="h-40 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-48 animate-pulse rounded-2xl bg-muted" />
+              <div className="h-32 animate-pulse rounded-2xl bg-muted" />
+            </div>
           </div>
         </div>
       </div>
@@ -204,7 +227,7 @@ export default function DealDetailPage() {
               The deal you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button asChild>
-              <Link href="/marketplace">Back to Marketplace</Link>
+              <Link href="/deals">Back to deals</Link>
             </Button>
           </div>
         </div>
@@ -436,29 +459,41 @@ export default function DealDetailPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      
-      <div className="container mx-auto px-4 py-8">
+
+      <div className="container mx-auto px-4 py-10">
         {/* Breadcrumb */}
-        <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/marketplace" className="hover:text-foreground">Marketplace</Link>
-          <span>/</span>
-          <span className="truncate">{deal.productName || 'Deal details'}</span>
+        <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/deals" className="flex items-center gap-1 hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            Deals
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 opacity-40" aria-hidden />
+          <span className="truncate text-foreground/70">{deal.productName || 'Deal details'}</span>
         </div>
 
         {/* Header */}
         <div className="mb-8">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div className="flex-1">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge className={`${status.color} ${status.bgColor}`}>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${status.color} ${status.bgColor} ring-current/20`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${status.color.replace('text-', 'bg-')}`} aria-hidden />
                   {status.label}
-                </Badge>
+                </span>
                 {deal.category && (
-                  <Badge variant="outline">{deal.category}</Badge>
+                  <Badge variant="outline" className="capitalize">{deal.category}</Badge>
+                )}
+                {(deal.yieldBonusApr ?? 0) > 0 && (
+                  <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
+                    <Sparkles className="h-3 w-3" aria-hidden />
+                    +{deal.yieldBonusApr}% bonus APR
+                  </Badge>
                 )}
               </div>
-              <h1 className="mb-2 text-4xl font-bold tracking-tight">{deal.productName}</h1>
-              <p className="text-lg text-muted-foreground">
+              <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl">{deal.productName}</h1>
+              <p className="max-w-xl text-lg text-muted-foreground">
                 {deal.description || `Supply chain financing deal for ${deal.pymeName}`}
               </p>
             </div>
@@ -468,9 +503,9 @@ export default function DealDetailPage() {
                 userType === 'investor' ? (
                   <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button size="lg" className="gap-2">
+                      <Button size="lg" className="gap-2 shadow-sm">
                         <Wallet className="h-5 w-5" aria-hidden />
-                        Fund This Deal
+                        Fund {formatCurrency(deal.priceUSDC)}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
@@ -530,18 +565,47 @@ export default function DealDetailPage() {
                     </DialogContent>
                   </Dialog>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
                     {userType
-                      ? 'Only investors can fund deals. This deal is open for funding by investors.'
-                      : 'Sign in with an investor account to fund this deal.'}
-                  </p>
+                      ? 'Only investors can fund deals.'
+                      : 'Sign in as an investor to fund this deal.'}
+                  </div>
                 )
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Escrow is being deployed. Refresh in a moment to fund this deal.
-                </p>
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                  Escrow deploying — refresh shortly to fund.
+                </div>
               )
             )}
+          </div>
+
+          {/* Quick stats row */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Amount</p>
+              <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(deal.priceUSDC)}</p>
+              <p className="text-[11px] text-muted-foreground">USDC</p>
+            </div>
+            <div className={`rounded-xl border px-4 py-3 text-center ${deal.yieldAPR ? 'border-success/30 bg-success/5' : 'border-border bg-muted/30'}`}>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">APR</p>
+              {deal.yieldAPR ? (
+                <p className="mt-1 text-xl font-bold tabular-nums text-success">{deal.yieldAPR.toFixed(1)}%</p>
+              ) : (
+                <p className="mt-1 text-xl text-muted-foreground">—</p>
+              )}
+              <p className="text-[11px] text-muted-foreground">yield</p>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Term</p>
+              <p className="mt-1 text-xl font-bold tabular-nums">{deal.term}</p>
+              <p className="text-[11px] text-muted-foreground">days</p>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Quantity</p>
+              <p className="mt-1 text-xl font-bold tabular-nums">{deal.quantity.toLocaleString()}</p>
+              <p className="text-[11px] text-muted-foreground">units</p>
+            </div>
           </div>
         </div>
 
@@ -600,157 +664,144 @@ export default function DealDetailPage() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Content */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Key Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Deal Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Total Amount</p>
-                    <p className="text-3xl font-bold">${deal.priceUSDC.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">USDC on Stellar</p>
-                  </div>
-
-                  {deal.yieldAPR && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Investor Yield</p>
-                      <p className="text-3xl font-bold text-success">{deal.yieldAPR}%</p>
-                      <p className="text-sm text-muted-foreground">APR ({deal.term} days)</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Quantity</p>
-                    <p className="text-2xl font-bold">{deal.quantity}</p>
-                    <p className="text-sm text-muted-foreground">units</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Term</p>
-                    <p className="text-2xl font-bold">{deal.term}</p>
-                    <p className="text-sm text-muted-foreground">days</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Milestones */}
             <Card>
               <CardHeader>
-                <CardTitle>Payment Milestones</CardTitle>
-                <CardDescription>
-                  Supplier payments released based on delivery confirmation
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Payment Milestones</CardTitle>
+                    <CardDescription className="mt-1">
+                      Funds released in stages as delivery is confirmed on-chain
+                    </CardDescription>
+                  </div>
+                  <span className="shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
+                    {completedMilestones}/{deal.milestones.length}
+                  </span>
+                </div>
+                <Progress value={progressPercentage} className="mt-4 h-1.5" />
               </CardHeader>
               <CardContent>
-                <div className="mb-4">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">
-                      {completedMilestones} of {deal.milestones.length} completed
-                    </span>
-                  </div>
-                  <Progress value={progressPercentage} className="h-2" />
-                </div>
+                <div className="space-y-3">
+                  {deal.milestones.map((milestone, index) => {
+                    const milestoneAmount = (deal.priceUSDC * milestone.percentage) / 100
+                    const isDone = milestone.status === 'completed'
+                    const isActive = milestone.status === 'in_progress'
+                    const isDisputed = milestone.status === 'disputed'
 
-                <div className="space-y-4">
-                  {deal.milestones.map((milestone, index) => (
-                    <div
-                      key={milestone.id}
-                      className={`rounded-lg border p-4 ${
-                        milestone.status === 'completed'
-                          ? 'border-success bg-success/5'
-                          : 'border-border'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                            milestone.status === 'completed'
-                              ? 'bg-success text-success-foreground'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {milestone.status === 'completed' ? (
-                            <CheckCircle2 className="h-5 w-5" />
-                          ) : (
-                            <Clock className="h-5 w-5" />
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="mb-1 flex items-center justify-between">
-                            <h4 className="font-semibold">{milestone.name}</h4>
-                            <Badge variant={milestone.status === 'completed' ? 'default' : 'secondary'}>
-                              {milestone.percentage}%
-                            </Badge>
-                          </div>
-                          <p className="mb-2 text-sm text-muted-foreground">
-                            ${((deal.priceUSDC * milestone.percentage) / 100).toLocaleString()} USDC
-                          </p>
-                          {milestone.status === 'in_progress' && (
-                            <p className="text-xs text-warning">
-                              {isShipmentMilestone(milestone.name, index, deal.milestones.length)
-                                ? 'Release requested — awaiting admin approval'
-                                : 'Delivery confirmed — awaiting admin release'}
-                            </p>
-                          )}
-                          {milestone.status === 'completed' && milestone.completedAt && (
-                            <p className="text-xs text-muted-foreground">
-                              Completed on {formatDate(milestone.completedAt)}
-                            </p>
-                          )}
-                          {milestone.proofNotes && milestone.status !== 'completed' && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {milestone.proofNotes}
-                            </p>
-                          )}
-
-                          {/* Supplier: Shipment Confirmation = Accept order. PyME/Admin: Delivery Confirmation = Confirm delivery. */}
-                          {milestone.status === 'pending' &&
-                            deal.status !== 'awaiting_funding' &&
-                            deal.escrowAddress && (
-                              <div className="mt-3">
-                                {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
-                                  <p className="text-xs text-muted-foreground">
-                                    The PyME (buyer) will confirm this milestone when they have the order in hand.
-                                  </p>
-                                )}
-                                {isShipmentMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    type="button"
-                                    onClick={() => handleAcceptOrder(index, milestone.id)}
-                                    disabled={acceptingMilestoneId === milestone.id}
-                                  >
-                                    {acceptingMilestoneId === milestone.id
-                                      ? 'Accepting…'
-                                      : 'Accept order (request milestone release)'}
-                                  </Button>
-                                )}
-                                {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && (isPyme || isAdmin) && (
-                                  <Button
-                                    size="sm"
-                                    variant={isPyme ? 'default' : 'outline'}
-                                    type="button"
-                                    onClick={() => openProofDialog(index, milestone.id)}
-                                    disabled={confirmingDeliveryMilestoneId === milestone.id}
-                                  >
-                                    <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                                    {confirmingDeliveryMilestoneId === milestone.id
-                                      ? 'Confirming…'
-                                      : 'Confirm delivery'}
-                                  </Button>
-                                )}
-                              </div>
+                    return (
+                      <div
+                        key={milestone.id}
+                        className={`rounded-xl border-2 p-4 transition-colors ${
+                          isDone
+                            ? 'border-success/30 bg-success/5'
+                            : isDisputed
+                              ? 'border-destructive/30 bg-destructive/5'
+                              : isActive
+                                ? 'border-primary/30 bg-primary/5'
+                                : 'border-border bg-card'
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Step indicator */}
+                          <div
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                              isDone
+                                ? 'bg-success text-success-foreground'
+                                : isDisputed
+                                  ? 'bg-destructive text-destructive-foreground'
+                                  : isActive
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {isDone ? (
+                              <CheckCircle2 className="h-4.5 w-4.5" aria-hidden />
+                            ) : (
+                              <span>{index + 1}</span>
                             )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <h4 className="font-semibold">{milestone.name}</h4>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  isDone
+                                    ? 'bg-success/10 text-success'
+                                    : isActive
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'bg-muted text-muted-foreground'
+                                }`}
+                              >
+                                {milestone.percentage}%
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+                              <span className="font-medium tabular-nums">
+                                {formatCurrency(milestoneAmount)} USDC
+                              </span>
+                              {isDone && milestone.completedAt && (
+                                <span className="text-muted-foreground">
+                                  Completed {formatDate(milestone.completedAt)}
+                                </span>
+                              )}
+                              {isActive && (
+                                <span className="text-primary">
+                                  {isShipmentMilestone(milestone.name, index, deal.milestones.length)
+                                    ? 'Release requested — awaiting admin approval'
+                                    : 'Delivery confirmed — awaiting admin release'}
+                                </span>
+                              )}
+                            </div>
+
+                            {milestone.proofNotes && !isDone && (
+                              <p className="mt-1 text-xs text-muted-foreground">{milestone.proofNotes}</p>
+                            )}
+
+                            {/* Role-specific actions */}
+                            {milestone.status === 'pending' &&
+                              deal.status !== 'awaiting_funding' &&
+                              deal.escrowAddress && (
+                                <div className="mt-3">
+                                  {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
+                                    <p className="text-xs text-muted-foreground">
+                                      The PyME (buyer) will confirm this milestone when they receive the goods.
+                                    </p>
+                                  )}
+                                  {isShipmentMilestone(milestone.name, index, deal.milestones.length) && isSupplier && (
+                                    <Button
+                                      size="sm"
+                                      type="button"
+                                      onClick={() => handleAcceptOrder(index, milestone.id)}
+                                      disabled={acceptingMilestoneId === milestone.id}
+                                    >
+                                      {acceptingMilestoneId === milestone.id
+                                        ? 'Accepting…'
+                                        : 'Accept order & request release'}
+                                    </Button>
+                                  )}
+                                  {isDeliveryMilestone(milestone.name, index, deal.milestones.length) && (isPyme || isAdmin) && (
+                                    <Button
+                                      size="sm"
+                                      variant={isPyme ? 'default' : 'outline'}
+                                      type="button"
+                                      onClick={() => openProofDialog(index, milestone.id)}
+                                      disabled={confirmingDeliveryMilestoneId === milestone.id}
+                                    >
+                                      <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                                      {confirmingDeliveryMilestoneId === milestone.id
+                                        ? 'Confirming…'
+                                        : 'Confirm delivery'}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -919,168 +970,160 @@ export default function DealDetailPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-5">
+            {/* Return calculator — only for open deals */}
+            {deal.status === 'awaiting_funding' && deal.yieldAPR != null && (
+              <Card className="border-success/30 bg-success/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base text-success">
+                    <TrendingUp className="h-4 w-4" aria-hidden />
+                    Investor return
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-end justify-between">
+                    <p className="text-sm text-muted-foreground">Principal</p>
+                    <p className="font-semibold tabular-nums">{formatCurrency(deal.priceUSDC)}</p>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Profit ({deal.term}d @ {deal.yieldAPR.toFixed(1)}%)
+                    </p>
+                    <p className="font-semibold tabular-nums text-success">
+                      +{formatCurrency(Math.round(deal.priceUSDC * (deal.yieldAPR / 100) * (deal.term / 365)))}
+                    </p>
+                  </div>
+                  <Separator />
+                  <div className="flex items-end justify-between">
+                    <p className="text-sm font-medium">Total repayment</p>
+                    <p className="text-lg font-bold tabular-nums">
+                      {formatCurrency(Math.round(deal.priceUSDC * (1 + (deal.yieldAPR / 100) * (deal.term / 365))))}
+                    </p>
+                  </div>
+                  {(deal.yieldBonusApr ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Includes {deal.yieldBonusApr}% bonus APR offered by the PyME.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Stakeholders */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base">Stakeholders</CardTitle>
-                <CardDescription>
-                  Click a name to view profile and reputation
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10">
-                    <Package className="h-5 w-5 text-accent" />
+              <CardContent className="space-y-3">
+                {[
+                  {
+                    icon: <Package className="h-4 w-4 text-accent" aria-hidden />,
+                    bg: 'bg-accent/10',
+                    label: 'PyME (Buyer)',
+                    name: deal.pymeName,
+                    href: deal.pymeId ? `/pymes/${deal.pymeId}` : undefined,
+                  },
+                  {
+                    icon: <TrendingUp className="h-4 w-4 text-success" aria-hidden />,
+                    bg: 'bg-success/10',
+                    label: 'Investor',
+                    name: deal.investorName ?? 'Awaiting funding',
+                    href: deal.investorId && deal.investorName ? `/investors/${deal.investorId}` : undefined,
+                  },
+                  {
+                    icon: <Building2 className="h-4 w-4 text-primary" aria-hidden />,
+                    bg: 'bg-primary/10',
+                    label: 'Supplier',
+                    name: deal.supplier,
+                    href: deal.supplierId ? `/suppliers/${deal.supplierId}` : undefined,
+                  },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-center gap-3">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${s.bg}`}>
+                      {s.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">{s.label}</p>
+                      {s.href ? (
+                        <Link
+                          href={s.href}
+                          className="group flex items-center gap-0.5 text-sm font-medium hover:text-accent hover:underline"
+                        >
+                          <span className="truncate">{s.name}</span>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                        </Link>
+                      ) : (
+                        <p className="truncate text-sm font-medium text-muted-foreground">{s.name}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">PyME (Buyer)</p>
-                    {deal.pymeId ? (
-                      <Link
-                        href={`/pymes/${deal.pymeId}`}
-                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                      >
-                        {deal.pymeName}
-                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                      </Link>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{deal.pymeName}</p>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/10">
-                    <TrendingUp className="h-5 w-5 text-success" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">Investor</p>
-                    {deal.investorId && deal.investorName ? (
-                      <Link
-                        href={`/investors/${deal.investorId}`}
-                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                      >
-                        {deal.investorName}
-                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                      </Link>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {deal.investorName ?? 'Awaiting funding'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">Supplier</p>
-                    {deal.supplierId ? (
-                      <Link
-                        href={`/suppliers/${deal.supplierId}`}
-                        className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                      >
-                        {deal.supplier}
-                        <ChevronRight className="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                      </Link>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{deal.supplier}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Security Features */}
-            <Card className="border-accent">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ShieldCheck className="h-5 w-5" />
-                  Security Features
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  <p className="text-muted-foreground">
-                    Non-custodial escrow via TrustlessWork smart contract
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  <p className="text-muted-foreground">
-                    Milestone-based payment release (50/50 split)
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  <p className="text-muted-foreground">
-                    Full transparency on Stellar blockchain
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                  <p className="text-muted-foreground">
-                    Dispute resolution mechanism built-in
-                  </p>
-                </div>
+                ))}
               </CardContent>
             </Card>
 
             {/* Timeline */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="h-4 w-4" aria-hidden />
                   Timeline
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    1
-                  </div>
-                  <div>
-                    <p className="font-medium">Deal Created</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(deal.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
+              <CardContent>
+                <ol className="relative space-y-4 border-l border-border pl-5">
+                  <li className="relative">
+                    <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-foreground ring-2 ring-background" />
+                    <p className="text-sm font-medium">Deal created</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(deal.createdAt)}</p>
+                  </li>
+                  {deal.fundedAt ? (
+                    <li className="relative">
+                      <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-success ring-2 ring-background" />
+                      <p className="text-sm font-medium">Funded</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(deal.fundedAt)}</p>
+                    </li>
+                  ) : (
+                    <li className="relative">
+                      <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground bg-background" />
+                      <p className="text-sm text-muted-foreground">Awaiting funding</p>
+                    </li>
+                  )}
+                  {deal.completedAt ? (
+                    <li className="relative">
+                      <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-success ring-2 ring-background" />
+                      <p className="text-sm font-medium">Completed</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(deal.completedAt)}</p>
+                    </li>
+                  ) : (
+                    <li className="relative">
+                      <span className="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground bg-background" />
+                      <p className="text-sm text-muted-foreground">Awaiting completion</p>
+                    </li>
+                  )}
+                </ol>
+              </CardContent>
+            </Card>
 
-                {deal.fundedAt && (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-xs font-medium text-success-foreground">
-                      2
-                    </div>
-                    <div>
-                      <p className="font-medium">Funded</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(deal.fundedAt).toLocaleDateString()}
-                      </p>
-                    </div>
+            {/* Security */}
+            <Card className="border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Lock className="h-4 w-4" aria-hidden />
+                  Escrow & trust
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {[
+                  'Non-custodial escrow on Stellar (TrustlessWork)',
+                  'Milestone-gated payment release',
+                  'Wallet-signed transactions — no third-party custody',
+                  'Dispute resolution built into the contract',
+                ].map((point) => (
+                  <div key={point} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
+                    <p className="text-xs text-muted-foreground">{point}</p>
                   </div>
-                )}
-
-                {deal.completedAt && (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-xs font-medium text-success-foreground">
-                      3
-                    </div>
-                    <div>
-                      <p className="font-medium">Completed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(deal.completedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                ))}
               </CardContent>
             </Card>
           </div>

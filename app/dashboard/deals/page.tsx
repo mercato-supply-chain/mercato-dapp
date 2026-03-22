@@ -161,7 +161,7 @@ export default async function DashboardDealsPage({
                 No deals yet
               </CardTitle>
               <CardDescription>
-                Deals where you are selected as the supplier will appear here. PyMEs create deals and choose suppliers from the marketplace.
+                Deals where you are selected as the supplier will appear here. PyMEs create deals and choose suppliers when they browse the platform.
               </CardDescription>
             </CardHeader>
             <CardContent>

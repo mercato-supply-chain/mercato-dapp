@@ -45,6 +45,8 @@ export interface Deal {
   description?: string
   category?: string
   yieldAPR?: number
+  /** Extra APR (percentage points) offered by PyME on top of the base formula rate */
+  yieldBonusApr?: number
 }
 
 export interface User {

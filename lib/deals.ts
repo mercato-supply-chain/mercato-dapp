@@ -16,6 +16,7 @@ export interface DealRow {
   supplier_name: string
   amount: number
   interest_rate: number
+  yield_bonus_apr?: number | null
   term_days: number
   status: string
   escrow_address?: string | null
@@ -62,7 +63,7 @@ const DB_STATUS_TO_DEAL_STATUS: Record<string, DealStatus> = {
 }
 
 /**
- * Map a Supabase deal row (with optional milestones and pyme profile) to the Deal type used by DealCard and marketplace.
+ * Map a Supabase deal row (with optional milestones and pyme profile) to the Deal type used by DealCard and the deals browse page.
  */
 export function mapDealFromDb(row: DealRow): Deal {
   const pymeProfile = row.pyme ?? row.profiles
@@ -133,7 +134,15 @@ export function mapDealFromDb(row: DealRow): Deal {
       const amount = Number(row.amount ?? 0)
       const termDays = row.term_days ?? 0
       if (amount <= 0 || termDays <= 0) return undefined
+      const stored = row.interest_rate
+      if (stored != null && Number.isFinite(Number(stored))) {
+        return Math.round(Number(stored) * 100) / 100
+      }
       return calculateYieldAPR(termDays, amount)
     })(),
+    yieldBonusApr:
+      row.yield_bonus_apr != null && Number.isFinite(Number(row.yield_bonus_apr))
+        ? Math.round(Number(row.yield_bonus_apr) * 100) / 100
+        : undefined,
   }
 }

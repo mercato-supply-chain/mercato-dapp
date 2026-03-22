@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Building2 } from 'lucide-react'
 import { formatCurrency, formatPercent } from '@/lib/format'
+import { Input } from '@/components/ui/input'
 import type { CreateDealFormData } from '../types'
 
 interface SupplierOption {
@@ -23,12 +24,20 @@ interface SupplierOption {
 interface SupplierStepProps {
   formData: Pick<
     CreateDealFormData,
-    'supplierId' | 'supplierName' | 'supplierContact' | 'term' | 'category'
+    | 'supplierId'
+    | 'supplierName'
+    | 'supplierContact'
+    | 'term'
+    | 'category'
+    | 'yieldBonusApr'
   >
   filteredSuppliers: SupplierOption[]
   totalAmount: number
   estimatedYield: number
-  calculatedAPR?: number
+  baseAPR?: number
+  effectiveAPR?: number
+  yieldBonusApr: number
+  maxYieldBonusApr: number
   onUpdate: (field: keyof CreateDealFormData, value: string) => void
   onSupplierSelect: (supplierId: string) => void
 }
@@ -38,10 +47,18 @@ export function SupplierStep({
   filteredSuppliers,
   totalAmount,
   estimatedYield,
-  calculatedAPR,
+  baseAPR,
+  effectiveAPR,
+  yieldBonusApr,
+  maxYieldBonusApr,
   onUpdate,
   onSupplierSelect,
 }: SupplierStepProps) {
+  const rawBonusInput =
+    parseFloat(String(formData.yieldBonusApr).replace(',', '.')) || 0
+  const showBonusCapHint =
+    Number.isFinite(rawBonusInput) && rawBonusInput > maxYieldBonusApr
+
   return (
     <Card>
       <CardHeader>
@@ -127,6 +144,36 @@ export function SupplierStep({
           </p>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="yield-bonus-apr">
+            Additional investor yield (optional)
+          </Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="yield-bonus-apr"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={maxYieldBonusApr}
+              step={0.25}
+              value={formData.yieldBonusApr}
+              onChange={(e) => onUpdate('yieldBonusApr', e.target.value)}
+              className="max-w-[140px] tabular-nums"
+            />
+            <span className="text-sm text-muted-foreground">% APR</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Extra percentage points on top of the base rate (from term and deal
+            size), up to {maxYieldBonusApr}% — increases what you repay but makes
+            the deal more attractive to investors
+          </p>
+          {showBonusCapHint && (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              Applied bonus is capped at {maxYieldBonusApr}% APR.
+            </p>
+          )}
+        </div>
+
         {totalAmount > 0 && (
           <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
@@ -144,10 +191,23 @@ export function SupplierStep({
                 {formatPercent((estimatedYield / totalAmount) * 100)})
               </span>
             </div>
-            {calculatedAPR != null && (
-              <p className="text-xs text-muted-foreground">
-                Based on {calculatedAPR.toFixed(1)}% APR (from {formData.term} days and deal amount)
-              </p>
+            {baseAPR != null && effectiveAPR != null && (
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>
+                  Base {baseAPR.toFixed(1)}% APR (from {formData.term} days and
+                  deal amount)
+                  {yieldBonusApr > 0 && (
+                    <span className="text-foreground">
+                      {' '}
+                      + {yieldBonusApr.toFixed(2)}% PyME bonus →{' '}
+                      <span className="font-medium text-success">
+                        {effectiveAPR.toFixed(2)}% APR
+                      </span>{' '}
+                      total
+                    </span>
+                  )}
+                </p>
+              </div>
             )}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">

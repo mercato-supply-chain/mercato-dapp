@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Package, Store, TrendingUp } from 'lucide-react'
+import { Package, PieChart, Store, TrendingUp } from 'lucide-react'
 
 const links = [
-  { href: '/marketplace', label: 'Marketplace', icon: TrendingUp },
+  { href: '/deals', label: 'Deals', icon: TrendingUp },
   { href: '/suppliers', label: 'Suppliers', icon: Package },
   { href: '/pymes', label: 'PYMEs', icon: Store },
+  { href: '/investors', label: 'Investors', icon: PieChart },
   { href: '/how-it-works', label: 'How It Works', icon: Package },
 ] as const
 

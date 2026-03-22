@@ -80,7 +80,7 @@ export default function HowItWorksPage() {
                     2
                   </div>
                   <div>
-                    <CardTitle className="mb-2">Deal Appears in Marketplace</CardTitle>
+                    <CardTitle className="mb-2">Deal appears for investors</CardTitle>
                     <CardDescription className="text-base">
                       The deal is now visible to investors seeking short-term yield opportunities
                     </CardDescription>
@@ -333,7 +333,7 @@ export default function HowItWorksPage() {
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/marketplace">
+              <Link href="/deals">
                 Browse Deals
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

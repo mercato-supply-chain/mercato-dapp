@@ -215,12 +215,12 @@ export default async function DashboardPage({
       case 'pyme':
         return [
           { label: 'Create New Deal', href: '/create-deal', icon: Plus },
-          { label: 'Browse Investors', href: '/marketplace?filter=funded', icon: TrendingUp },
+          { label: 'Browse Investors', href: '/deals?filter=funded', icon: TrendingUp },
           rampAction,
         ]
       case 'investor':
         return [
-          { label: 'Browse Deals', href: '/marketplace', icon: Package },
+          { label: 'Browse Deals', href: '/deals', icon: Package },
           { label: 'My Investments', href: '/dashboard/investments', icon: DollarSign },
           rampAction,
         ]
@@ -234,7 +234,7 @@ export default async function DashboardPage({
       case 'admin':
         return [
           { label: 'Milestone approvals', href: '/dashboard/admin', icon: ShieldCheck },
-          { label: 'View marketplace', href: '/marketplace', icon: Package },
+          { label: 'View deals', href: '/deals', icon: Package },
           rampAction,
         ]
       default:
@@ -481,7 +481,7 @@ export default async function DashboardPage({
               {userType === 'admin' ? 'Recent platform deals' : 'Recent Deals'}
             </h2>
             <Button asChild variant="ghost" size="sm">
-              <Link href={userType === 'admin' ? '/marketplace' : userType === 'supplier' ? '/dashboard/deals' : '/marketplace'}>
+              <Link href={userType === 'admin' ? '/deals' : userType === 'supplier' ? '/dashboard/deals' : '/deals'}>
                 View All
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -495,7 +495,7 @@ export default async function DashboardPage({
                 <h3 className="mb-2 text-lg font-semibold">No deals yet</h3>
                 <p className="mb-4 text-sm text-muted-foreground">
                   {userType === 'pyme' && 'Create your first deal to get started'}
-                  {userType === 'investor' && 'Browse the marketplace to fund your first deal'}
+                  {userType === 'investor' && 'Browse open deals to fund your first investment'}
                   {userType === 'supplier' &&
                     (supplierCompanies.length === 0
                       ? 'Add a company and products in Manage companies so PyMEs can create deals with you.'
@@ -520,7 +520,7 @@ export default async function DashboardPage({
                 )}
                 {(userType === 'investor' || userType === 'admin') && (
                   <Button asChild>
-                    <Link href="/marketplace">Browse Marketplace</Link>
+                    <Link href="/deals">Browse deals</Link>
                   </Button>
                 )}
               </CardContent>
@@ -671,8 +671,8 @@ export default async function DashboardPage({
                     {userType === 'supplier' ? `Your last ${deals.length} deals` : `Last ${deals.length} deals`} • Created date order
                   </p>
                   <Button asChild variant="outline" size="sm">
-                    <Link href={userType === 'supplier' ? '/dashboard/deals' : '/marketplace'}>
-                      {userType === 'supplier' ? 'View all my deals' : 'View all in marketplace'}
+                    <Link href={userType === 'supplier' ? '/dashboard/deals' : '/deals'}>
+                      {userType === 'supplier' ? 'View all my deals' : 'View all deals'}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

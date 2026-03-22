@@ -10,8 +10,11 @@ import {
   ArrowLeft,
   FileText,
   DollarSign,
-  Wallet,
+  Globe,
+  Briefcase,
+  Phone,
 } from 'lucide-react'
+import { getCountryLabel, getSectorLabel } from '@/lib/constants'
 
 type DealRow = {
   id: string
@@ -30,6 +33,32 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('company_name, full_name, contact_name, user_type')
+    .eq('id', id)
+    .single()
+  if (!profile || profile.user_type !== 'investor') {
+    return { title: 'Investor | MERCATO' }
+  }
+  const name =
+    profile.company_name ||
+    profile.full_name ||
+    profile.contact_name ||
+    'Investor'
+  return {
+    title: `${name} | MERCATO`,
+    description: `Investor profile and funded deals for ${name} on MERCATO.`,
+  }
+}
+
 export default async function InvestorDetailPage({
   params,
 }: {
@@ -40,7 +69,9 @@ export default async function InvestorDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, user_type, verified')
+    .select(
+      'id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified',
+    )
     .eq('id', id)
     .single()
 
@@ -74,12 +105,15 @@ export default async function InvestorDetailPage({
     <div className="flex min-h-screen flex-col">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/marketplace">
+            <Link href="/investors">
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
-              Back to Marketplace
+              Back to investors
             </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/deals">Deals</Link>
           </Button>
         </div>
 
@@ -92,20 +126,36 @@ export default async function InvestorDetailPage({
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{displayName}</h1>
-                <Badge variant="secondary" className="mt-2">
-                  Investor
-                </Badge>
-                {profile.verified && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 bg-success/10 text-success"
-                  >
-                    Verified
-                  </Badge>
-                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">Investor</Badge>
+                  {profile.verified && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-success/10 text-success"
+                    >
+                      Verified
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+          {(profile.country || profile.sector) && (
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              {profile.sector && (
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="h-4 w-4 shrink-0" aria-hidden />
+                  {getSectorLabel(profile.sector)}
+                </span>
+              )}
+              {profile.country && (
+                <span className="flex items-center gap-1.5">
+                  <Globe className="h-4 w-4 shrink-0" aria-hidden />
+                  {getCountryLabel(profile.country)}
+                </span>
+              )}
+            </div>
+          )}
           {profile.bio && (
             <p className="mt-4 max-w-2xl text-muted-foreground">{profile.bio}</p>
           )}
@@ -159,7 +209,16 @@ export default async function InvestorDetailPage({
                     {profile.email}
                   </a>
                 </div>
-              ) : (
+              ) : null}
+              {profile.phone ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <a href={`tel:${profile.phone}`} className="hover:underline">
+                    {profile.phone}
+                  </a>
+                </div>
+              ) : null}
+              {!profile.email && !profile.phone && (
                 <p className="text-sm text-muted-foreground">
                   Contact information not shared
                 </p>

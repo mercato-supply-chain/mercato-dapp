@@ -12,6 +12,26 @@ export function calculateYieldAPR(termDays: number, amount: number): number {
   return Math.round((baseAPR - discount) * 100) / 100
 }
 
+/** Max extra APR (percentage points) a PyME may add on top of the base rate. */
+export const MAX_YIELD_BONUS_APR = 10
+
+/**
+ * Clamps the PyME-offered bonus APR to a safe range (0–MAX_YIELD_BONUS_APR).
+ */
+export function clampYieldBonusApr(bonus: number): number {
+  if (!Number.isFinite(bonus)) return 0
+  return (
+    Math.round(Math.max(0, Math.min(MAX_YIELD_BONUS_APR, bonus)) * 100) / 100
+  )
+}
+
+/**
+ * Total investor APR: base (from term + amount) plus optional PyME bonus.
+ */
+export function effectiveInvestorApr(baseAPR: number, bonusApr: number): number {
+  return Math.round((baseAPR + bonusApr) * 100) / 100
+}
+
 /**
  * Calculates the expected yield amount in USDC for a deal.
  */

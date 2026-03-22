@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -10,20 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CheckCircle2, Info } from 'lucide-react'
+import { CheckCircle2, Info, Plus, Trash2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
-import type { CreateDealFormData } from '../types'
+import {
+  equalMilestonePercentages,
+  sumMilestonePercentages,
+  type MilestoneDraft,
+  MAX_MILESTONES,
+  MIN_MILESTONES,
+} from '../types'
 
 interface MilestonesStepProps {
-  formData: Pick<
-    CreateDealFormData,
-    | 'milestone1Name'
-    | 'milestone1Percentage'
-    | 'milestone2Name'
-    | 'milestone2Percentage'
-  >
+  milestones: MilestoneDraft[]
   totalAmount: number
-  onUpdate: (field: keyof CreateDealFormData, value: string) => void
+  onMilestonesChange: (milestones: MilestoneDraft[]) => void
 }
 
 const PERCENT_OPTIONS = ['30', '40', '50', '60', '70'] as const
@@ -33,23 +34,61 @@ function complementPercent(p: string): string {
 }
 
 export function MilestonesStep({
-  formData,
+  milestones,
   totalAmount,
-  onUpdate,
+  onMilestonesChange,
 }: MilestonesStepProps) {
-  const m1Pct = Number(formData.milestone1Percentage)
-  const m2Pct = Number(formData.milestone2Percentage)
-  const m1Amount = (totalAmount * m1Pct) / 100
-  const m2Amount = (totalAmount * m2Pct) / 100
+  const totalPct = sumMilestonePercentages(milestones)
+  const pctBalanced = Math.abs(totalPct - 100) < 0.0001
 
-  const handleM1PercentChange = (v: string) => {
-    onUpdate('milestone1Percentage', v)
-    onUpdate('milestone2Percentage', complementPercent(v))
+  const updateAt = (index: number, patch: Partial<MilestoneDraft>) => {
+    const next = milestones.map((m, i) =>
+      i === index ? { ...m, ...patch } : m,
+    )
+    onMilestonesChange(next)
   }
 
-  const handleM2PercentChange = (v: string) => {
-    onUpdate('milestone2Percentage', v)
-    onUpdate('milestone1Percentage', complementPercent(v))
+  const handleTwoMilestonePercentChange = (index: number, v: string) => {
+    const other = index === 0 ? 1 : 0
+    const next = [...milestones]
+    next[index] = { ...next[index], percentage: v }
+    next[other] = { ...next[other], percentage: complementPercent(v) }
+    onMilestonesChange(next)
+  }
+
+  const handleMultiPercentChange = (index: number, raw: string) => {
+    if (raw === '') {
+      updateAt(index, { percentage: '' })
+      return
+    }
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return
+    const clamped = Math.min(99, Math.max(0, Math.round(n)))
+    updateAt(index, { percentage: String(clamped) })
+  }
+
+  const addMilestone = () => {
+    if (milestones.length >= MAX_MILESTONES) return
+    const n = milestones.length + 1
+    const pcts = equalMilestonePercentages(n)
+    const next = milestones.map((m, i) => ({
+      ...m,
+      percentage: pcts[i],
+    }))
+    next.push({
+      name: `Milestone ${n}`,
+      percentage: pcts[n - 1],
+    })
+    onMilestonesChange(next)
+  }
+
+  const removeMilestone = (index: number) => {
+    if (milestones.length <= MIN_MILESTONES) return
+    const filtered = milestones.filter((_, i) => i !== index)
+    const pcts = equalMilestonePercentages(filtered.length)
+    onMilestonesChange(
+      filtered.map((m, i) => ({ ...m, percentage: pcts[i] })),
+    )
   }
 
   return (
@@ -75,83 +114,113 @@ export function MilestonesStep({
                 Standard Milestone Structure
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Most deals use a 50/50 split: 50% upfront after shipment
-                confirmation, and 50% after delivery confirmation. You can
-                customize if needed.
+                Most deals use a 50/50 split: 50% after shipment confirmation,
+                and 50% after delivery. Add more milestones if your supplier
+                needs extra release points — percentages must total 100%.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-border p-4">
-          <h4 className="font-semibold">Milestone 1</h4>
-          <div className="space-y-2">
-            <Label htmlFor="milestone1Name">Milestone Name</Label>
-            <Input
-              id="milestone1Name"
-              value={formData.milestone1Name}
-              readOnly
-              className="bg-muted cursor-not-allowed"
-              aria-readonly="true"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="milestone1Percentage">Payment Percentage</Label>
-            <Select
-              value={formData.milestone1Percentage}
-              onValueChange={handleM1PercentChange}
-            >
-              <SelectTrigger id="milestone1Percentage">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERCENT_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}%
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {formatCurrency(m1Amount)} USDC
-            </p>
-          </div>
-        </div>
+        {milestones.map((m, index) => {
+          const pct = Number(m.percentage || 0)
+          const amount = (totalAmount * pct) / 100
+          const isTwo = milestones.length === 2
 
-        <div className="space-y-4 rounded-lg border border-border p-4">
-          <h4 className="font-semibold">Milestone 2</h4>
-          <div className="space-y-2">
-            <Label htmlFor="milestone2Name">Milestone Name</Label>
-            <Input
-              id="milestone2Name"
-              value={formData.milestone2Name}
-              readOnly
-              className="bg-muted cursor-not-allowed"
-              aria-readonly="true"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="milestone2Percentage">Payment Percentage</Label>
-            <Select
-              value={formData.milestone2Percentage}
-              onValueChange={handleM2PercentChange}
+          return (
+            <div
+              key={`milestone-${index}`}
+              className="space-y-4 rounded-lg border border-border p-4"
             >
-              <SelectTrigger id="milestone2Percentage">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERCENT_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}%
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {formatCurrency(m2Amount)} USDC
-            </p>
-          </div>
-        </div>
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="font-semibold">Milestone {index + 1}</h4>
+                {milestones.length > MIN_MILESTONES && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeMilestone(index)}
+                    aria-label={`Remove milestone ${index + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`milestone-name-${index}`}>Milestone Name</Label>
+                <Input
+                  id={`milestone-name-${index}`}
+                  value={m.name}
+                  onChange={(e) => updateAt(index, { name: e.target.value })}
+                  placeholder="e.g. Deposit on order"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`milestone-pct-${index}`}>
+                  Payment Percentage
+                </Label>
+                {isTwo ? (
+                  <Select
+                    value={m.percentage}
+                    onValueChange={(v) =>
+                      handleTwoMilestonePercentChange(index, v)
+                    }
+                  >
+                    <SelectTrigger id={`milestone-pct-${index}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PERCENT_OPTIONS.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}%
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id={`milestone-pct-${index}`}
+                    type="number"
+                    min={1}
+                    max={99}
+                    inputMode="numeric"
+                    value={m.percentage}
+                    onChange={(e) =>
+                      handleMultiPercentChange(index, e.target.value)
+                    }
+                    className="tabular-nums"
+                  />
+                )}
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {formatCurrency(amount)} USDC
+                </p>
+              </div>
+            </div>
+          )
+        })}
+
+        {milestones.length < MAX_MILESTONES && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={addMilestone}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            Add milestone
+          </Button>
+        )}
+
+        <p
+          className={`text-sm font-medium tabular-nums ${
+            pctBalanced ? 'text-muted-foreground' : 'text-destructive'
+          }`}
+          role="status"
+        >
+          Total: {totalPct.toFixed(0)}%
+          {!pctBalanced && ' — must equal 100%'}
+        </p>
       </CardContent>
     </Card>
   )

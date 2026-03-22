@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 const steps = [
   'Create your deal with product details and payment terms',
   'Escrow smart contract is deployed to Stellar',
-  'Investors fund your deal through the marketplace',
+  'Investors fund your deal when they browse open deals',
   'Supplier ships and gets paid in milestones',
 ] as const
 

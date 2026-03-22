@@ -208,7 +208,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/marketplace?filter=funded" className="cursor-pointer">
+                <Link href="/deals?filter=funded" className="cursor-pointer">
                   <TrendingUp className="mr-2 h-4 w-4" aria-hidden />
                   Browse Investors
                 </Link>
@@ -218,7 +218,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
           {userType === 'investor' && (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/marketplace" className="cursor-pointer">
+                <Link href="/deals" className="cursor-pointer">
                   <Package className="mr-2 h-4 w-4" aria-hidden />
                   Browse Deals
                 </Link>
@@ -326,7 +326,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
             <Plus className="h-4 w-4" aria-hidden />
             Create Deal
           </Link>
-          <Link href="/marketplace?filter=funded" className={linkClass}>
+          <Link href="/deals?filter=funded" className={linkClass}>
             <TrendingUp className="h-4 w-4" aria-hidden />
             Browse Investors
           </Link>
@@ -334,7 +334,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
       )}
       {userType === 'investor' && (
         <>
-          <Link href="/marketplace" className={linkClass}>
+          <Link href="/deals" className={linkClass}>
             <Package className="h-4 w-4" aria-hidden />
             Browse Deals
           </Link>
