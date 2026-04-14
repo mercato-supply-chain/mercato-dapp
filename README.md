@@ -182,4 +182,6 @@ pnpm start
 
 ## License
 
-Private / unlicensed unless otherwise specified.
+MERCATO is released under the **[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)** (SPDX `Apache-2.0`). See the [`LICENSE`](LICENSE) file in the repository root for the full terms.
+
+Apache 2.0 is a permissive open-source license that includes an express **patent grant** from contributors, standard **redistribution and attribution** requirements, and **disclaimers of warranty and limitation of liability**—the usual legal framing teams want when publishing source publicly. If you need a different arrangement (for example a commercial license or CLA), that should be documented by the maintainers in addition to this default.

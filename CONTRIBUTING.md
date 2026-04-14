@@ -87,4 +87,4 @@ Be respectful and professional in issues and PRs. Maintainers may decline or req
 
 ## License
 
-Outbound contributions are accepted under the terms stated in this repository’s **LICENSE** (or as noted in the README if no LICENSE file is present). If you are unsure, ask before contributing.
+By opening a pull request, you agree your contribution can be merged under the same terms as the project: **Apache License 2.0** (see [`LICENSE`](LICENSE)). If you are unsure, ask before contributing.
