@@ -12,6 +12,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'MERCATO - Supply Chain Finance Platform',
   description: 'Connect PyMEs, investors, and suppliers through transparent, blockchain-secured escrow for supply chain financing',
+  icons: {
+    icon: [{ url: '/mercato.svg', type: 'image/svg+xml' }],
+  },
 }
 
 export default function RootLayout({

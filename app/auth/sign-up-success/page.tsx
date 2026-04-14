@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { CheckCircle2, Mail, Package } from 'lucide-react'
+import { MercatoLogo } from '@/components/mercato-logo'
+import { CheckCircle2, Mail } from 'lucide-react'
 
 export default function SignUpSuccessPage() {
   return (
@@ -13,7 +14,7 @@ export default function SignUpSuccessPage() {
             className="mb-10 flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Package className="h-5 w-5" aria-hidden />
+              <MercatoLogo className="h-5" />
             </span>
             MERCATO
           </Link>

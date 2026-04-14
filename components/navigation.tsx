@@ -8,7 +8,8 @@ import { useWallet } from '@/hooks/use-wallet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Package, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
+import { MercatoLogo } from '@/components/mercato-logo'
 import { NavLinks } from '@/components/navigation/nav-links'
 import { UserNav, type NavProfile, type NavUser } from '@/components/navigation/user-nav'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
@@ -75,7 +76,7 @@ export function Navigation() {
             className="group flex items-center gap-2 rounded-md outline-offset-4 transition-[opacity,transform] duration-200 ease-out hover:opacity-90 active:scale-[0.98] motion-reduce:active:scale-100"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
-              <Package className="h-5 w-5 text-primary-foreground" aria-hidden />
+              <MercatoLogo className="h-5" />
             </div>
             <span className="text-xl font-semibold tracking-tight">MERCATO</span>
           </Link>

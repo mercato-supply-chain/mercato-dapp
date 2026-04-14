@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Navigation } from '@/components/navigation'
 import { HeroDealsCarousel } from '@/components/landing/hero-deals-carousel'
+import { MercatoLogo } from '@/components/mercato-logo'
 import { cn } from '@/lib/utils'
 import {
   Boxes,
@@ -11,7 +12,6 @@ import {
   ArrowLeft,
   ArrowUp,
   Lock,
-  Package,
   Truck,
   DollarSign,
   RotateCcw,
@@ -669,7 +669,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <MercatoLogo className="h-5 dark:invert" />
               <span className="font-semibold">MERCATO</span>
             </div>
             <p className="text-sm text-muted-foreground">
