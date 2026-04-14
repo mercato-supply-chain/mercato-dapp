@@ -29,6 +29,7 @@ flowchart TB
 
   subgraph Stellar["Stellar Ecosystem"]
     Trustless[Trustless Work API]
+    Blend[Blend\nSoroban lending]
     StellarNet[Stellar Network]
     Wallets[Stellar Wallets Kit\nFreighter · Albedo]
   end
@@ -37,6 +38,7 @@ flowchart TB
     Etherfuse[Etherfuse]
     AlfredPay[Alfred Pay]
     BlindPay[BlindPay]
+    MoneyGram[MoneyGram\nStellar ramps]
   end
 
   PyME --> Next
@@ -48,15 +50,18 @@ flowchart TB
   API --> Supabase
   Next --> Wallets
   Next --> Trustless
+  Next --> Blend
+  Blend --> StellarNet
   API --> Etherfuse
   API --> AlfredPay
   API --> BlindPay
+  API --> MoneyGram
   Trustless --> StellarNet
   Wallets --> StellarNet
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through blockchain-secured escrow. Auth and deal data live in **Supabase**; escrow and payments are **non-custodial** on **Stellar** via **Trustless Work**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay). An **Admin** role oversees milestone approvals and platform operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through blockchain-secured escrow. Auth and deal data live in **Supabase**; escrow and payments are **non-custodial** on **Stellar** via **Trustless Work**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay) and **MoneyGram** Stellar on/off-ramps (see [MoneyGram developer docs — Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)). **Blend** ([Blend Capital](https://www.blend.capital/), [Blend v2 docs](https://docs.blend.capital/)) supplies **Soroban** decentralized lending pools as the Stellar-native liquidity / lending layer alongside deal escrow. An **Admin** role oversees milestone approvals and platform operations.
 
 ---
 
@@ -221,6 +226,7 @@ flowchart TB
     TrustlessPkg["@trustless-work/escrow"]
     StellarSDK["@stellar/stellar-sdk"]
     WalletKit["@creit.tech/stellar-wallets-kit"]
+    BlendPools["Blend\nSoroban lending pools"]
   end
 
   subgraph RampLib["Ramp Integration"]
@@ -241,6 +247,7 @@ flowchart TB
   Next --> TrustlessPkg
   Next --> StellarSDK
   Next --> WalletKit
+  Next --> BlendPools
 ```
 
 | Layer | Technology | Version |
@@ -252,6 +259,7 @@ flowchart TB
 | **Escrow** | Trustless Work API (@trustless-work/escrow) | 3.0 |
 | **Wallets** | Stellar Wallets Kit (Freighter, Albedo) | 1.9 |
 | **Stellar** | @stellar/stellar-sdk | 14.5 |
+| **Lending (Soroban)** | [Blend Capital — Blend](https://www.blend.capital/) (Stellar Soroban pools); [Blend v2 documentation](https://docs.blend.capital/) | — |
 | **Validation** | Zod, react-hook-form | 3.24 / 7.54 |
 | **Ramps** | Custom anchor clients + SEP modules (lib/anchors) | — |
 
@@ -516,8 +524,11 @@ Shared presentational components: `QuoteCard`, `StepIndicator`, `CopyButton`, `P
 | **Etherfuse** | Mexico | SPEI | USDC, CETES | Iframe | Deferred (poll for XDR, then sign) |
 | **Alfred Pay** | Latin America | SPEI | USDC | Form | Standard |
 | **BlindPay** | Global | Multiple | USDB | Redirect | Anchor payout submission |
+| **MoneyGram** | Global (MoneyGram network) | Per MoneyGram Stellar product | XLM, USDC (per developer “For Blockchain” docs) | SEP-10, SEP-9 fields | Per MoneyGram Stellar transaction flow |
 
-Provider availability is driven by **environment variables**; `getConfiguredProviders()` in `anchor-factory.ts` returns only anchors with all required env vars set. All three clients implement the shared `Anchor` interface from `lib/anchors/types.ts`.
+**Etherfuse, Alfred Pay, and BlindPay:** availability is driven by **environment variables**; `getConfiguredProviders()` in `anchor-factory.ts` returns only anchors with all required env vars set. All three implement the shared `Anchor` interface from `lib/anchors/types.ts`.
+
+**MoneyGram:** Stellar ramps use MoneyGram’s blockchain APIs and SEP patterns as in their documentation (including [Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps) for wallet/domain allowlisting); this path is **not** wired through `anchor-factory.ts`.
 
 ### 6.4 On-Ramp Data Flow
 
@@ -703,8 +714,9 @@ flowchart TB
     T1["Next.js 16 + React 19\nTailwind + shadcn/ui"]
     T2["Supabase\nAuth + Postgres"]
     T3["Trustless Work\nStellar escrow contracts"]
+    T3b["Blend\nSoroban lending pools"]
     T4["Stellar Wallets Kit\nFreighter · Albedo"]
-    T5["Anchor clients\nEtherfuse · Alfred Pay · BlindPay"]
+    T5["Ramps\nEtherfuse · Alfred Pay · BlindPay · MoneyGram"]
     T6["SEP modules\n1 · 6 · 10 · 12 · 24 · 31 · 38"]
   end
 
@@ -719,4 +731,7 @@ flowchart TB
 - [Stellar](https://stellar.org) — Network and assets
 - [Stellar Wallets Kit](https://stellarwalletskit.dev/) — Wallet connection (Freighter, Albedo)
 - [Supabase](https://supabase.com) — Auth and database
-- [lib/anchors/README.md](../lib/anchors/README.md) — Anchor interface and ramp provider details
+- [lib/anchors/README.md](../lib/anchors/README.md) — Anchor interface and ramp provider details (Etherfuse, Alfred Pay, BlindPay)
+- [MoneyGram — Ramps Instant Access / Stellar ramps](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps) — Stellar on/off-ramp (XLM, USDC), SEP-10 / SEP-9, allowlisting
+- [Blend Capital](https://www.blend.capital/) — Blend product home (Stellar Soroban lending pools)
+- [Blend v2 documentation](https://docs.blend.capital/) — Protocol docs (users, pool creators)
