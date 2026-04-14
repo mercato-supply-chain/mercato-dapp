@@ -16,13 +16,14 @@ MERCATO is a **supply chain finance** application: it helps **small and medium b
 
 ### Why Stellar (and this ecosystem)
 
-MERCATO is built **on and around Stellar** by composing **many Stellar-focused products**, not a single integration. That matters for reviewers: the app is intentionally **modular**—settlement and assets on Stellar, specialized vendors for distinct jobs—so each concern (escrow logic, wallet UX, lending liquidity, fiat access, anchor-style SEP flows) can use **mature tooling** instead of reinventing it.
+MERCATO is built **on and around Stellar** by composing **many Stellar-focused products**, not a single integration. That matters for reviewers: the app is intentionally **modular**—settlement and assets on Stellar, specialized vendors for distinct jobs—so each concern (escrow logic, wallet UX, lending liquidity, **yield vaults**, fiat access, anchor-style SEP flows) can use **mature tooling** instead of reinventing it.
 
 **Examples wired into MERCATO today** (each is summarized in [Stellar ecosystem](#stellar-ecosystem) below):
 
 - **[Trustless Work](https://docs.trustlesswork.com/)** — non-custodial **multi-release escrow** on Stellar (deal funding stays in contract rules, not the platform’s bank account).
 - **[Stellar Wallets Kit](https://stellarwalletskit.dev/)** — one wallet layer for **connect + sign** (e.g. Freighter, Albedo) across escrow and ramp flows.
 - **[Blend](https://www.blend.capital/)** — **Soroban** lending pools as the Stellar-native **liquidity** layer alongside deal escrow ([docs](https://docs.blend.capital/)).
+- **[DeFindex](https://docs.defindex.io)** — **Soroban yield vaults**: tokenized vaults, **multi-strategy** allocation, rebalancing, auto-compounding, and emergency-style **rescue** patterns for optimizing yield alongside other Stellar DeFi ([documentation](https://docs.defindex.io)).
 - **Fiat ramps** — **[Etherfuse](https://etherfuse.com)**, **[Alfred Pay](https://alfredpay.io)**, **[BlindPay](https://blindpay.com)** (anchor-style server clients + UI), **[MoneyGram](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)** Stellar on/off-ramp APIs.
 - **SEP building blocks** — shared modules under `lib/anchors/sep/` for **SEP 1, 6, 10, 12, 24, 31, 38** alongside provider APIs (see [`doc/architecture.md`](doc/architecture.md)).
 
@@ -52,26 +53,28 @@ Three primary roles — **pyme**, **investor**, **supplier** — map to the flow
 | Escrow      | [Trustless Work](https://docs.trustlesswork.com/) — see [Stellar ecosystem](#stellar-ecosystem) |
 | Wallets     | [Stellar Wallets Kit](https://stellarwalletskit.dev/) — see [Stellar ecosystem](#stellar-ecosystem) |
 | Lending     | [Blend](https://www.blend.capital/) (Stellar Soroban) — see [Stellar ecosystem](#stellar-ecosystem) |
+| Yield vaults | [DeFindex](https://docs.defindex.io) (Stellar Soroban) — see [Stellar ecosystem](#stellar-ecosystem) |
 | Styling     | Tailwind, next-themes (light/dark) |
 
 ---
 
 ## Stellar ecosystem
 
-MERCATO runs on the [Stellar](https://stellar.org) network. The items below match **[`doc/architecture.md`](doc/architecture.md)** (diagrams, flows, env reference in §5–6 and §9), including **MoneyGram** Stellar ramps and **[Blend](https://www.blend.capital/)** Soroban lending.
+MERCATO runs on the [Stellar](https://stellar.org) network. The items below match **[`doc/architecture.md`](doc/architecture.md)** (diagrams, flows, env reference in §5–6 and §9), including **MoneyGram** Stellar ramps, **[Blend](https://www.blend.capital/)** Soroban lending, and **[DeFindex](https://docs.defindex.io)** Soroban yield vaults.
 
 | Product | Role in this application |
 |--------|---------------------------|
 | [Trustless Work](https://docs.trustlesswork.com/) | **Escrow** — Non-custodial multi-release contracts: initialize and deploy escrow via the Trustless Work API, sign with the user’s wallet, and drive milestone releases. The app uses `@trustless-work/escrow` and the configured USDC trustline for on-chain settlement. |
 | [Stellar Wallets Kit](https://stellarwalletskit.dev/) | **Wallets** — Single integration for connecting and signing (e.g. **Freighter**, **Albedo**) with `@creit.tech/stellar-wallets-kit`, including escrow deployment and ramp flows that require a signed Stellar transaction. |
 | [Blend](https://www.blend.capital/) | **Soroban lending** — [Blend Capital](https://www.blend.capital/)’s **Blend** protocol: decentralized lending pools on **Stellar Soroban**, created by users, DAOs, and institutions (see their site). Protocol reference: **[Blend v2 docs](https://docs.blend.capital/)**. MERCATO uses Blend as the Stellar-native **liquidity / lending** layer alongside Trustless Work escrow (see [`doc/architecture.md`](doc/architecture.md)). |
+| [DeFindex](https://docs.defindex.io) | **Soroban yield & vaults** — A **decentralized yield** layer on Soroban: **tokenized vaults** expose users to **one or more assets** and **multiple underlying strategies** (lending, liquidity, tokenized bonds, and other listed strategies). Vault managers can **rebalance** safely on-chain, earnings can be **auto-compounded**, and the protocol includes **fee** rails (users, vault managers, and DeFindex) plus **emergency / rescue** flows when a strategy misbehaves. MERCATO treats DeFindex as the **yield-optimization / vault** complement to **Blend** lending pools and Trustless Work **deal escrow**—see [DeFindex documentation](https://docs.defindex.io) for vault creation, SDK integration, deposits, withdrawals, and strategy plug-ins. |
 | [Etherfuse](https://etherfuse.com) | **Fiat ramp** — Mexico (SPEI) ↔ Stellar **USDC** (and **CETES** where the deployment exposes them). KYC via iframe; off-ramp uses deferred signing (poll for XDR, then sign in-wallet). Server-side `EtherfuseClient` in `lib/anchors/etherfuse/`. |
 | [Alfred Pay](https://alfredpay.io) | **Fiat ramp** — Latin America, SPEI ↔ **USDC**; form-based KYC. Server-side `AlfredPayClient` in `lib/anchors/alfredpay/`. |
 | [BlindPay](https://blindpay.com) | **Fiat ramp** — Global rails ↔ Stellar stablecoins (e.g. **USDB** in configured flows). ToS, redirect KYC, wallet registration, and payout submission; dedicated onboarding at `/dashboard/ramp/blindpay-setup`. Server-side `BlindPayClient` in `lib/anchors/blindpay/`. |
 | [MoneyGram (Stellar ramps)](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps) | **Fiat ramp (Stellar)** — MoneyGram’s **Stellar**-based on/off-ramp (developer docs cover acquiring **XLM** and **USDC**, **SEP-10** authentication, **SEP-9** customer info, and transaction lifecycle). Production access uses **Ramps Instant Access** (wallet/domain allowlisting via the same developer portal). |
 | **SEP modules** (`lib/anchors/sep/`) | Shared **Stellar Ecosystem Proposal** building blocks used with the anchor layer (SEP **1, 6, 10, 12, 24, 31, 38** per the architecture doc), alongside each provider’s REST API. |
 
-**Etherfuse**, **Alfred Pay**, and **BlindPay** share the `Anchor` interface; behavior and env-driven availability are summarized in [`lib/anchors/README.md`](lib/anchors/README.md). Those anchors appear in `/dashboard/ramp` only when their server env vars are set. **MoneyGram** follows MoneyGram’s Stellar ramp documentation (not the same `lib/anchors` factory path). **Blend** ([blend.capital](https://www.blend.capital/), [docs](https://docs.blend.capital/)) is Soroban lending infrastructure, separate from fiat ramps and from the Trustless Work escrow SDK path.
+**Etherfuse**, **Alfred Pay**, and **BlindPay** share the `Anchor` interface; behavior and env-driven availability are summarized in [`lib/anchors/README.md`](lib/anchors/README.md). Those anchors appear in `/dashboard/ramp` only when their server env vars are set. **MoneyGram** follows MoneyGram’s Stellar ramp documentation (not the same `lib/anchors` factory path). **Blend** ([blend.capital](https://www.blend.capital/), [docs](https://docs.blend.capital/)) is Soroban **lending-pool** infrastructure; **DeFindex** ([documentation](https://docs.defindex.io)) is Soroban **multi-strategy yield vault** infrastructure. Both sit outside fiat ramps and outside the Trustless Work escrow SDK path.
 
 ---
 
@@ -80,7 +83,7 @@ MERCATO runs on the [Stellar](https://stellar.org) network. The items below matc
 Architecture and design docs (with diagrams) live in the **[`doc/`](doc/)** folder:
 
 - **[Contributing](CONTRIBUTING.md)** — How to contribute (including [Drips Wave — Stellar](https://www.drips.network/wave/stellar)), local checks, and PR / commit expectations.
-- **[Architecture](doc/architecture.md)** — System overview, application flows, tech stack, Stellar/Trustless Work escrow, Blend (Soroban lending), ramp providers (Etherfuse, Alfred Pay, BlindPay, MoneyGram), SEP usage, data split, and environment variables. Includes Mermaid diagrams.
+- **[Architecture](doc/architecture.md)** — System overview, application flows, tech stack, Stellar/Trustless Work escrow, Blend and DeFindex (Soroban lending and yield vaults), ramp providers (Etherfuse, Alfred Pay, BlindPay, MoneyGram), SEP usage, data split, and environment variables. Includes Mermaid diagrams.
 
 ---
 

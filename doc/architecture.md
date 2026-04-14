@@ -30,6 +30,7 @@ flowchart TB
   subgraph Stellar["Stellar Ecosystem"]
     Trustless[Trustless Work API]
     Blend[Blend\nSoroban lending]
+    DeFindex[DeFindex\nSoroban yield vaults]
     StellarNet[Stellar Network]
     Wallets[Stellar Wallets Kit\nFreighter · Albedo]
   end
@@ -51,7 +52,9 @@ flowchart TB
   Next --> Wallets
   Next --> Trustless
   Next --> Blend
+  Next --> DeFindex
   Blend --> StellarNet
+  DeFindex --> StellarNet
   API --> Etherfuse
   API --> AlfredPay
   API --> BlindPay
@@ -61,7 +64,7 @@ flowchart TB
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through blockchain-secured escrow. Auth and deal data live in **Supabase**; escrow and payments are **non-custodial** on **Stellar** via **Trustless Work**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay) and **MoneyGram** Stellar on/off-ramps (see [MoneyGram developer docs — Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)). **Blend** ([Blend Capital](https://www.blend.capital/), [Blend v2 docs](https://docs.blend.capital/)) supplies **Soroban** decentralized lending pools as the Stellar-native liquidity / lending layer alongside deal escrow. An **Admin** role oversees milestone approvals and platform operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through blockchain-secured escrow. Auth and deal data live in **Supabase**; escrow and payments are **non-custodial** on **Stellar** via **Trustless Work**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay) and **MoneyGram** Stellar on/off-ramps (see [MoneyGram developer docs — Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)). **Blend** ([Blend Capital](https://www.blend.capital/), [Blend v2 docs](https://docs.blend.capital/)) supplies **Soroban** decentralized lending pools as the Stellar-native liquidity / lending layer alongside deal escrow. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban** tokenized **yield vaults** that allocate across **multiple DeFi strategies** (with rebalancing, auto-compounding, configurable fees, and emergency/rescue patterns) as the Stellar-native **yield optimization** layer—complementary to Blend pools and Trustless Work escrow. An **Admin** role oversees milestone approvals and platform operations.
 
 ---
 
@@ -227,6 +230,7 @@ flowchart TB
     StellarSDK["@stellar/stellar-sdk"]
     WalletKit["@creit.tech/stellar-wallets-kit"]
     BlendPools["Blend\nSoroban lending pools"]
+    DeFindexVaults["DeFindex\nSoroban yield vaults"]
   end
 
   subgraph RampLib["Ramp Integration"]
@@ -248,6 +252,7 @@ flowchart TB
   Next --> StellarSDK
   Next --> WalletKit
   Next --> BlendPools
+  Next --> DeFindexVaults
 ```
 
 | Layer | Technology | Version |
@@ -260,6 +265,7 @@ flowchart TB
 | **Wallets** | Stellar Wallets Kit (Freighter, Albedo) | 1.9 |
 | **Stellar** | @stellar/stellar-sdk | 14.5 |
 | **Lending (Soroban)** | [Blend Capital — Blend](https://www.blend.capital/) (Stellar Soroban pools); [Blend v2 documentation](https://docs.blend.capital/) | — |
+| **Yield vaults (Soroban)** | [DeFindex](https://docs.defindex.io) — tokenized vaults, multi-strategy allocation, rebalancing, auto-compounding, fees, rescue / emergency flows | — |
 | **Validation** | Zod, react-hook-form | 3.24 / 7.54 |
 | **Ramps** | Custom anchor clients + SEP modules (lib/anchors) | — |
 
@@ -715,6 +721,7 @@ flowchart TB
     T2["Supabase\nAuth + Postgres"]
     T3["Trustless Work\nStellar escrow contracts"]
     T3b["Blend\nSoroban lending pools"]
+    T3c["DeFindex\nSoroban yield vaults"]
     T4["Stellar Wallets Kit\nFreighter · Albedo"]
     T5["Ramps\nEtherfuse · Alfred Pay · BlindPay · MoneyGram"]
     T6["SEP modules\n1 · 6 · 10 · 12 · 24 · 31 · 38"]
@@ -735,3 +742,4 @@ flowchart TB
 - [MoneyGram — Ramps Instant Access / Stellar ramps](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps) — Stellar on/off-ramp (XLM, USDC), SEP-10 / SEP-9, allowlisting
 - [Blend Capital](https://www.blend.capital/) — Blend product home (Stellar Soroban lending pools)
 - [Blend v2 documentation](https://docs.blend.capital/) — Protocol docs (users, pool creators)
+- [DeFindex](https://docs.defindex.io) — Soroban yield vaults, strategies, SDKs, and operations (deposits, withdrawals, rescue)
