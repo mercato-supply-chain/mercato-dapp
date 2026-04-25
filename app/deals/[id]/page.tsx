@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { mapDealFromDb, type DealRow } from '@/lib/deals'
+import { getFundingTimeRemainingMs, mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
 import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useApproveMilestone, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { FundEscrowPayload, ChangeMilestoneStatusPayload, ApproveMilestonePayload } from '@trustless-work/escrow'
@@ -58,6 +58,15 @@ function isDeliveryMilestone(name: string, index: number, total: number): boolea
   return total === 2 && index === 1
 }
 
+function formatFundingRemaining(ms: number): string {
+  const totalMinutes = Math.floor(ms / (60 * 1000))
+  if (totalMinutes < 60) return `${Math.max(1, totalMinutes)}m left`
+  const totalHours = Math.floor(totalMinutes / 60)
+  if (totalHours < 24) return `${totalHours}h left`
+  const totalDays = Math.floor(totalHours / 24)
+  return `${totalDays}d left`
+}
+
 export default function DealDetailPage() {
   const params = useParams()
   const dealId = typeof params.id === 'string' ? params.id : params.id?.[0]
@@ -77,6 +86,9 @@ export default function DealDetailPage() {
   const [acceptingMilestoneId, setAcceptingMilestoneId] = useState<string | null>(null)
   const [confirmingDeliveryMilestoneId, setConfirmingDeliveryMilestoneId] = useState<string | null>(null)
   const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
+  const [extendFundingDialogOpen, setExtendFundingDialogOpen] = useState(false)
+  const [extendFundingDays, setExtendFundingDays] = useState('7')
+  const [isExtendingFundingWindow, setIsExtendingFundingWindow] = useState(false)
 
   const { fundEscrow } = useFundEscrow()
   const { sendTransaction } = useSendTransaction()
@@ -245,7 +257,21 @@ export default function DealDetailPage() {
     released: { label: 'Released', color: 'text-success', bgColor: 'bg-success/10' },
   }
 
-  const status = statusConfig[deal.status]
+  const fundingStatusConfig = {
+    open: { label: 'Open for Funding', color: 'text-accent', bgColor: 'bg-accent/10' },
+    extended: { label: 'Extended', color: 'text-warning', bgColor: 'bg-warning/10' },
+    expired: { label: 'Expired', color: 'text-destructive', bgColor: 'bg-destructive/10' },
+    funded: { label: 'Funded', color: 'text-success', bgColor: 'bg-success/10' },
+  }
+
+  const status =
+    deal.status === 'awaiting_funding'
+      ? fundingStatusConfig[deal.fundingStatus]
+      : statusConfig[deal.status]
+  const isFundingOpen =
+    deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
+  const isFundingExpired = deal.fundingStatus === 'expired'
+  const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
   const completedMilestones = deal.milestones.filter(m => m.status === 'completed').length
   const progressPercentage = (completedMilestones / deal.milestones.length) * 100
 
@@ -456,6 +482,66 @@ export default function DealDetailPage() {
     }
   }
 
+  const handleExtendFundingWindow = async () => {
+    if (!deal || !userId) return
+    if (!isPyme) {
+      toast.error('Only the PyME owner can extend the funding window.')
+      return
+    }
+    if (deal.fundingStatus !== 'expired' || deal.status !== 'awaiting_funding') {
+      toast.error('This deal is not eligible for extension.')
+      return
+    }
+
+    const nextWindowDays = Number(extendFundingDays)
+    if (!Number.isInteger(nextWindowDays) || nextWindowDays <= 0) {
+      toast.error('Enter a valid extension duration in days.')
+      return
+    }
+
+    setIsExtendingFundingWindow(true)
+    try {
+      const nowIso = new Date().toISOString()
+      const nextExpirationIso = new Date(
+        Date.now() + nextWindowDays * 24 * 60 * 60 * 1000
+      ).toISOString()
+
+      const { data, error } = await supabase
+        .from('deals')
+        .update({
+          funding_window_days: nextWindowDays,
+          funding_expires_at: nextExpirationIso,
+          extension_count: (deal.extensionCount ?? 0) + 1,
+          extended_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', deal.id)
+        .eq('pyme_id', userId)
+        .eq('status', 'seeking_funding')
+        .is('investor_id', null)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      if (!data) {
+        throw new Error('Deal is no longer eligible for extension.')
+      }
+
+      const updated = await fetchDeal()
+      if (updated) setDeal(updated)
+      toast.success('Funding window extended successfully.')
+      setExtendFundingDialogOpen(false)
+      setExtendFundingDays(String(nextWindowDays))
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to extend funding window'
+      console.error('Extend funding window error:', err)
+      toast.error(message)
+    } finally {
+      setIsExtendingFundingWindow(false)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
@@ -499,7 +585,8 @@ export default function DealDetailPage() {
             </div>
 
             {deal.status === 'awaiting_funding' && (
-              deal.escrowAddress ? (
+              isFundingOpen ? (
+                deal.escrowAddress ? (
                 userType === 'investor' ? (
                   <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
                     <DialogTrigger asChild>
@@ -571,12 +658,74 @@ export default function DealDetailPage() {
                       : 'Sign in as an investor to fund this deal.'}
                   </div>
                 )
+                ) : (
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                    Escrow deploying — refresh shortly to fund.
+                  </div>
+                )
               ) : (
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 shrink-0" aria-hidden />
-                  Escrow deploying — refresh shortly to fund.
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                    Funding window expired.
+                  </div>
+                  {isPyme && (
+                    <Dialog
+                      open={extendFundingDialogOpen}
+                      onOpenChange={setExtendFundingDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline">
+                          Extend funding window
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Extend funding window</DialogTitle>
+                          <DialogDescription>
+                            Choose how many days to extend this deal. Extension is
+                            only allowed while the deal is unfunded.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="extend-days">Additional days</Label>
+                            <Input
+                              id="extend-days"
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              step={1}
+                              value={extendFundingDays}
+                              onChange={(e) => setExtendFundingDays(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleExtendFundingWindow}
+                            disabled={isExtendingFundingWindow}
+                            className="w-full"
+                          >
+                            {isExtendingFundingWindow
+                              ? 'Extending…'
+                              : 'Confirm extension'}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               )
+            )}
+
+            {deal.status === 'awaiting_funding' && deal.fundingExpiresAt && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Funding deadline: {formatDate(deal.fundingExpiresAt)}
+                {isFundingOpen && fundingRemainingMs != null && fundingRemainingMs > 0
+                  ? ` (${formatFundingRemaining(fundingRemainingMs)})`
+                  : ''}
+              </p>
             )}
           </div>
 
@@ -861,6 +1010,21 @@ export default function DealDetailPage() {
                           </p>
                         </div>
                       )}
+                      {deal.fundingExpiresAt && (
+                        <div>
+                          <p className="mb-1 text-sm font-medium">Funding deadline</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(deal.fundingExpiresAt)}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="mb-1 text-sm font-medium">Funding window</p>
+                        <p className="text-sm text-muted-foreground">
+                          {deal.fundingWindowDays ?? '—'} days
+                          {deal.extensionCount > 0 ? ` · ${deal.extensionCount} extension(s)` : ''}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -972,7 +1136,7 @@ export default function DealDetailPage() {
           {/* Sidebar */}
           <div className="space-y-5">
             {/* Return calculator — only for open deals */}
-            {deal.status === 'awaiting_funding' && deal.yieldAPR != null && (
+            {isFundingOpen && deal.yieldAPR != null && (
               <Card className="border-success/30 bg-success/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base text-success">

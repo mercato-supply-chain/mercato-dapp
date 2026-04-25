@@ -46,6 +46,7 @@ export interface CreateDealFormData {
   description: string
   quantity: string
   term: string
+  fundingWindowDays: string
   /** Extra APR percentage points on top of the base rate (optional, 0–10) */
   yieldBonusApr: string
   milestones: MilestoneDraft[]
@@ -60,6 +61,7 @@ export const DEFAULT_FORM_DATA: CreateDealFormData = {
   description: '',
   quantity: '',
   term: '60',
+  fundingWindowDays: '7',
   yieldBonusApr: '0',
   milestones: [
     { name: 'Shipment Confirmation', percentage: '50' },

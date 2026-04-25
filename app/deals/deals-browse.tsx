@@ -20,12 +20,22 @@ import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import { Search, TrendingUp, BarChart3, Clock, DollarSign, X } from 'lucide-react'
 
-type StatusQuickFilter = 'all' | 'awaiting_funding' | 'active' | 'completed'
+type StatusQuickFilter =
+  | 'all'
+  | 'open'
+  | 'extended'
+  | 'expired'
+  | 'funded'
+  | 'active'
+  | 'completed'
 type SortOption = 'newest' | 'highest_yield' | 'highest_amount' | 'shortest_term'
 
 const STATUS_PILLS: { value: StatusQuickFilter; label: string }[] = [
   { value: 'all', label: 'All deals' },
-  { value: 'awaiting_funding', label: 'Open for funding' },
+  { value: 'open', label: 'Open for funding' },
+  { value: 'extended', label: 'Extended' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'funded', label: 'Funded' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
 ]
@@ -37,11 +47,17 @@ function formatCompact(v: number): string {
   return formatCurrency(v)
 }
 
-function matchesStatusFilter(status: string, filter: StatusQuickFilter): boolean {
+function matchesStatusFilter(deal: Deal, filter: StatusQuickFilter): boolean {
   if (filter === 'all') return true
-  if (filter === 'active') return ['funded', 'in_progress', 'milestone_pending'].includes(status)
-  if (filter === 'completed') return ['completed', 'released'].includes(status)
-  return status === filter
+  if (filter === 'open') return deal.fundingStatus === 'open'
+  if (filter === 'extended') return deal.fundingStatus === 'extended'
+  if (filter === 'expired') return deal.fundingStatus === 'expired'
+  if (filter === 'funded') return deal.fundingStatus === 'funded'
+  if (filter === 'active') {
+    return ['funded', 'in_progress', 'milestone_pending'].includes(deal.status)
+  }
+  if (filter === 'completed') return ['completed', 'released'].includes(deal.status)
+  return true
 }
 
 export function DealsBrowse() {
@@ -55,7 +71,8 @@ export function DealsBrowse() {
 
   useEffect(() => {
     const filter = searchParams.get('filter')
-    if (filter === 'awaiting_funding') setStatusFilter('awaiting_funding')
+    if (filter === 'awaiting_funding') setStatusFilter('open')
+    else if (filter === 'expired') setStatusFilter('expired')
     else if (filter === 'funded' || filter === 'in_progress') setStatusFilter('active')
     else if (filter === 'completed') setStatusFilter('completed')
   }, [searchParams])
@@ -93,7 +110,8 @@ export function DealsBrowse() {
   const stats = useMemo(
     () => ({
       total: deals.length,
-      open: deals.filter((d) => d.status === 'awaiting_funding').length,
+      open: deals.filter((d) => d.fundingStatus === 'open' || d.fundingStatus === 'extended').length,
+      expired: deals.filter((d) => d.fundingStatus === 'expired').length,
       active: deals.filter((d) =>
         ['funded', 'in_progress', 'milestone_pending'].includes(d.status)
       ).length,
@@ -112,7 +130,7 @@ export function DealsBrowse() {
         !deal.supplier.toLowerCase().includes(q)
       )
         return false
-      if (!matchesStatusFilter(deal.status, statusFilter)) return false
+      if (!matchesStatusFilter(deal, statusFilter)) return false
       if (categoryFilter !== 'all' && deal.category !== categoryFilter) return false
       return true
     })
@@ -230,12 +248,14 @@ export function DealsBrowse() {
                       statusFilter === pill.value ? 'bg-background/20 text-background' : ''
                     }`}
                   >
-                    {pill.value === 'awaiting_funding'
+                    {pill.value === 'open'
                       ? stats.open
+                      : pill.value === 'expired'
+                        ? stats.expired
                       : pill.value === 'active'
                         ? stats.active
                         : deals.filter((d) =>
-                            matchesStatusFilter(d.status, pill.value)
+                            matchesStatusFilter(d, pill.value)
                           ).length}
                   </Badge>
                 )}

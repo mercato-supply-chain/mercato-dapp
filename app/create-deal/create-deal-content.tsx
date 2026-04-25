@@ -189,7 +189,11 @@ export default function CreateDealContent() {
   const canProceedStep1 =
     Boolean(formData.category || availableCategories.length === 0) &&
     Boolean(formData.supplierId && formData.productId && formData.quantity)
-  const canProceedStep2 = Boolean(formData.supplierName && formData.term)
+  const fundingWindowDays = Number(formData.fundingWindowDays)
+  const isFundingWindowValid =
+    Number.isInteger(fundingWindowDays) && fundingWindowDays > 0
+  const canProceedStep2 =
+    Boolean(formData.supplierName && formData.term) && isFundingWindowValid
   const milestonesOk = isMilestonesValid(formData.milestones)
   const canSubmit = canProceedStep1 && canProceedStep2 && milestonesOk
 
@@ -225,6 +229,11 @@ export default function CreateDealContent() {
       return
     }
 
+    if (!isFundingWindowValid) {
+      toast.error('Set a valid funding window in days before creating the deal.')
+      return
+    }
+
     setIsLoading(true)
     try {
       const { data: company } = await supabase
@@ -250,6 +259,9 @@ export default function CreateDealContent() {
 
       const productName = selectedProduct.name
       const productUnitPrice = Number(selectedProduct.price_per_unit)
+      const fundingExpiresAt = new Date(
+        Date.now() + fundingWindowDays * 24 * 60 * 60 * 1000
+      ).toISOString()
 
       const { data: deal, error: dealError } = await supabase
         .from('deals')
@@ -271,6 +283,9 @@ export default function CreateDealContent() {
           supplier_email: ownerProfile?.email ?? null,
           supplier_contact: formData.supplierContact || null,
           platform_fee: 2.5,
+          funding_window_days: fundingWindowDays,
+          funding_expires_at: fundingExpiresAt,
+          extension_count: 0,
         })
         .select()
         .single()
