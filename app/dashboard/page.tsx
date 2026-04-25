@@ -23,6 +23,10 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
+import { calculateCapitalState } from '@/lib/capital'
+import { mapDealFromDb } from '@/lib/deals'
+import { Deal } from '@/lib/types'
+import { CapitalOverview } from '@/components/CapitalOverview'
 
 type DashboardSearchParams = Promise<{ company?: string }> | { company?: string }
 
@@ -331,6 +335,25 @@ export default async function DashboardPage({
             )}
           </div>
         </div>
+
+        {/* Global Capital Overview (Usage of Issue #4) */}
+        {(userType === 'admin' || userType === 'investor') && deals.length > 0 && (
+          <div className="mb-8">
+            <CapitalOverview 
+              state={calculateCapitalState(
+                (deals as any[]).map(d => mapDealFromDb({
+                  ...d,
+                  product_name: d.product_name,
+                  product_quantity: d.quantity,
+                  product_unit_price: d.amount / (d.quantity || 1),
+                  term_days: d.term_days,
+                  interest_rate: d.interest_rate,
+                } as any)),
+                'USDC'
+              )} 
+            />
+          </div>
+        )}
 
         {/* Supplier: Company filter */}
         {userType === 'supplier' && supplierCompanies.length > 1 && (
