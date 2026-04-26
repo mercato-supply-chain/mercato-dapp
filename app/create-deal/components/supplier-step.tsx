@@ -29,6 +29,7 @@ interface SupplierStepProps {
     | 'supplierName'
     | 'supplierContact'
     | 'term'
+    | 'fundingWindowDays'
     | 'category'
     | 'yieldBonusApr'
   >
@@ -143,6 +144,55 @@ export function SupplierStep({
           </Select>
           <p className="text-xs text-muted-foreground">
             {t('createDeal.repayHint')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="funding-window">Funding Window (Days) *</Label>
+          <Select
+            value={
+              isCustomFundingWindow
+                ? 'custom'
+                : formData.fundingWindowDays
+            }
+            onValueChange={(v) => {
+              if (v === 'custom') {
+                onUpdate('fundingWindowDays', '')
+                return
+              }
+              onUpdate('fundingWindowDays', v)
+            }}
+          >
+            <SelectTrigger id="funding-window">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 days</SelectItem>
+              <SelectItem value="7">7 days</SelectItem>
+              <SelectItem value="14">14 days</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+          {(formData.fundingWindowDays === '' || isCustomFundingWindow) && (
+            <div className="flex items-center gap-2">
+              <Input
+                id="funding-window-custom"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={365}
+                step={1}
+                placeholder="e.g. 10"
+                value={formData.fundingWindowDays}
+                onChange={(e) => onUpdate('fundingWindowDays', e.target.value)}
+                className="max-w-[140px] tabular-nums"
+              />
+              <span className="text-sm text-muted-foreground">days</span>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Investors can fund this deal until the funding deadline. After that,
+            it expires unless you extend it before funding.
           </p>
         </div>
 

@@ -7,6 +7,8 @@ export type DealStatus =
   | 'disputed'
   | 'released'
 
+export type FundingStatus = 'open' | 'funded' | 'expired' | 'extended'
+
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
 
 export interface Milestone {
@@ -47,6 +49,11 @@ export interface Deal {
   yieldAPR?: number
   /** Extra APR (percentage points) offered by PyME on top of the base formula rate */
   yieldBonusApr?: number
+  fundingStatus: FundingStatus
+  fundingWindowDays?: number
+  fundingExpiresAt?: string
+  extensionCount: number
+  extendedAt?: string
 }
 
 export interface User {
