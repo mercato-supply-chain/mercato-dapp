@@ -28,6 +28,7 @@ import {
   Unplug,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useI18n } from '@/lib/i18n/provider'
 
 const EXPLORER_NETWORK =
   process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK === 'mainnet' ? 'public' : 'testnet'
@@ -66,10 +67,12 @@ const displayName = (profile: NavProfile | null, email?: string) =>
   profile?.full_name || profile?.contact_name || profile?.company_name || email
 
 export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavProps) {
+  const { t } = useI18n()
+
   const copyAddress = () => {
     if (wallet?.address) {
       navigator.clipboard.writeText(wallet.address)
-      toast.success('Wallet address copied')
+      toast.success(t('wallet.addressCopied'))
     }
   }
 
@@ -80,20 +83,20 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               <User className="h-4 w-4" aria-hidden />
-              Account
+              {t('nav.account')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
               <Link href="/auth/login" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" aria-hidden />
-                Login
+                {t('nav.login')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/auth/sign-up" className="cursor-pointer">
               <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-                Sign up
+                {t('nav.signUp')}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -103,10 +106,10 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
     return (
       <div className="mt-4 flex flex-col gap-2">
         <Button variant="outline" asChild>
-          <Link href="/auth/login">Login</Link>
+          <Link href="/auth/login">{t('nav.login')}</Link>
         </Button>
         <Button asChild>
-          <Link href="/auth/sign-up">Get Started</Link>
+          <Link href="/auth/sign-up">{t('nav.getStarted')}</Link>
         </Button>
       </div>
     )
@@ -147,7 +150,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                 <>
                   <DropdownMenuLabel>
                     <p className="text-xs font-medium leading-none text-muted-foreground">
-                      Stellar Wallet
+                      {t('wallet.stellarWallet')}
                     </p>
                     <p className="mt-0.5 text-xs font-mono break-all">
                       {wallet.address}
@@ -155,7 +158,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                   </DropdownMenuLabel>
                   <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
                     <Copy className="mr-2 h-4 w-4" aria-hidden />
-                    Copy Address
+                    {t('wallet.copyAddress')}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <a
@@ -165,7 +168,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                       className="cursor-pointer"
                     >
                       <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
-                      View on Explorer
+                      {t('wallet.viewExplorer')}
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -173,13 +176,13 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <Unplug className="mr-2 h-4 w-4" aria-hidden />
-                    Disconnect Wallet
+                    {t('wallet.disconnectWallet')}
                   </DropdownMenuItem>
                 </>
               ) : (
                 <DropdownMenuItem onClick={wallet.onConnect} className="cursor-pointer">
                   <Wallet className="mr-2 h-4 w-4" aria-hidden />
-                  Connect Wallet
+                  {t('wallet.connectWallet')}
                 </DropdownMenuItem>
               )}
             </>
@@ -188,14 +191,14 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
           <DropdownMenuItem asChild>
             <Link href="/dashboard" className="cursor-pointer">
               <LayoutDashboard className="mr-2 h-4 w-4" aria-hidden />
-              Dashboard
+              {t('nav.dashboard')}
             </Link>
           </DropdownMenuItem>
           {userType === 'admin' && (
             <DropdownMenuItem asChild>
               <Link href="/dashboard/admin" className="cursor-pointer">
                 <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                Milestone approvals
+                {t('nav.milestoneApprovals')}
               </Link>
             </DropdownMenuItem>
           )}
@@ -204,13 +207,13 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
               <DropdownMenuItem asChild>
                 <Link href="/create-deal" className="cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" aria-hidden />
-                  Create Deal
+                  {t('nav.createDeal')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/deals?filter=funded" className="cursor-pointer">
                   <TrendingUp className="mr-2 h-4 w-4" aria-hidden />
-                  Browse Investors
+                  {t('nav.browseInvestors')}
                 </Link>
               </DropdownMenuItem>
             </>
@@ -220,13 +223,13 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
               <DropdownMenuItem asChild>
                 <Link href="/deals" className="cursor-pointer">
                   <Package className="mr-2 h-4 w-4" aria-hidden />
-                  Browse Deals
+                  {t('nav.browseDeals')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/investments" className="cursor-pointer">
                   <DollarSign className="mr-2 h-4 w-4" aria-hidden />
-                  My Investments
+                  {t('nav.myInvestments')}
                 </Link>
               </DropdownMenuItem>
             </>
@@ -236,19 +239,19 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/supplier-profile" className="cursor-pointer">
                   <Package className="mr-2 h-4 w-4" aria-hidden />
-                  Products & Categories
+                  {t('nav.productsCategories')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/deals" className="cursor-pointer">
                   <TrendingUp className="mr-2 h-4 w-4" aria-hidden />
-                  Active Deals
+                  {t('nav.activeDeals')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/deliveries" className="cursor-pointer">
                   <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                  Delivery Proof
+                  {t('nav.deliveryProof')}
                 </Link>
               </DropdownMenuItem>
             </>
@@ -257,13 +260,13 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
           <DropdownMenuItem asChild>
             <Link href="/settings" className="cursor-pointer">
               <Settings className="mr-2 h-4 w-4" aria-hidden />
-              Settings
+              {t('nav.settings')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" aria-hidden />
-            Log out
+            {t('nav.logout')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -284,12 +287,12 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
           <div className="my-2 border-t border-border" />
           {wallet.isConnected && wallet.address ? (
             <div className="flex flex-col gap-2 px-2">
-              <p className="text-xs font-medium text-muted-foreground">Stellar Wallet</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('wallet.stellarWallet')}</p>
               <p className="text-xs font-mono break-all">{wallet.address}</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={copyAddress}>
                   <Copy className="mr-2 h-3 w-3" aria-hidden />
-                  Copy
+                  {t('wallet.copy')}
                 </Button>
                 <Button
                   variant="outline"
@@ -298,37 +301,37 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                   onClick={wallet.onDisconnect}
                 >
                   <Unplug className="mr-2 h-3 w-3" aria-hidden />
-                  Disconnect
+                  {t('wallet.disconnect')}
                 </Button>
               </div>
             </div>
           ) : (
             <Button variant="outline" size="sm" className="gap-2 justify-start w-full" onClick={wallet.onConnect}>
               <Wallet className="h-4 w-4" aria-hidden />
-              Connect Wallet
+              {t('wallet.connectWallet')}
             </Button>
           )}
         </>
       )}
       <Link href="/dashboard" className={linkClass}>
         <LayoutDashboard className="h-4 w-4" aria-hidden />
-        Dashboard
+        {t('nav.dashboard')}
       </Link>
       {userType === 'admin' && (
         <Link href="/dashboard/admin" className={linkClass}>
           <ShieldCheck className="h-4 w-4" aria-hidden />
-          Milestone approvals
+          {t('nav.milestoneApprovals')}
         </Link>
       )}
       {userType === 'pyme' && (
         <>
           <Link href="/create-deal" className={linkClass}>
             <Plus className="h-4 w-4" aria-hidden />
-            Create Deal
+            {t('nav.createDeal')}
           </Link>
           <Link href="/deals?filter=funded" className={linkClass}>
             <TrendingUp className="h-4 w-4" aria-hidden />
-            Browse Investors
+            {t('nav.browseInvestors')}
           </Link>
         </>
       )}
@@ -336,11 +339,11 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
         <>
           <Link href="/deals" className={linkClass}>
             <Package className="h-4 w-4" aria-hidden />
-            Browse Deals
+            {t('nav.browseDeals')}
           </Link>
           <Link href="/dashboard/investments" className={linkClass}>
             <DollarSign className="h-4 w-4" aria-hidden />
-            My Investments
+            {t('nav.myInvestments')}
           </Link>
         </>
       )}
@@ -348,25 +351,25 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
         <>
           <Link href="/dashboard/supplier-profile" className={linkClass}>
             <Package className="h-4 w-4" aria-hidden />
-            Products & Categories
+            {t('nav.productsCategories')}
           </Link>
           <Link href="/dashboard/deals" className={linkClass}>
             <TrendingUp className="h-4 w-4" aria-hidden />
-            Active Deals
+            {t('nav.activeDeals')}
           </Link>
           <Link href="/dashboard/deliveries" className={linkClass}>
             <CheckCircle2 className="h-4 w-4" aria-hidden />
-            Delivery Proof
+            {t('nav.deliveryProof')}
           </Link>
         </>
       )}
       <Link href="/settings" className={linkClass}>
         <Settings className="h-4 w-4" aria-hidden />
-        Settings
+        {t('nav.settings')}
       </Link>
       <Button variant="ghost" className="justify-start" onClick={onLogout}>
         <LogOut className="mr-2 h-4 w-4" aria-hidden />
-        Log out
+        {t('nav.logout')}
       </Button>
     </>
   )

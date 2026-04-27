@@ -66,7 +66,7 @@ export default async function SmbDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified, stake_amount, stake_updated_at')
     .eq('id', id)
     .single()
 
@@ -173,7 +173,7 @@ export default async function SmbDetailPage({
         </div>
 
         {/* Stats grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
@@ -211,6 +211,17 @@ export default async function SmbDetailPage({
               </CardDescription>
               <CardTitle className="text-3xl tabular-nums">
                 {completionRate != null ? `${completionRate}%` : '-'}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Wallet className="h-3.5 w-3.5" />
+                Trust stake
+              </CardDescription>
+              <CardTitle className="text-2xl tabular-nums text-primary">
+                {stakeAmount > 0 ? formatPrice(stakeAmount) : '—'}
               </CardTitle>
             </CardHeader>
           </Card>

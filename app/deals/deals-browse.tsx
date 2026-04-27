@@ -19,15 +19,23 @@ import { mapDealFromDb, type DealRow } from '@/lib/deals'
 import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import { Search, TrendingUp, BarChart3, Clock, DollarSign, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/provider'
 
-type StatusQuickFilter = 'all' | 'awaiting_funding' | 'active' | 'completed'
+type StatusQuickFilter =
+  | 'all'
+  | 'open'
+  | 'extended'
+  | 'expired'
+  | 'funded'
+  | 'active'
+  | 'completed'
 type SortOption = 'newest' | 'highest_yield' | 'highest_amount' | 'shortest_term'
 
-const STATUS_PILLS: { value: StatusQuickFilter; label: string }[] = [
-  { value: 'all', label: 'All deals' },
-  { value: 'awaiting_funding', label: 'Open for funding' },
-  { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
+const STATUS_PILLS: { value: StatusQuickFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'deals.allDeals' },
+  { value: 'awaiting_funding', labelKey: 'deals.openForFunding' },
+  { value: 'active', labelKey: 'deals.active' },
+  { value: 'completed', labelKey: 'deals.completed' },
 ]
 
 function formatCompact(v: number): string {
@@ -37,14 +45,21 @@ function formatCompact(v: number): string {
   return formatCurrency(v)
 }
 
-function matchesStatusFilter(status: string, filter: StatusQuickFilter): boolean {
+function matchesStatusFilter(deal: Deal, filter: StatusQuickFilter): boolean {
   if (filter === 'all') return true
-  if (filter === 'active') return ['funded', 'in_progress', 'milestone_pending'].includes(status)
-  if (filter === 'completed') return ['completed', 'released'].includes(status)
-  return status === filter
+  if (filter === 'open') return deal.fundingStatus === 'open'
+  if (filter === 'extended') return deal.fundingStatus === 'extended'
+  if (filter === 'expired') return deal.fundingStatus === 'expired'
+  if (filter === 'funded') return deal.fundingStatus === 'funded'
+  if (filter === 'active') {
+    return ['funded', 'in_progress', 'milestone_pending'].includes(deal.status)
+  }
+  if (filter === 'completed') return ['completed', 'released'].includes(deal.status)
+  return true
 }
 
 export function DealsBrowse() {
+  const { t } = useI18n()
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusQuickFilter>('all')
@@ -55,7 +70,8 @@ export function DealsBrowse() {
 
   useEffect(() => {
     const filter = searchParams.get('filter')
-    if (filter === 'awaiting_funding') setStatusFilter('awaiting_funding')
+    if (filter === 'awaiting_funding') setStatusFilter('open')
+    else if (filter === 'expired') setStatusFilter('expired')
     else if (filter === 'funded' || filter === 'in_progress') setStatusFilter('active')
     else if (filter === 'completed') setStatusFilter('completed')
   }, [searchParams])
@@ -93,7 +109,8 @@ export function DealsBrowse() {
   const stats = useMemo(
     () => ({
       total: deals.length,
-      open: deals.filter((d) => d.status === 'awaiting_funding').length,
+      open: deals.filter((d) => d.fundingStatus === 'open' || d.fundingStatus === 'extended').length,
+      expired: deals.filter((d) => d.fundingStatus === 'expired').length,
       active: deals.filter((d) =>
         ['funded', 'in_progress', 'milestone_pending'].includes(d.status)
       ).length,
@@ -112,7 +129,7 @@ export function DealsBrowse() {
         !deal.supplier.toLowerCase().includes(q)
       )
         return false
-      if (!matchesStatusFilter(deal.status, statusFilter)) return false
+      if (!matchesStatusFilter(deal, statusFilter)) return false
       if (categoryFilter !== 'all' && deal.category !== categoryFilter) return false
       return true
     })
@@ -150,12 +167,11 @@ export function DealsBrowse() {
         <div className="mb-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent/20">
             <TrendingUp className="h-3 w-3" aria-hidden />
-            Supply chain deals
+            {t('deals.eyebrow')}
           </div>
-          <h1 className="mb-2 text-4xl font-bold tracking-tight">Deals</h1>
+          <h1 className="mb-2 text-4xl font-bold tracking-tight">{t('deals.title')}</h1>
           <p className="max-w-xl text-lg text-muted-foreground">
-            Browse and fund real supply chain orders. Each deal is secured by
-            non-custodial escrow on Stellar.
+            {t('deals.description')}
           </p>
         </div>
 
@@ -166,7 +182,7 @@ export function DealsBrowse() {
               <BarChart3 className="h-5 w-5 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total deals</p>
+              <p className="text-sm text-muted-foreground">{t('deals.totalDeals')}</p>
               <p className="text-2xl font-bold tabular-nums">
                 {isLoading ? '—' : stats.total}
               </p>
@@ -177,7 +193,7 @@ export function DealsBrowse() {
               <TrendingUp className="h-5 w-5 text-accent" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Open for funding</p>
+              <p className="text-sm text-muted-foreground">{t('deals.openForFunding')}</p>
               <p className="text-2xl font-bold tabular-nums text-accent">
                 {isLoading ? '—' : stats.open}
               </p>
@@ -188,7 +204,7 @@ export function DealsBrowse() {
               <Clock className="h-5 w-5 text-success" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active</p>
+              <p className="text-sm text-muted-foreground">{t('deals.active')}</p>
               <p className="text-2xl font-bold tabular-nums text-success">
                 {isLoading ? '—' : stats.active}
               </p>
@@ -199,7 +215,7 @@ export function DealsBrowse() {
               <DollarSign className="h-5 w-5 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total value</p>
+              <p className="text-sm text-muted-foreground">{t('deals.totalValue')}</p>
               <p className="text-2xl font-bold tabular-nums">
                 {isLoading ? '—' : formatCompact(stats.totalValue)}
               </p>
@@ -222,7 +238,7 @@ export function DealsBrowse() {
                     : 'border border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground'
                 }`}
               >
-                {pill.label}
+                {t(pill.labelKey)}
                 {pill.value !== 'all' && !isLoading && (
                   <Badge
                     variant="secondary"
@@ -230,12 +246,14 @@ export function DealsBrowse() {
                       statusFilter === pill.value ? 'bg-background/20 text-background' : ''
                     }`}
                   >
-                    {pill.value === 'awaiting_funding'
+                    {pill.value === 'open'
                       ? stats.open
+                      : pill.value === 'expired'
+                        ? stats.expired
                       : pill.value === 'active'
                         ? stats.active
                         : deals.filter((d) =>
-                            matchesStatusFilter(d.status, pill.value)
+                            matchesStatusFilter(d, pill.value)
                           ).length}
                   </Badge>
                 )}
@@ -251,7 +269,7 @@ export function DealsBrowse() {
                 aria-hidden
               />
               <Input
-                placeholder="Search deals, PyMEs, suppliers…"
+                placeholder={t('deals.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -260,10 +278,10 @@ export function DealsBrowse() {
 
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder={t('common.category')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">{t('deals.allCategories')}</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat as string} className="capitalize">
                     {cat}
@@ -277,13 +295,13 @@ export function DealsBrowse() {
               onValueChange={(v) => setSortBy(v as SortOption)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder={t('deals.sortBy')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest first</SelectItem>
-                <SelectItem value="highest_yield">Highest APR</SelectItem>
-                <SelectItem value="highest_amount">Highest amount</SelectItem>
-                <SelectItem value="shortest_term">Shortest term</SelectItem>
+                <SelectItem value="newest">{t('deals.newest')}</SelectItem>
+                <SelectItem value="highest_yield">{t('deals.highestApr')}</SelectItem>
+                <SelectItem value="highest_amount">{t('deals.highestAmount')}</SelectItem>
+                <SelectItem value="shortest_term">{t('deals.shortestTerm')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -292,13 +310,13 @@ export function DealsBrowse() {
         {/* Active filter chips */}
         {hasActiveFilters && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Filters:</span>
+            <span className="text-xs text-muted-foreground">{t('common.filters')}</span>
             {statusFilter !== 'all' && (
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {STATUS_PILLS.find((p) => p.value === statusFilter)?.label}
+                {t(STATUS_PILLS.find((p) => p.value === statusFilter)?.labelKey ?? 'deals.allDeals')}
                 <button
                   type="button"
-                  aria-label="Remove status filter"
+                  aria-label={t('deals.removeStatus')}
                   onClick={() => setStatusFilter('all')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -311,7 +329,7 @@ export function DealsBrowse() {
                 {categoryFilter}
                 <button
                   type="button"
-                  aria-label="Remove category filter"
+                  aria-label={t('deals.removeCategory')}
                   onClick={() => setCategoryFilter('all')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -324,7 +342,7 @@ export function DealsBrowse() {
                 &ldquo;{searchQuery}&rdquo;
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('deals.clearSearch')}
                   onClick={() => setSearchQuery('')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -333,7 +351,7 @@ export function DealsBrowse() {
               </span>
             )}
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearAll}>
-              Clear all
+              {t('common.clearAll')}
             </Button>
           </div>
         )}
@@ -341,8 +359,12 @@ export function DealsBrowse() {
         {/* Result count */}
         <p className="mb-4 text-sm text-muted-foreground">
           {isLoading
-            ? 'Loading deals…'
-            : `${filteredDeals.length} ${filteredDeals.length === 1 ? 'deal' : 'deals'}`}
+            ? t('deals.loadingDeals')
+            : `${filteredDeals.length} ${
+                filteredDeals.length === 1
+                  ? t('deals.dealCountOne')
+                  : t('deals.dealCountOther')
+              }`}
         </p>
 
         {/* Deal grid */}
@@ -366,15 +388,15 @@ export function DealsBrowse() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
               <Search className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
-            <p className="mb-1 text-base font-semibold">No deals found</p>
+            <p className="mb-1 text-base font-semibold">{t('deals.noDeals')}</p>
             <p className="mb-5 max-w-xs text-sm text-muted-foreground">
               {deals.length === 0
-                ? 'No deals have been created yet. Check back soon or create the first one from your dashboard.'
-                : 'No deals match your current filters. Try adjusting your search or status selection.'}
+                ? t('deals.noDealsEmpty')
+                : t('deals.noDealsFiltered')}
             </p>
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearAll}>
-                Clear filters
+                {t('common.clearFilters')}
               </Button>
             )}
           </div>

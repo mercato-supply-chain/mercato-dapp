@@ -13,6 +13,7 @@ import { Building2 } from 'lucide-react'
 import { formatCurrency, formatPercent } from '@/lib/format'
 import { Input } from '@/components/ui/input'
 import type { CreateDealFormData } from '../types'
+import { useI18n } from '@/lib/i18n/provider'
 
 interface SupplierOption {
   id: string
@@ -28,6 +29,7 @@ interface SupplierStepProps {
     | 'supplierName'
     | 'supplierContact'
     | 'term'
+    | 'fundingWindowDays'
     | 'category'
     | 'yieldBonusApr'
   >
@@ -54,6 +56,7 @@ export function SupplierStep({
   onUpdate,
   onSupplierSelect,
 }: SupplierStepProps) {
+  const { t } = useI18n()
   const rawBonusInput =
     parseFloat(String(formData.yieldBonusApr).replace(',', '.')) || 0
   const showBonusCapHint =
@@ -64,15 +67,15 @@ export function SupplierStep({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5" aria-hidden />
-          Supplier & Terms
+          {t('createDeal.supplierTermsTitle')}
         </CardTitle>
         <CardDescription>
-          Who will supply the product and what are the payment terms?
+          {t('createDeal.supplierTermsDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="supplier">Select Supplier *</Label>
+          <Label htmlFor="supplier">{t('createDeal.selectSupplierRequired')}</Label>
           <Select
             value={formData.supplierId || undefined}
             onValueChange={onSupplierSelect}
@@ -80,7 +83,7 @@ export function SupplierStep({
             <SelectTrigger id="supplier">
               <SelectValue
                 placeholder={
-                  formData.supplierName || 'Choose from verified suppliers'
+                  formData.supplierName || t('createDeal.chooseVerifiedSupplier')
                 }
               />
             </SelectTrigger>
@@ -88,8 +91,8 @@ export function SupplierStep({
               {filteredSuppliers.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                   {formData.category
-                    ? `No suppliers found for ${formData.category}`
-                    : 'Select a category first to see suppliers'}
+                    ? t('createDeal.noSuppliersForCategory', { category: formData.category })
+                    : t('createDeal.selectCategory')}
                 </div>
               ) : (
                 filteredSuppliers.map((supplier) => (
@@ -102,7 +105,7 @@ export function SupplierStep({
           </Select>
           {formData.category && (
             <p className="text-xs text-muted-foreground">
-              Showing suppliers for:{' '}
+              {t('createDeal.showingSuppliersFor')}{' '}
               <span className="font-medium capitalize">{formData.category}</span>
             </p>
           )}
@@ -110,20 +113,20 @@ export function SupplierStep({
 
         {formData.supplierName && (
           <div className="rounded-lg border border-border bg-muted/30 p-3">
-            <p className="mb-1 text-sm font-medium">Selected Supplier</p>
+            <p className="mb-1 text-sm font-medium">{t('createDeal.selectedSupplier')}</p>
             <p className="text-sm text-muted-foreground">
               {formData.supplierName}
             </p>
             {formData.supplierContact && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Contact: {formData.supplierContact}
+                {t('createDeal.contact', { contact: formData.supplierContact })}
               </p>
             )}
           </div>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="term">Deal Term (Days) *</Label>
+          <Label htmlFor="term">{t('createDeal.dealTerm')}</Label>
           <Select
             value={formData.term}
             onValueChange={(v) => onUpdate('term', v)}
@@ -132,21 +135,70 @@ export function SupplierStep({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="30">30 days</SelectItem>
-              <SelectItem value="45">45 days</SelectItem>
-              <SelectItem value="60">60 days</SelectItem>
-              <SelectItem value="75">75 days</SelectItem>
-              <SelectItem value="90">90 days</SelectItem>
+              <SelectItem value="30">30 {t('common.days')}</SelectItem>
+              <SelectItem value="45">45 {t('common.days')}</SelectItem>
+              <SelectItem value="60">60 {t('common.days')}</SelectItem>
+              <SelectItem value="75">75 {t('common.days')}</SelectItem>
+              <SelectItem value="90">90 {t('common.days')}</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            This is how long you have to repay investors after delivery
+            {t('createDeal.repayHint')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="funding-window">Funding Window (Days) *</Label>
+          <Select
+            value={
+              isCustomFundingWindow
+                ? 'custom'
+                : formData.fundingWindowDays
+            }
+            onValueChange={(v) => {
+              if (v === 'custom') {
+                onUpdate('fundingWindowDays', '')
+                return
+              }
+              onUpdate('fundingWindowDays', v)
+            }}
+          >
+            <SelectTrigger id="funding-window">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 days</SelectItem>
+              <SelectItem value="7">7 days</SelectItem>
+              <SelectItem value="14">14 days</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+          {(formData.fundingWindowDays === '' || isCustomFundingWindow) && (
+            <div className="flex items-center gap-2">
+              <Input
+                id="funding-window-custom"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={365}
+                step={1}
+                placeholder="e.g. 10"
+                value={formData.fundingWindowDays}
+                onChange={(e) => onUpdate('fundingWindowDays', e.target.value)}
+                className="max-w-[140px] tabular-nums"
+              />
+              <span className="text-sm text-muted-foreground">days</span>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Investors can fund this deal until the funding deadline. After that,
+            it expires unless you extend it before funding.
           </p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="yield-bonus-apr">
-            Additional investor yield (optional)
+            {t('createDeal.additionalYield')}
           </Label>
           <div className="flex items-center gap-2">
             <Input
@@ -163,13 +215,11 @@ export function SupplierStep({
             <span className="text-sm text-muted-foreground">% APR</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Extra percentage points on top of the base rate (from term and deal
-            size), up to {maxYieldBonusApr}% — increases what you repay but makes
-            the deal more attractive to investors
+            {t('createDeal.yieldHint', { max: maxYieldBonusApr })}
           </p>
           {showBonusCapHint && (
             <p className="text-xs text-amber-600 dark:text-amber-500">
-              Applied bonus is capped at {maxYieldBonusApr}% APR.
+              {t('createDeal.bonusCapped', { max: maxYieldBonusApr })}
             </p>
           )}
         </div>
@@ -177,14 +227,14 @@ export function SupplierStep({
         {totalAmount > 0 && (
           <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Deal Amount</span>
+              <span className="text-sm text-muted-foreground">{t('createDeal.dealAmount')}</span>
               <span className="font-semibold tabular-nums">
                 {formatCurrency(totalAmount)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Estimated Investor Yield
+                {t('createDeal.estimatedYield')}
               </span>
               <span className="font-semibold text-success tabular-nums">
                 {formatCurrency(estimatedYield)} (
@@ -194,16 +244,19 @@ export function SupplierStep({
             {baseAPR != null && effectiveAPR != null && (
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>
-                  Base {baseAPR.toFixed(1)}% APR (from {formData.term} days and
-                  deal amount)
+                  {t('createDeal.baseAprLine', {
+                    apr: baseAPR.toFixed(1),
+                    days: formData.term,
+                  })}
                   {yieldBonusApr > 0 && (
                     <span className="text-foreground">
                       {' '}
-                      + {yieldBonusApr.toFixed(2)}% PyME bonus →{' '}
                       <span className="font-medium text-success">
-                        {effectiveAPR.toFixed(2)}% APR
-                      </span>{' '}
-                      total
+                        {t('createDeal.pymeBonus', {
+                          bonus: yieldBonusApr.toFixed(2),
+                          apr: effectiveAPR.toFixed(2),
+                        })}
+                      </span>
                     </span>
                   )}
                 </p>
@@ -211,7 +264,7 @@ export function SupplierStep({
             )}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                You Repay (estimate)
+                {t('createDeal.repayEstimate')}
               </span>
               <span className="font-semibold tabular-nums">
                 {formatCurrency(totalAmount + estimatedYield)}

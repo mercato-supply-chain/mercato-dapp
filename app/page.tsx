@@ -21,6 +21,7 @@ import {
   Coins,
   ArrowLeftRight,
 } from 'lucide-react'
+import { getServerDictionary } from '@/lib/i18n/server'
 
 /** Deal cycle: one-shot enter, transform + opacity only, skipped under reduced motion */
 const cycleHeaderEnter =
@@ -68,7 +69,9 @@ function cycleCardPulseClass(step: number) {
   )
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const t = await getServerDictionary()
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
@@ -88,39 +91,38 @@ export default function HomePage() {
                 className="mb-5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both"
                 variant="secondary"
               >
-                Built on Stellar · Trustless Work escrow
+                {t.home.badge}
               </Badge>
               <h1 className="mb-5 text-4xl font-bold tracking-tight text-balance motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:delay-75 motion-safe:fill-mode-both md:text-5xl lg:text-6xl">
-                Supply chain finance,{' '}
-                <span className="text-accent">on-chain</span>
+                {t.home.titlePrefix}{' '}
+                <span className="text-accent">{t.home.titleAccent}</span>
               </h1>
               <p className="mb-8 max-w-xl text-lg text-muted-foreground text-balance motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:delay-150 motion-safe:fill-mode-both">
-                PyMEs get working capital, investors earn 8–15% APR on USDC deals, and suppliers
-                receive guaranteed milestone payments — all secured by non-custodial escrow on Stellar.
+                {t.home.description}
               </p>
               <div className="flex flex-col items-center justify-center gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:delay-200 motion-safe:fill-mode-both sm:flex-row lg:justify-start">
                 <Button size="lg" asChild>
                   <Link href="/auth/sign-up">
-                    Get started free
+                    {t.home.primaryCta}
                     <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/deals">Explore deals</Link>
+                  <Link href="/deals">{t.home.secondaryCta}</Link>
                 </Button>
               </div>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground lg:justify-start">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden />
-                  Non-custodial escrow
+                  {t.home.trustEscrow}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden />
-                  USDC on Stellar
+                  {t.home.trustUsdc}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden />
-                  30–90 day deal terms
+                  {t.home.trustTerms}
                 </span>
               </div>
             </div>

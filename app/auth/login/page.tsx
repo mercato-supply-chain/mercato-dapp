@@ -16,8 +16,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { MercatoLogo } from '@/components/mercato-logo'
+import { useI18n } from '@/lib/i18n/provider'
 
 export default function LoginPage() {
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(error instanceof Error ? error.message : t('auth.genericError'))
     } finally {
       setIsLoading(false)
     }
@@ -62,16 +64,16 @@ export default function LoginPage() {
           <Card className="border-border/80 shadow-lg shadow-black/5">
             <CardHeader className="space-y-1 pb-6 text-center sm:text-left">
               <CardTitle className="text-2xl font-semibold tracking-tight">
-                Welcome back
+                {t('auth.loginTitle')}
               </CardTitle>
               <CardDescription className="text-base">
-                Sign in to your account to continue
+                {t('auth.loginDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('auth.email')}</Label>
                   <Input
                     id="email"
                     name="email"
@@ -87,12 +89,12 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t('auth.password')}</Label>
                     <Link
                       href="/auth/forgot-password"
                       className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground"
                     >
-                      Forgot password?
+                      {t('auth.forgotPassword')}
                     </Link>
                   </div>
                   <Input
@@ -124,24 +126,24 @@ export default function LoginPage() {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing in…' : 'Sign in'}
+                  {isLoading ? t('auth.signingIn') : t('auth.signIn')}
                 </Button>
               </form>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
+                {t('auth.noAccount')}{' '}
                 <Link
                   href="/auth/sign-up"
                   className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
                 >
-                  Sign up
+                  {t('nav.signUp')}
                 </Link>
               </p>
             </CardContent>
           </Card>
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            Supply chain finance for PyMEs, investors, and suppliers
+            {t('auth.tagline')}
           </p>
         </div>
       </div>

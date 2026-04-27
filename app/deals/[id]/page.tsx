@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { mapDealFromDb, type DealRow } from '@/lib/deals'
+import { getFundingTimeRemainingMs, mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
 import { getReputation, type Reputation } from '@/lib/reputation'
 import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useApproveMilestone, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
@@ -43,6 +43,7 @@ import {
   Lock,
   ArrowLeft,
 } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/provider'
 
 /** Match "Shipment Confirmation" milestone (supplier accepts order) */
 function isShipmentMilestone(name: string, index: number, total: number): boolean {
@@ -60,7 +61,17 @@ function isDeliveryMilestone(name: string, index: number, total: number): boolea
   return total === 2 && index === 1
 }
 
+function formatFundingRemaining(ms: number): string {
+  const totalMinutes = Math.floor(ms / (60 * 1000))
+  if (totalMinutes < 60) return `${Math.max(1, totalMinutes)}m left`
+  const totalHours = Math.floor(totalMinutes / 60)
+  if (totalHours < 24) return `${totalHours}h left`
+  const totalDays = Math.floor(totalHours / 24)
+  return `${totalDays}d left`
+}
+
 export default function DealDetailPage() {
+  const { t } = useI18n()
   const params = useParams()
   const dealId = typeof params.id === 'string' ? params.id : params.id?.[0]
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -122,7 +133,7 @@ export default function DealDetailPage() {
         `
         *,
         milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount),
         investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
         supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `
@@ -245,12 +256,12 @@ export default function DealDetailPage() {
         <Navigation />
         <div className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
-            <h1 className="mb-2 text-2xl font-bold">Deal Not Found</h1>
+            <h1 className="mb-2 text-2xl font-bold">{t('deals.noDeals')}</h1>
             <p className="mb-4 text-muted-foreground">
               The deal you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button asChild>
-              <Link href="/deals">Back to deals</Link>
+              <Link href="/deals">{t('common.back')}</Link>
             </Button>
           </div>
         </div>
@@ -259,16 +270,30 @@ export default function DealDetailPage() {
   }
 
   const statusConfig = {
-    awaiting_funding: { label: 'Open for Funding', color: 'text-accent', bgColor: 'bg-accent/10' },
-    funded: { label: 'Funded', color: 'text-success', bgColor: 'bg-success/10' },
-    in_progress: { label: 'In Progress', color: 'text-warning', bgColor: 'bg-warning/10' },
-    milestone_pending: { label: 'Milestone Pending', color: 'text-warning', bgColor: 'bg-warning/10' },
-    completed: { label: 'Completed', color: 'text-success', bgColor: 'bg-success/10' },
-    disputed: { label: 'Disputed', color: 'text-destructive', bgColor: 'bg-destructive/10' },
-    released: { label: 'Released', color: 'text-success', bgColor: 'bg-success/10' },
+    awaiting_funding: { label: t('dealStatus.awaiting_funding'), color: 'text-accent', bgColor: 'bg-accent/10' },
+    funded: { label: t('dealStatus.funded'), color: 'text-success', bgColor: 'bg-success/10' },
+    in_progress: { label: t('dealStatus.in_progress'), color: 'text-warning', bgColor: 'bg-warning/10' },
+    milestone_pending: { label: t('dealStatus.milestone_pending'), color: 'text-warning', bgColor: 'bg-warning/10' },
+    completed: { label: t('dealStatus.completed'), color: 'text-success', bgColor: 'bg-success/10' },
+    disputed: { label: t('dealStatus.disputed'), color: 'text-destructive', bgColor: 'bg-destructive/10' },
+    released: { label: t('dealStatus.released'), color: 'text-success', bgColor: 'bg-success/10' },
   }
 
-  const status = statusConfig[deal.status]
+  const fundingStatusConfig = {
+    open: { label: 'Open for Funding', color: 'text-accent', bgColor: 'bg-accent/10' },
+    extended: { label: 'Extended', color: 'text-warning', bgColor: 'bg-warning/10' },
+    expired: { label: 'Expired', color: 'text-destructive', bgColor: 'bg-destructive/10' },
+    funded: { label: 'Funded', color: 'text-success', bgColor: 'bg-success/10' },
+  }
+
+  const status =
+    deal.status === 'awaiting_funding'
+      ? fundingStatusConfig[deal.fundingStatus]
+      : statusConfig[deal.status]
+  const isFundingOpen =
+    deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
+  const isFundingExpired = deal.fundingStatus === 'expired'
+  const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
   const completedMilestones = deal.milestones.filter(m => m.status === 'completed').length
   const progressPercentage = (completedMilestones / deal.milestones.length) * 100
 
@@ -479,6 +504,66 @@ export default function DealDetailPage() {
     }
   }
 
+  const handleExtendFundingWindow = async () => {
+    if (!deal || !userId) return
+    if (!isPyme) {
+      toast.error('Only the PyME owner can extend the funding window.')
+      return
+    }
+    if (deal.fundingStatus !== 'expired' || deal.status !== 'awaiting_funding') {
+      toast.error('This deal is not eligible for extension.')
+      return
+    }
+
+    const nextWindowDays = Number(extendFundingDays)
+    if (!Number.isInteger(nextWindowDays) || nextWindowDays <= 0) {
+      toast.error('Enter a valid extension duration in days.')
+      return
+    }
+
+    setIsExtendingFundingWindow(true)
+    try {
+      const nowIso = new Date().toISOString()
+      const nextExpirationIso = new Date(
+        Date.now() + nextWindowDays * 24 * 60 * 60 * 1000
+      ).toISOString()
+
+      const { data, error } = await supabase
+        .from('deals')
+        .update({
+          funding_window_days: nextWindowDays,
+          funding_expires_at: nextExpirationIso,
+          extension_count: (deal.extensionCount ?? 0) + 1,
+          extended_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', deal.id)
+        .eq('pyme_id', userId)
+        .eq('status', 'seeking_funding')
+        .is('investor_id', null)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      if (!data) {
+        throw new Error('Deal is no longer eligible for extension.')
+      }
+
+      const updated = await fetchDeal()
+      if (updated) setDeal(updated)
+      toast.success('Funding window extended successfully.')
+      setExtendFundingDialogOpen(false)
+      setExtendFundingDays(String(nextWindowDays))
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to extend funding window'
+      console.error('Extend funding window error:', err)
+      toast.error(message)
+    } finally {
+      setIsExtendingFundingWindow(false)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
@@ -488,10 +573,10 @@ export default function DealDetailPage() {
         <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/deals" className="flex items-center gap-1 hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-            Deals
+            {t('deals.title')}
           </Link>
           <ChevronRight className="h-3.5 w-3.5 opacity-40" aria-hidden />
-          <span className="truncate text-foreground/70">{deal.productName || 'Deal details'}</span>
+          <span className="truncate text-foreground/70">{deal.productName || t('deals.viewDeal')}</span>
         </div>
 
         {/* Header */}
@@ -511,7 +596,7 @@ export default function DealDetailPage() {
                 {(deal.yieldBonusApr ?? 0) > 0 && (
                   <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
                     <Sparkles className="h-3 w-3" aria-hidden />
-                    +{deal.yieldBonusApr}% bonus APR
+                    +{deal.yieldBonusApr}% {t('deals.bonusApr').replace('+', '')}
                   </Badge>
                 )}
               </div>
@@ -522,13 +607,14 @@ export default function DealDetailPage() {
             </div>
 
             {deal.status === 'awaiting_funding' && (
-              deal.escrowAddress ? (
+              isFundingOpen ? (
+                deal.escrowAddress ? (
                 userType === 'investor' ? (
                   <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
                     <DialogTrigger asChild>
                       <Button size="lg" className="gap-2 shadow-sm">
                         <Wallet className="h-5 w-5" aria-hidden />
-                        Fund {formatCurrency(deal.priceUSDC)}
+                        {t('deals.fundThisDeal')} {formatCurrency(deal.priceUSDC)}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
@@ -594,38 +680,100 @@ export default function DealDetailPage() {
                       : 'Sign in as an investor to fund this deal.'}
                   </div>
                 )
+                ) : (
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                    Escrow deploying — refresh shortly to fund.
+                  </div>
+                )
               ) : (
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 shrink-0" aria-hidden />
-                  Escrow deploying — refresh shortly to fund.
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                    Funding window expired.
+                  </div>
+                  {isPyme && (
+                    <Dialog
+                      open={extendFundingDialogOpen}
+                      onOpenChange={setExtendFundingDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline">
+                          Extend funding window
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Extend funding window</DialogTitle>
+                          <DialogDescription>
+                            Choose how many days to extend this deal. Extension is
+                            only allowed while the deal is unfunded.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="extend-days">Additional days</Label>
+                            <Input
+                              id="extend-days"
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              step={1}
+                              value={extendFundingDays}
+                              onChange={(e) => setExtendFundingDays(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleExtendFundingWindow}
+                            disabled={isExtendingFundingWindow}
+                            className="w-full"
+                          >
+                            {isExtendingFundingWindow
+                              ? 'Extending…'
+                              : 'Confirm extension'}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               )
+            )}
+
+            {deal.status === 'awaiting_funding' && deal.fundingExpiresAt && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Funding deadline: {formatDate(deal.fundingExpiresAt)}
+                {isFundingOpen && fundingRemainingMs != null && fundingRemainingMs > 0
+                  ? ` (${formatFundingRemaining(fundingRemainingMs)})`
+                  : ''}
+              </p>
             )}
           </div>
 
           {/* Quick stats row */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Amount</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('common.amount')}</p>
               <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(deal.priceUSDC)}</p>
-              <p className="text-[11px] text-muted-foreground">USDC</p>
+              <p className="text-[11px] text-muted-foreground">{t('deals.usdc')}</p>
             </div>
             <div className={`rounded-xl border px-4 py-3 text-center ${deal.yieldAPR ? 'border-success/30 bg-success/5' : 'border-border bg-muted/30'}`}>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">APR</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('deals.apr')}</p>
               {deal.yieldAPR ? (
                 <p className="mt-1 text-xl font-bold tabular-nums text-success">{deal.yieldAPR.toFixed(1)}%</p>
               ) : (
                 <p className="mt-1 text-xl text-muted-foreground">—</p>
               )}
-              <p className="text-[11px] text-muted-foreground">yield</p>
+              <p className="text-[11px] text-muted-foreground">{t('common.yield')}</p>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Term</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('common.term')}</p>
               <p className="mt-1 text-xl font-bold tabular-nums">{deal.term}</p>
-              <p className="text-[11px] text-muted-foreground">days</p>
+              <p className="text-[11px] text-muted-foreground">{t('common.days')}</p>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Quantity</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('common.quantity')}</p>
               <p className="mt-1 text-xl font-bold tabular-nums">{deal.quantity.toLocaleString()}</p>
               <p className="text-[11px] text-muted-foreground">units</p>
             </div>
@@ -884,6 +1032,21 @@ export default function DealDetailPage() {
                           </p>
                         </div>
                       )}
+                      {deal.fundingExpiresAt && (
+                        <div>
+                          <p className="mb-1 text-sm font-medium">Funding deadline</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(deal.fundingExpiresAt)}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="mb-1 text-sm font-medium">Funding window</p>
+                        <p className="text-sm text-muted-foreground">
+                          {deal.fundingWindowDays ?? '—'} days
+                          {deal.extensionCount > 0 ? ` · ${deal.extensionCount} extension(s)` : ''}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -995,7 +1158,7 @@ export default function DealDetailPage() {
           {/* Sidebar */}
           <div className="space-y-5">
             {/* Return calculator — only for open deals */}
-            {deal.status === 'awaiting_funding' && deal.yieldAPR != null && (
+            {isFundingOpen && deal.yieldAPR != null && (
               <Card className="border-success/30 bg-success/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base text-success">
@@ -1047,6 +1210,7 @@ export default function DealDetailPage() {
                     label: 'PyME (Buyer)',
                     name: deal.pymeName,
                     href: deal.pymeId ? `/pymes/${deal.pymeId}` : undefined,
+                    stakeAmount: deal.pymeStakeAmount,
                   },
                   {
                     icon: <TrendingUp className="h-4 w-4 text-success" aria-hidden />,
@@ -1054,6 +1218,7 @@ export default function DealDetailPage() {
                     label: 'Investor',
                     name: deal.investorName ?? 'Awaiting funding',
                     href: deal.investorId && deal.investorName ? `/investors/${deal.investorId}` : undefined,
+                    stakeAmount: undefined,
                   },
                   {
                     icon: <Building2 className="h-4 w-4 text-primary" aria-hidden />,
@@ -1061,6 +1226,7 @@ export default function DealDetailPage() {
                     label: 'Supplier',
                     name: deal.supplier,
                     href: deal.supplierId ? `/suppliers/${deal.supplierId}` : undefined,
+                    stakeAmount: undefined,
                   },
                 ].map((s) => (
                   <div key={s.label} className="flex items-center gap-3">
@@ -1079,6 +1245,11 @@ export default function DealDetailPage() {
                         </Link>
                       ) : (
                         <p className="truncate text-sm font-medium text-muted-foreground">{s.name}</p>
+                      )}
+                      {s.stakeAmount && s.stakeAmount > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Trust stake: {formatCurrency(s.stakeAmount)}
+                        </p>
                       )}
                     </div>
                   </div>

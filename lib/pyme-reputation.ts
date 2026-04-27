@@ -2,6 +2,7 @@
  * PYME reputation: derived from repayment behavior to boost investor trust.
  * Circle: PYME opens order → investor funds → PYME receives product → PYME pays debt.
  * We score based on debt paid (completed deals) and current debt (in progress).
+ * Stake signal v1 is stored separately and intentionally not included in score yet.
  */
 
 export interface PymeReputationStats {

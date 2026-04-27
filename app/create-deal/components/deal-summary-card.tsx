@@ -5,7 +5,7 @@ import { formatCurrency } from '@/lib/format'
 import type { CreateDealFormData } from '../types'
 
 interface DealSummaryCardProps {
-  formData: Pick<CreateDealFormData, 'supplierName' | 'term'>
+  formData: Pick<CreateDealFormData, 'supplierName' | 'term' | 'fundingWindowDays'>
   productName: string
   totalAmount: number
   baseAPR?: number
@@ -45,6 +45,12 @@ export function DealSummaryCard({
         <div>
           <p className="text-sm text-muted-foreground">Term</p>
           <p className="font-medium">{formData.term} days</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Funding Window</p>
+          <p className="font-medium">
+            {formData.fundingWindowDays || 'Not set'} days
+          </p>
         </div>
         {effectiveAPR != null && baseAPR != null && (
           <div>

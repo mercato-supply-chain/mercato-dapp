@@ -35,8 +35,10 @@ import {
   effectiveInvestorApr,
   MAX_YIELD_BONUS_APR,
 } from '@/lib/yield'
+import { useI18n } from '@/lib/i18n/provider'
 
 export default function CreateDealContent() {
+  const { t } = useI18n()
   const router = useRouter()
   const supabase = createClient()
   const { deployEscrow } = useInitializeEscrow()
@@ -189,7 +191,11 @@ export default function CreateDealContent() {
   const canProceedStep1 =
     Boolean(formData.category || availableCategories.length === 0) &&
     Boolean(formData.supplierId && formData.productId && formData.quantity)
-  const canProceedStep2 = Boolean(formData.supplierName && formData.term)
+  const fundingWindowDays = Number(formData.fundingWindowDays)
+  const isFundingWindowValid =
+    Number.isInteger(fundingWindowDays) && fundingWindowDays > 0
+  const canProceedStep2 =
+    Boolean(formData.supplierName && formData.term) && isFundingWindowValid
   const milestonesOk = isMilestonesValid(formData.milestones)
   const canSubmit = canProceedStep1 && canProceedStep2 && milestonesOk
 
@@ -197,31 +203,36 @@ export default function CreateDealContent() {
     if (!userId || !userProfile) return
 
     if (!isConnected || !walletInfo?.address) {
-      toast.error('Please connect your Stellar wallet before creating a deal.')
+      toast.error(t('createDeal.walletRequired'))
       return
     }
     const signerAddress = walletInfo.address
 
     if (!MERCATO_PLATFORM_ADDRESS) {
-      toast.error('Platform address is not configured. Contact support.')
+      toast.error(t('createDeal.platformMissing'))
       return
     }
     if (!USDC_TRUSTLINE.address) {
       toast.error(
-        'Trustline address is not configured (NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS).'
+        t('createDeal.trustlineMissing')
       )
       return
     }
 
     if (!selectedProduct) {
-      toast.error('Please select a product.')
+      toast.error(t('createDeal.selectProduct'))
       return
     }
 
     if (!isMilestonesValid(formData.milestones)) {
       toast.error(
-        'Set each milestone name and adjust percentages so they total 100%.',
+        t('createDeal.invalidMilestones'),
       )
+      return
+    }
+
+    if (!isFundingWindowValid) {
+      toast.error('Set a valid funding window in days before creating the deal.')
       return
     }
 
@@ -236,7 +247,7 @@ export default function CreateDealContent() {
       const supplierAddress = company?.address?.trim()
       if (!supplierAddress) {
         toast.error(
-          'Selected supplier company does not have a Stellar wallet address. Ask the supplier to add it in Settings.'
+          t('createDeal.supplierWalletMissing')
         )
         setIsLoading(false)
         return
@@ -250,13 +261,16 @@ export default function CreateDealContent() {
 
       const productName = selectedProduct.name
       const productUnitPrice = Number(selectedProduct.price_per_unit)
+      const fundingExpiresAt = new Date(
+        Date.now() + fundingWindowDays * 24 * 60 * 60 * 1000
+      ).toISOString()
 
       const { data: deal, error: dealError } = await supabase
         .from('deals')
         .insert({
           pyme_id: userId,
           title: productName,
-          description: formData.description || selectedProduct.description || 'No description provided',
+          description: formData.description || selectedProduct.description || t('createDeal.missingDescription'),
           product_name: productName,
           product_quantity: Number(formData.quantity),
           product_unit_price: productUnitPrice,
@@ -271,6 +285,9 @@ export default function CreateDealContent() {
           supplier_email: ownerProfile?.email ?? null,
           supplier_contact: formData.supplierContact || null,
           platform_fee: 2.5,
+          funding_window_days: fundingWindowDays,
+          funding_expires_at: fundingExpiresAt,
+          extension_count: 0,
         })
         .select()
         .single()
@@ -300,7 +317,7 @@ export default function CreateDealContent() {
         signer: signerAddress,
         engagementId: deal.id,
         title: productName,
-        description: formData.description || selectedProduct.description || 'No description provided',
+        description: formData.description || selectedProduct.description || t('createDeal.missingDescription'),
         roles: {
           approver: signerAddress,
           serviceProvider: supplierAddress,
@@ -326,7 +343,7 @@ export default function CreateDealContent() {
         deployResponse.status !== 'SUCCESS' ||
         !deployResponse.unsignedTransaction
       ) {
-        throw new Error('Failed to create escrow transaction')
+        throw new Error(t('createDeal.escrowFailed'))
       }
 
       const signedXdr = await signTransaction({
@@ -335,7 +352,7 @@ export default function CreateDealContent() {
       })
 
       if (!signedXdr) {
-        throw new Error('Signed transaction is missing.')
+        throw new Error(t('createDeal.signedMissing'))
       }
 
       const txResult = await sendTransaction(signedXdr)
@@ -357,20 +374,20 @@ export default function CreateDealContent() {
           })
           .eq('id', deal.id)
 
-        toast.success('Deal created and escrow deployed successfully!')
+        toast.success(t('createDeal.success'))
         router.push('/dashboard')
       } else {
         throw new Error(
           'message' in txResult
             ? (txResult as { message: string }).message
-            : 'Failed to submit transaction'
+            : t('createDeal.transactionFailed')
         )
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Please try again.'
+        error instanceof Error ? error.message : t('createDeal.tryAgain')
       console.error('Error creating deal:', error)
-      toast.error(`Error creating deal: ${message}`)
+      toast.error(t('createDeal.errorPrefix', { message }))
     } finally {
       setIsLoading(false)
     }
@@ -393,14 +410,13 @@ export default function CreateDealContent() {
       <main id="main-content" className="container mx-auto px-4 py-8 pb-16">
         <div className="mb-8">
           <Badge className="mb-3" variant="secondary">
-            For PyMEs
+            {t('createDeal.badge')}
           </Badge>
           <h1 className="mb-2 text-4xl font-bold tracking-tight">
-            Create New Deal
+            {t('createDeal.title')}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Set up your purchase order and let investors fund it through secure
-            escrow
+            {t('createDeal.description')}
           </p>
         </div>
 
@@ -450,7 +466,7 @@ export default function CreateDealContent() {
                 disabled={currentStep === 1}
                 type="button"
               >
-                Back
+                {t('common.back')}
               </Button>
 
               {currentStep < 3 ? (
@@ -461,7 +477,7 @@ export default function CreateDealContent() {
                     currentStep === 1 ? !canProceedStep1 : !canProceedStep2
                   }
                 >
-                  Continue
+                  {t('common.continue')}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                 </Button>
               ) : isConnected ? (
@@ -471,17 +487,17 @@ export default function CreateDealContent() {
                   disabled={!canSubmit || isLoading}
                   title={
                     !milestonesOk
-                      ? 'Set milestone names and percentages to total 100%'
+                      ? t('createDeal.invalidMilestones')
                       : undefined
                   }
                 >
                   {isLoading
-                    ? 'Creating Deal & Deploying Escrow…'
-                    : 'Create Deal & Deploy Escrow'}
+                    ? t('createDeal.creatingDeploying')
+                    : t('createDeal.createDeploy')}
                 </Button>
               ) : (
                 <Button type="button" onClick={handleConnect}>
-                  Connect Wallet to Continue
+                  {t('createDeal.connectWalletContinue')}
                 </Button>
               )}
             </div>

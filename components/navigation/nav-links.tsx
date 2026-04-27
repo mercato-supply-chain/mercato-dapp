@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { Package, PieChart, Store, TrendingUp } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/provider'
 
 const links = [
-  { href: '/deals', label: 'Deals', icon: TrendingUp },
-  { href: '/suppliers', label: 'Suppliers', icon: Package },
-  { href: '/pymes', label: 'SMBs', icon: Store },
-  { href: '/investors', label: 'Investors', icon: PieChart },
-  { href: '/how-it-works', label: 'How It Works', icon: Package },
+  { href: '/deals', labelKey: 'nav.deals', icon: TrendingUp },
+  { href: '/suppliers', labelKey: 'nav.suppliers', icon: Package },
+  { href: '/pymes', labelKey: 'nav.smbs', icon: Store },
+  { href: '/investors', labelKey: 'nav.investors', icon: PieChart },
+  { href: '/how-it-works', labelKey: 'nav.howItWorks', icon: Package },
 ] as const
 
 interface NavLinksProps {
@@ -18,17 +19,18 @@ interface NavLinksProps {
 
 export function NavLinks({ variant }: NavLinksProps) {
   const isDesktop = variant === 'desktop'
+  const { t } = useI18n()
 
   if (isDesktop) {
     return (
-      <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
-        {links.map(({ href, label }) => (
+      <nav className="hidden items-center gap-6 md:flex" aria-label={t('nav.main')}>
+        {links.map(({ href, labelKey }) => (
           <Link
             key={href}
             href={href}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            {label}
+            {t(labelKey)}
           </Link>
         ))}
       </nav>
@@ -37,14 +39,14 @@ export function NavLinks({ variant }: NavLinksProps) {
 
   return (
     <>
-      {links.map(({ href, label, icon: Icon }) => (
+      {links.map(({ href, labelKey, icon: Icon }) => (
         <Link
           key={href}
           href={href}
           className="flex items-center gap-2 text-sm font-medium"
         >
           <Icon className="h-4 w-4" aria-hidden />
-          {label}
+          {t(labelKey)}
         </Link>
       ))}
     </>

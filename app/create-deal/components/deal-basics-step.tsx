@@ -15,6 +15,7 @@ import { Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { getCategoryLabel } from '@/lib/categories'
 import type { CreateDealFormData } from '../types'
+import { useI18n } from '@/lib/i18n/provider'
 
 interface SupplierOption {
   id: string
@@ -53,20 +54,22 @@ export function DealBasicsStep({
   onUpdate,
   onSupplierSelect,
 }: DealBasicsStepProps) {
+  const { t } = useI18n()
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" aria-hidden />
-          Deal Basics
+          {t('createDeal.basicsTitle')}
         </CardTitle>
         <CardDescription>
-          Choose a category, supplier, and product; price comes from the supplier catalog
+          {t('createDeal.basicsDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="category">{t('common.category')}</Label>
           <Select
             value={formData.category}
             onValueChange={(v) => onUpdate('category', v)}
@@ -75,16 +78,15 @@ export function DealBasicsStep({
               <SelectValue
                 placeholder={
                   availableCategories.length > 0
-                    ? 'Select category'
-                    : 'No categories available yet'
+                    ? t('createDeal.selectCategory')
+                    : t('createDeal.noCategories')
                 }
               />
             </SelectTrigger>
             <SelectContent>
               {availableCategories.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No products in catalog yet. Ask suppliers to add products in
-                  their profile.
+                  {t('createDeal.catalogEmpty')}
                 </div>
               ) : (
                 availableCategories.map((cat) => (
@@ -98,7 +100,7 @@ export function DealBasicsStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="supplier">Supplier</Label>
+          <Label htmlFor="supplier">{t('createDeal.supplier')}</Label>
           <Select
             value={formData.supplierId}
             onValueChange={(v) => {
@@ -109,15 +111,15 @@ export function DealBasicsStep({
               <SelectValue
                 placeholder={
                   filteredSuppliers.length > 0
-                    ? 'Select supplier'
-                    : 'Select a category first or no suppliers available'
+                    ? t('createDeal.selectSupplier')
+                    : t('createDeal.selectCategoryFirst')
                 }
               />
             </SelectTrigger>
             <SelectContent>
               {filteredSuppliers.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No suppliers with products in this category
+                  {t('createDeal.noSuppliersCategory')}
                 </div>
               ) : (
                 filteredSuppliers.map((s) => (
@@ -131,7 +133,7 @@ export function DealBasicsStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="product">Product</Label>
+          <Label htmlFor="product">{t('createDeal.product')}</Label>
           <Select
             value={formData.productId}
             onValueChange={(v) => onUpdate('productId', v)}
@@ -140,20 +142,20 @@ export function DealBasicsStep({
               <SelectValue
                 placeholder={
                   productsForSupplier.length > 0
-                    ? 'Select product'
-                    : 'Select a supplier first'
+                    ? t('createDeal.selectProductPlaceholder')
+                    : t('createDeal.selectSupplierFirst')
                 }
               />
             </SelectTrigger>
             <SelectContent>
               {productsForSupplier.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No products for this supplier
+                  {t('createDeal.noProductsSupplier')}
                 </div>
               ) : (
                 productsForSupplier.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name} — {formatCurrency(p.price_per_unit)} USDC/unit
+                    {p.name} — {formatCurrency(p.price_per_unit)} USDC/{t('createDeal.unit')}
                   </SelectItem>
                 ))
               )}
@@ -162,14 +164,14 @@ export function DealBasicsStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="quantity">Quantity</Label>
+          <Label htmlFor="quantity">{t('common.quantity')}</Label>
           <Input
             id="quantity"
             name="quantity"
             type="number"
             inputMode="numeric"
             min={1}
-            placeholder="e.g. 500"
+            placeholder={t('createDeal.quantityPlaceholder')}
             value={formData.quantity}
             onChange={(e) => onUpdate('quantity', e.target.value)}
             aria-required
@@ -177,12 +179,12 @@ export function DealBasicsStep({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">Description (optional)</Label>
+          <Label htmlFor="description">{t('createDeal.descriptionOptional')}</Label>
           <Textarea
             id="description"
             name="description"
             autoComplete="off"
-            placeholder="Brief description or notes for this order…"
+            placeholder={t('createDeal.descriptionPlaceholder')}
             value={formData.description}
             onChange={(e) => onUpdate('description', e.target.value)}
             rows={3}
@@ -191,7 +193,7 @@ export function DealBasicsStep({
 
         {totalAmount > 0 && (
           <div className="rounded-lg border border-accent bg-accent/5 p-4">
-            <p className="text-sm text-muted-foreground">Total Deal Amount</p>
+            <p className="text-sm text-muted-foreground">{t('createDeal.totalDealAmount')}</p>
             <p className="text-3xl font-bold text-accent tabular-nums">
               {formatCurrency(totalAmount)} USDC
             </p>

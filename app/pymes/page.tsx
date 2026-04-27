@@ -27,8 +27,10 @@ import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib
 import {
   aggregateDealsToStats,
   computePymeReputation,
+  type PymeReputation,
   type PymeReputationTier,
 } from '@/lib/pyme-reputation'
+import { ReputationTooltip } from '@/components/reputation-tooltip'
 
 type Smb = {
   id: string
@@ -43,6 +45,7 @@ type Smb = {
   sector: string | null
   deal_count?: number
   active_deals?: number
+  reputation?: PymeReputation
   reputationLabel?: string
   reputationTier?: PymeReputationTier
   totalRepaid?: number
@@ -143,6 +146,7 @@ export default function SmbsPage() {
           ...p,
           deal_count: deals.length,
           active_deals,
+          reputation: rep,
           reputationLabel: rep.label,
           reputationTier: rep.tier,
           totalRepaid: rep.stats.totalRepaid,
@@ -285,12 +289,15 @@ export default function SmbsPage() {
                         {getInitials(smb)}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 justify-end">
-                        {smb.reputationTier && smb.reputationTier !== 'new' && (
-                          <span
-                            className={`rounded-md px-2 py-0.5 text-xs font-medium ${TIER_STYLES[smb.reputationTier]}`}
-                          >
-                            {smb.reputationLabel}
-                          </span>
+                        {smb.reputationTier && smb.reputationTier !== 'new' && smb.reputation && (
+                          <ReputationTooltip reputation={smb.reputation} side="bottom" align="end">
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-xs font-medium ${TIER_STYLES[smb.reputationTier]}`}
+                              title={`Reputation: ${smb.reputationLabel}. Hover for breakdown.`}
+                            >
+                              {smb.reputationLabel}
+                            </span>
+                          </ReputationTooltip>
                         )}
                         {typeof smb.deal_count === 'number' && smb.deal_count > 0 && (
                           <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">

@@ -1,4 +1,4 @@
-import type { Deal, DealStatus, Milestone } from './types'
+import type { Deal, DealStatus, FundingStatus, Milestone } from './types'
 import { calculateYieldAPR } from './yield'
 
 /** DB deal row with optional relations from Supabase select */
@@ -21,12 +21,21 @@ export interface DealRow {
   status: string
   escrow_address?: string | null
   escrow_contract_address?: string | null
+  funding_expires_at?: string | null
+  funding_window_days?: number | null
+  extension_count?: number | null
+  extended_at?: string | null
   created_at?: string | null
   funded_at?: string | null
   completed_at?: string | null
   milestones?: MilestoneRow[] | null
   /** From Supabase select with alias: pyme:profiles!deals_pyme_id_fkey(...) */
-  pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
+  pyme?: {
+    company_name?: string
+    full_name?: string
+    contact_name?: string
+    stake_amount?: number | null
+  } | null
   /** From Supabase select with alias: investor:profiles!deals_investor_id_fkey(...) */
   investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
   /** From Supabase select: supplier_companies!deals_supplier_id_fkey(...) */
@@ -62,6 +71,42 @@ const DB_STATUS_TO_DEAL_STATUS: Record<string, DealStatus> = {
   cancelled: 'completed',
 }
 
+const FUNDED_DB_STATUSES = new Set(['funded', 'in_progress', 'completed', 'cancelled'])
+
+export function getFundingTimeRemainingMs(
+  fundingExpiresAt?: string | null,
+  nowMs = Date.now()
+): number | null {
+  if (!fundingExpiresAt) return null
+  const expiresAtMs = Date.parse(fundingExpiresAt)
+  if (!Number.isFinite(expiresAtMs)) return null
+  return expiresAtMs - nowMs
+}
+
+export function getDealFundingStatus(
+  row: Pick<
+    DealRow,
+    'status' | 'investor_id' | 'funded_at' | 'funding_expires_at' | 'extension_count'
+  >,
+  nowMs = Date.now()
+): FundingStatus {
+  const hasInvestment =
+    Boolean(row.investor_id) ||
+    Boolean(row.funded_at) ||
+    FUNDED_DB_STATUSES.has(row.status)
+
+  if (hasInvestment) return 'funded'
+  if (row.status !== 'seeking_funding') return 'funded'
+
+  const remainingMs = getFundingTimeRemainingMs(row.funding_expires_at, nowMs)
+  if (remainingMs != null && remainingMs <= 0) return 'expired'
+
+  const extensionCount = Number(row.extension_count ?? 0)
+  if (extensionCount > 0) return 'extended'
+
+  return 'open'
+}
+
 /**
  * Map a Supabase deal row (with optional milestones and pyme profile) to the Deal type used by DealCard and the deals browse page.
  */
@@ -72,6 +117,11 @@ export function mapDealFromDb(row: DealRow): Deal {
     pymeProfile?.full_name ||
     pymeProfile?.contact_name ||
     'PyME'
+
+  const pymeStakeAmount =
+    pymeProfile && 'stake_amount' in pymeProfile
+      ? Number(pymeProfile.stake_amount ?? 0)
+      : 0
 
   const investorName =
     row.investor?.company_name ||
@@ -99,6 +149,8 @@ export function mapDealFromDb(row: DealRow): Deal {
   }))
 
   const status = DB_STATUS_TO_DEAL_STATUS[row.status] ?? 'awaiting_funding'
+  const fundingStatus = getDealFundingStatus(row)
+  const extensionCount = Math.max(0, Number(row.extension_count ?? 0))
 
   const supplierCompany = row.supplier
   const supplierName =
@@ -126,10 +178,26 @@ export function mapDealFromDb(row: DealRow): Deal {
     escrowAddress: row.escrow_contract_address ?? row.escrow_address ?? undefined,
     pymeName,
     pymeId: row.pyme_id ?? undefined,
+    pymeStakeAmount:
+      Number.isFinite(pymeStakeAmount) && pymeStakeAmount > 0
+        ? pymeStakeAmount
+        : undefined,
     investorName: investorName ?? undefined,
     investorId: row.investor_id ?? undefined,
     description: row.description ?? undefined,
     category: row.category ?? undefined,
+    fundingStatus,
+    fundingWindowDays:
+      row.funding_window_days != null && Number.isFinite(Number(row.funding_window_days))
+        ? Number(row.funding_window_days)
+        : undefined,
+    fundingExpiresAt: row.funding_expires_at
+      ? new Date(row.funding_expires_at).toISOString()
+      : undefined,
+    extensionCount,
+    extendedAt: row.extended_at
+      ? new Date(row.extended_at).toISOString()
+      : undefined,
     yieldAPR: (() => {
       const amount = Number(row.amount ?? 0)
       const termDays = row.term_days ?? 0
