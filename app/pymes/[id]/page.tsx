@@ -25,6 +25,7 @@ import {
   computePymeReputation,
   type PymeReputationTier,
 } from '@/lib/pyme-reputation'
+import { ReputationTooltip } from '@/components/reputation-tooltip'
 
 type DealRow = {
   id: string
@@ -169,7 +170,15 @@ export default async function SmbDetailPage({
             {/* Reputation badge */}
             {reputation.tier !== 'new' && (
               <div className={`shrink-0 rounded-lg border px-3 py-2 text-center ${TIER_STYLES[reputation.tier]}`}>
-                <p className="text-xs font-medium opacity-70 mb-0.5">Reputation</p>
+                <div className="mb-0.5 flex items-center justify-center gap-1">
+                  <p className="text-xs font-medium opacity-70">Reputation</p>
+                  <ReputationTooltip
+                    reputation={reputation}
+                    side="bottom"
+                    align="end"
+                    triggerClassName="h-4 w-4 text-current opacity-60 hover:opacity-100 hover:bg-transparent"
+                  />
+                </div>
                 <p className="text-sm font-semibold">{reputation.label}</p>
               </div>
             )}
@@ -232,6 +241,7 @@ export default async function SmbDetailPage({
             <CardTitle className="flex items-center gap-2 text-base">
               <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
               Repayment track record
+              <ReputationTooltip reputation={reputation} side="bottom" align="start" />
             </CardTitle>
             <CardDescription>{reputation.description} Helps investors assess repayment behavior.</CardDescription>
           </CardHeader>
