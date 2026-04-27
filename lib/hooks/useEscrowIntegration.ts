@@ -12,6 +12,8 @@ import type {
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
+import { showLoading, showSuccess, showError } from '@/hooks/use-toast'
+import type { TxState } from '@/lib/types'
 
 export interface EscrowMilestone {
   description: string
@@ -31,7 +33,7 @@ export interface InitializeEscrowParams {
 }
 
 export function useEscrowIntegration() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [txState, setTxState] = useState<TxState>('idle')
   const [error, setError] = useState<string | null>(null)
 
   const { deployEscrow } = useInitializeEscrow()
@@ -46,8 +48,9 @@ export function useEscrowIntegration() {
     transactionHash?: string
     error?: string
   }> => {
-    setIsLoading(true)
+    setTxState('loading')
     setError(null)
+    showLoading('Submitting transaction...')
 
     try {
       if (!MERCATO_PLATFORM_ADDRESS) {
@@ -95,6 +98,7 @@ export function useEscrowIntegration() {
         address: params.signer,
       })
 
+      setTxState('pending')
       const sendResponse = await sendTransaction(signedXdr)
 
       if (sendResponse.status !== 'SUCCESS') {
@@ -104,6 +108,9 @@ export function useEscrowIntegration() {
             : 'Failed to submit transaction'
         )
       }
+
+      setTxState('success')
+      showSuccess('Transaction confirmed')
 
       const contractId =
         'contractId' in sendResponse ? sendResponse.contractId : undefined
@@ -120,18 +127,19 @@ export function useEscrowIntegration() {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to initialize escrow'
       setError(errorMessage)
+      setTxState('error')
+      showError(errorMessage)
       return {
         success: false,
         error: errorMessage,
       }
-    } finally {
-      setIsLoading(false)
     }
   }
 
   return {
     initializeAndDeployEscrow,
-    isLoading,
+    txState,
+    isLoading: txState === 'loading' || txState === 'pending',
     error,
   }
 }

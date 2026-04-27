@@ -1,4 +1,6 @@
-export type DealStatus = 
+export type TxState = 'idle' | 'loading' | 'pending' | 'success' | 'error'
+
+export type DealStatus =
   | 'awaiting_funding' 
   | 'funded' 
   | 'in_progress' 

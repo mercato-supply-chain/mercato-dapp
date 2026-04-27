@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { DefindexSDK, SupportedNetworks, DepositParams, WithdrawParams } from '@defindex/sdk'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
-import { submitSignedTransaction } from '@/lib/stellar-submit'
+import { executeTransaction } from '@/lib/stellar-submit'
 import { useWalletContext } from '@/providers/wallet-provider'
+import { showLoading, showSuccess, showError } from '@/hooks/use-toast'
+import type { TxState } from '@/lib/types'
 
 const isTestnet = process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK !== 'mainnet'
 const DEFINDEX_NETWORK = isTestnet
@@ -34,15 +36,16 @@ export interface WithdrawResult {
 }
 
 export function useDefindex() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [txState, setTxState] = useState<TxState>('idle')
   const [error, setError] = useState<string | null>(null)
   const { walletInfo } = useWalletContext()
 
   const depositToVault = async (
     params: DepositToVaultParams
   ): Promise<DepositResult> => {
-    setIsLoading(true)
+    setTxState('loading')
     setError(null)
+    showLoading('Submitting deposit...')
 
     try {
       if (!params.amount || params.amount <= 0) {
@@ -85,7 +88,9 @@ export function useDefindex() {
         address: walletInfo.address,
       })
 
-      const result = await submitSignedTransaction(signedXdr)
+      setTxState('pending')
+      const result = await executeTransaction(signedXdr, setTxState)
+      showSuccess('Deposit confirmed')
 
       return {
         success: true,
@@ -95,20 +100,21 @@ export function useDefindex() {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to deposit to vault'
       setError(errorMessage)
+      setTxState('error')
+      showError(errorMessage)
       return {
         success: false,
         error: errorMessage,
       }
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const withdrawFromVault = async (
     params: WithdrawFromVaultParams
   ): Promise<WithdrawResult> => {
-    setIsLoading(true)
+    setTxState('loading')
     setError(null)
+    showLoading('Submitting withdrawal...')
 
     try {
       if (!params.amount || params.amount <= 0) {
@@ -161,7 +167,9 @@ export function useDefindex() {
         address: walletInfo.address,
       })
 
-      const result = await submitSignedTransaction(signedXdr)
+      setTxState('pending')
+      const result = await executeTransaction(signedXdr, setTxState)
+      showSuccess('Withdrawal confirmed')
 
       return {
         success: true,
@@ -173,23 +181,20 @@ export function useDefindex() {
         ? 'Insufficient vault balance'
         : message || 'Failed to withdraw from vault'
       setError(errorMessage)
+      setTxState('error')
+      showError(errorMessage)
       return {
         success: false,
         error: errorMessage,
       }
-    } finally {
-      setIsLoading(false)
     }
   }
 
   return {
     depositToVault,
     withdrawFromVault,
-    isLoading,
+    txState,
+    isLoading: txState === 'loading' || txState === 'pending',
     error,
   }
 }
-
-// Test manual: en cualquier componente con wallet conectada,
-// llamar: await depositToVault({ vaultAddress: "VAULT_ADDR", amount: 1000000 })
-// llamar: await withdrawFromVault({ vaultAddress: "VAULT_ADDR", amount: 5000000 })

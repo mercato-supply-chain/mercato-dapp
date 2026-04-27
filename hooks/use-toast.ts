@@ -188,4 +188,16 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+function showLoading(message: string) {
+  return toast({ title: message })
+}
+
+function showSuccess(message: string) {
+  return toast({ title: message })
+}
+
+function showError(message: string) {
+  return toast({ title: message, variant: 'destructive' })
+}
+
+export { useToast, toast, showLoading, showSuccess, showError }
