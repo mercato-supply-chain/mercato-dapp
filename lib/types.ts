@@ -64,3 +64,22 @@ export interface User {
   walletAddress?: string
   email?: string
 }
+
+/**
+ * Standardized model for representing capital distribution across the platform.
+ * Used for tracking liquidity, exposure, and settlement state.
+ */
+export interface CapitalState {
+  /** The currency code (e.g., "USDC") */
+  assetCode: string
+  /** Total capital under management/committed by investors */
+  totalCapital: number
+  /** Capital currently locked in active escrow contracts */
+  lockedCapital: number
+  /** Capital available for new deals (committed but not deployed) */
+  availableCapital: number
+  /** Total capital successfully released/paid to suppliers */
+  releasedCapital: number
+  /** Optional: timestamp of the last state update */
+  updatedAt?: string
+}
