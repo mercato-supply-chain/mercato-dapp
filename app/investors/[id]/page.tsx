@@ -94,7 +94,7 @@ export default async function InvestorDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount, stake_updated_at')
     .eq('id', id)
     .single()
 
@@ -113,6 +113,7 @@ export default async function InvestorDetailPage({
   const activeVolume = allDeals
     .filter((d) => d.status === 'funded' || d.status === 'in_progress')
     .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
+  const stakeAmount = Math.max(0, Number(profile.stake_amount ?? 0) || 0)
 
   const displayName = profile.company_name || profile.full_name || profile.contact_name || 'Investor'
   const initials = getInitials(displayName)
@@ -194,7 +195,7 @@ export default async function InvestorDetailPage({
         </div>
 
         {/* Stats grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
@@ -231,6 +232,17 @@ export default async function InvestorDetailPage({
                 Completed
               </CardDescription>
               <CardTitle className="text-3xl tabular-nums">{completedDeals}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Trust stake
+              </CardDescription>
+              <CardTitle className="text-2xl tabular-nums text-emerald-600 dark:text-emerald-400">
+                {stakeAmount > 0 ? formatPrice(stakeAmount) : '—'}
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>

@@ -133,7 +133,7 @@ export default function DealDetailPage() {
         `
         *,
         milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount),
         investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
         supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `
@@ -1188,6 +1188,7 @@ export default function DealDetailPage() {
                     label: 'PyME (Buyer)',
                     name: deal.pymeName,
                     href: deal.pymeId ? `/pymes/${deal.pymeId}` : undefined,
+                    stakeAmount: deal.pymeStakeAmount,
                   },
                   {
                     icon: <TrendingUp className="h-4 w-4 text-success" aria-hidden />,
@@ -1195,6 +1196,7 @@ export default function DealDetailPage() {
                     label: 'Investor',
                     name: deal.investorName ?? 'Awaiting funding',
                     href: deal.investorId && deal.investorName ? `/investors/${deal.investorId}` : undefined,
+                    stakeAmount: undefined,
                   },
                   {
                     icon: <Building2 className="h-4 w-4 text-primary" aria-hidden />,
@@ -1202,6 +1204,7 @@ export default function DealDetailPage() {
                     label: 'Supplier',
                     name: deal.supplier,
                     href: deal.supplierId ? `/suppliers/${deal.supplierId}` : undefined,
+                    stakeAmount: undefined,
                   },
                 ].map((s) => (
                   <div key={s.label} className="flex items-center gap-3">
@@ -1220,6 +1223,11 @@ export default function DealDetailPage() {
                         </Link>
                       ) : (
                         <p className="truncate text-sm font-medium text-muted-foreground">{s.name}</p>
+                      )}
+                      {s.stakeAmount && s.stakeAmount > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Trust stake: {formatCurrency(s.stakeAmount)}
+                        </p>
                       )}
                     </div>
                   </div>

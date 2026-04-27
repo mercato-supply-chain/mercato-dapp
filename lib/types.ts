@@ -41,6 +41,7 @@ export interface Deal {
   escrowAddress?: string
   pymeName: string
   pymeId?: string
+  pymeStakeAmount?: number
   investorName?: string
   investorId?: string
   investorAddress?: string
