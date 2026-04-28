@@ -13,18 +13,15 @@ import {
   Globe,
   Briefcase,
   Wallet,
-  ShieldCheck,
   CheckCircle2,
   Activity,
   BarChart3,
   ExternalLink,
 } from 'lucide-react'
 import { getCountryLabel, getSectorLabel } from '@/lib/constants'
-import {
-  aggregateDealsToStats,
-  computePymeReputation,
-  type PymeReputationTier,
-} from '@/lib/pyme-reputation'
+import { getReputation } from '@/lib/reputation'
+import { formatCurrency } from '@/lib/format'
+import { ReputationSummaryCard } from '@/components/reputation-summary-card'
 
 type DealRow = {
   id: string
@@ -51,13 +48,6 @@ const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' |
   cancelled: 'destructive',
 }
 
-const TIER_STYLES: Record<PymeReputationTier, string> = {
-  top_performer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-  established: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  building: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  new: 'bg-muted text-muted-foreground border-border',
-}
-
 function getInitials(name: string): string {
   return name
     .split(/\s+/)
@@ -76,7 +66,7 @@ export default async function SmbDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified, stake_amount, stake_updated_at')
     .eq('id', id)
     .single()
 
@@ -84,31 +74,37 @@ export default async function SmbDetailPage({
     notFound()
   }
 
-  const { data: allDeals } = await supabase
+  const dealsPromise = supabase
     .from('deals')
     .select('id, title, product_name, status, amount, created_at')
     .eq('pyme_id', id)
     .order('created_at', { ascending: false })
+  const reputationPromise = getReputation(supabase, id)
+
+  const [{ data: allDeals }, reputation] = await Promise.all([
+    dealsPromise,
+    reputationPromise,
+  ])
 
   const dealsList = (allDeals ?? []).slice(0, 10) as DealRow[]
   const totalDeals = (allDeals ?? []).length
-
-  const reputationStats = aggregateDealsToStats(
-    (allDeals ?? []).map((d) => ({ status: d.status, amount: d.amount }))
+  const activeDeals = (allDeals ?? []).filter((d) =>
+    ['funded', 'in_progress', 'milestone_pending'].includes(d.status)
+  ).length
+  const completedDeals = (allDeals ?? []).filter((d) => d.status === 'completed').length
+  const totalRepaid = (allDeals ?? [])
+    .filter((d) => d.status === 'completed')
+    .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
+  const fundedDeals = (allDeals ?? []).filter((d) =>
+    ['funded', 'in_progress', 'milestone_pending', 'completed'].includes(d.status)
   )
-  const reputation = computePymeReputation(reputationStats)
+  const completionRate =
+    fundedDeals.length > 0 ? Math.round((completedDeals / fundedDeals.length) * 100) : null
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || 'SMB'
 
   const initials = getInitials(displayName)
-
-  const formatPrice = (value: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -165,19 +161,19 @@ export default async function SmbDetailPage({
                 </p>
               )}
             </div>
-
-            {/* Reputation badge */}
-            {reputation.tier !== 'new' && (
-              <div className={`shrink-0 rounded-lg border px-3 py-2 text-center ${TIER_STYLES[reputation.tier]}`}>
-                <p className="text-xs font-medium opacity-70 mb-0.5">Reputation</p>
-                <p className="text-sm font-semibold">{reputation.label}</p>
+            {reputation?.trustLabel && (
+              <div className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-center text-primary">
+                <p className="mb-0.5 text-xs font-medium opacity-70">Reputation</p>
+                <p className="text-sm font-semibold capitalize">
+                  {reputation.trustLabel.replaceAll('_', ' ')}
+                </p>
               </div>
             )}
           </div>
         </div>
 
         {/* Stats grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
@@ -193,11 +189,7 @@ export default async function SmbDetailPage({
                 <Activity className="h-3.5 w-3.5" />
                 Active deals
               </CardDescription>
-              <CardTitle className="text-3xl tabular-nums">
-                {reputationStats.dealsFunded - reputationStats.dealsCompleted > 0
-                  ? reputationStats.dealsFunded - reputationStats.dealsCompleted
-                  : 0}
-              </CardTitle>
+              <CardTitle className="text-3xl tabular-nums">{activeDeals}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -207,7 +199,7 @@ export default async function SmbDetailPage({
                 Total repaid
               </CardDescription>
               <CardTitle className="text-2xl tabular-nums text-emerald-600 dark:text-emerald-400">
-                {formatPrice(reputation.stats.totalRepaid)}
+                {formatCurrency(totalRepaid)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -218,65 +210,24 @@ export default async function SmbDetailPage({
                 Completion rate
               </CardDescription>
               <CardTitle className="text-3xl tabular-nums">
-                {reputation.completionRate > 0
-                  ? `${Math.round(reputation.completionRate * 100)}%`
-                  : '—'}
+                {completionRate != null ? `${completionRate}%` : '-'}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <Wallet className="h-3.5 w-3.5" />
+                Trust stake
+              </CardDescription>
+              <CardTitle className="text-2xl tabular-nums text-primary">
+                {stakeAmount > 0 ? formatPrice(stakeAmount) : '—'}
               </CardTitle>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Repayment track record */}
-        <Card className="mb-8 border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
-              Repayment track record
-            </CardTitle>
-            <CardDescription>{reputation.description} Helps investors assess repayment behavior.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Deals funded</p>
-                <p className="text-2xl font-semibold tabular-nums">{reputationStats.dealsFunded}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Deals completed</p>
-                <p className="text-2xl font-semibold tabular-nums">{reputationStats.dealsCompleted}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Total repaid</p>
-                <p className="text-2xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {formatPrice(reputationStats.totalRepaid)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Current debt</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatPrice(reputationStats.currentDebt)}
-                </p>
-              </div>
-            </div>
-
-            {reputation.completionRate > 0 && (
-              <div className="mt-5">
-                <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Completion rate</span>
-                  <span className="font-medium tabular-nums">
-                    {Math.round(reputation.completionRate * 100)}%
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.round(reputation.completionRate * 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <ReputationSummaryCard reputation={reputation} className="mb-8" />
 
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Contact & details */}
@@ -343,7 +294,7 @@ export default async function SmbDetailPage({
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="tabular-nums text-muted-foreground">
-                            {formatPrice(d.amount)}
+                            {formatCurrency(d.amount)}
                           </span>
                           <Badge variant={STATUS_BADGE_VARIANT[d.status] ?? 'outline'} className="text-xs">
                             {STATUS_LABELS[d.status] ?? d.status}

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
 import { InvestorCapitalOverview } from '@/components/dashboard/investor-capital-overview'
+import { getServerDictionary } from '@/lib/i18n/server'
 
 type DashboardSearchParams = Promise<{ company?: string }> | { company?: string }
 
@@ -44,14 +45,6 @@ type DealRow = {
   milestones?: Array<{ id: string; status: string }> | null
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  seeking_funding: 'Seeking funding',
-  funded: 'Funded',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
-
 function statusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
   if (status === 'completed') return 'default'
   if (status === 'funded' || status === 'in_progress') return 'secondary'
@@ -65,6 +58,7 @@ export default async function DashboardPage({
   searchParams?: DashboardSearchParams
 }) {
   const supabase = await createClient()
+  const t = await getServerDictionary()
 
   const params = searchParams
     ? typeof (searchParams as Promise<{ company?: string }>).then === 'function'
@@ -217,29 +211,29 @@ export default async function DashboardPage({
   const roleConfig = {
     pyme: {
       icon: <Package className="h-4 w-4" />,
-      label: 'SMB (Buyer)',
-      tagline: 'Create deals and secure supply chain financing',
+      label: t.dashboard.roles.pyme,
+      tagline: t.dashboard.roles.pymeTagline,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'from-blue-50/60 to-transparent dark:from-blue-950/20',
     },
     investor: {
       icon: <TrendingUp className="h-4 w-4" />,
-      label: 'Investor',
-      tagline: 'Fund deals and earn yield on your capital',
+      label: t.dashboard.roles.investor,
+      tagline: t.dashboard.roles.investorTagline,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'from-emerald-50/60 to-transparent dark:from-emerald-950/20',
     },
     supplier: {
       icon: <Users className="h-4 w-4" />,
-      label: 'Supplier',
-      tagline: 'Manage orders and confirm deliveries',
+      label: t.dashboard.roles.supplier,
+      tagline: t.dashboard.roles.supplierTagline,
       color: 'text-purple-600 dark:text-purple-400',
       bg: 'from-purple-50/60 to-transparent dark:from-purple-950/20',
     },
     admin: {
       icon: <ShieldCheck className="h-4 w-4" />,
-      label: 'Admin',
-      tagline: 'Oversee platform operations and milestone approvals',
+      label: t.dashboard.roles.admin,
+      tagline: t.dashboard.roles.adminTagline,
       color: 'text-orange-600 dark:text-orange-400',
       bg: 'from-orange-50/60 to-transparent dark:from-orange-950/20',
     },
@@ -251,35 +245,35 @@ export default async function DashboardPage({
 
   const getQuickActions = (): QuickAction[] => {
     const rampAction: QuickAction = {
-      label: 'Add funds / Cash out',
-      description: 'Move money in and out via on-ramp providers',
+      label: t.dashboard.actions.ramp,
+      description: t.dashboard.actions.rampDescription,
       href: '/dashboard/ramp',
       icon: Wallet,
     }
     switch (userType) {
       case 'pyme':
         return [
-          { label: 'Create New Deal', description: 'Request supply chain financing for a purchase', href: '/create-deal', icon: Plus },
-          { label: 'Browse Investors', description: 'See funded deals and active investors', href: '/deals?filter=funded', icon: TrendingUp },
+          { label: t.dashboard.actions.create, description: t.dashboard.actions.createDescription, href: '/create-deal', icon: Plus },
+          { label: t.nav.browseInvestors, description: t.dashboard.actions.browseInvestorsDescription, href: '/deals?filter=funded', icon: TrendingUp },
           rampAction,
         ]
       case 'investor':
         return [
-          { label: 'Browse Deals', description: 'Explore open deals seeking funding', href: '/deals', icon: Package },
-          { label: 'My Investments', description: 'Track active and completed investments', href: '/dashboard/investments', icon: DollarSign },
+          { label: t.nav.browseDeals, description: t.dashboard.actions.browseDealsDescription, href: '/deals', icon: Package },
+          { label: t.nav.myInvestments, description: t.dashboard.actions.myInvestmentsDescription, href: '/dashboard/investments', icon: DollarSign },
           rampAction,
         ]
       case 'supplier':
         return [
-          { label: 'Manage Companies', description: 'Update your company profile and catalog', href: '/dashboard/supplier-profile', icon: Building2 },
-          { label: 'View Active Deals', description: 'See deals assigned to your companies', href: '/dashboard/deals', icon: TrendingUp },
-          { label: 'Confirm Deliveries', description: 'Accept orders and confirm delivery milestones', href: '/dashboard/deliveries', icon: CheckCircle2 },
+          { label: t.dashboard.actions.manageCompanies, description: t.dashboard.actions.manageCompaniesDescription, href: '/dashboard/supplier-profile', icon: Building2 },
+          { label: t.dashboard.actions.viewActiveDeals, description: t.dashboard.actions.viewActiveDealsDescription, href: '/dashboard/deals', icon: TrendingUp },
+          { label: t.dashboard.actions.confirmDeliveries, description: t.dashboard.actions.confirmDeliveriesDescription, href: '/dashboard/deliveries', icon: CheckCircle2 },
           rampAction,
         ]
       case 'admin':
         return [
-          { label: 'Milestone Approvals', description: 'Release funds for completed milestones', href: '/dashboard/admin', icon: ShieldCheck },
-          { label: 'Browse All Deals', description: 'View the full platform deal history', href: '/deals', icon: Package },
+          { label: t.nav.milestoneApprovals, description: t.dashboard.actions.milestoneApprovalsDescription, href: '/dashboard/admin', icon: ShieldCheck },
+          { label: t.dashboard.actions.browseAllDeals, description: t.dashboard.actions.browseAllDealsDescription, href: '/deals', icon: Package },
           rampAction,
         ]
       default:
@@ -301,7 +295,7 @@ export default async function DashboardPage({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Welcome back, {fullName?.split(' ')[0] || 'there'}
+                {t.dashboard.welcome.replace('{name}', fullName?.split(' ')[0] || t.dashboard.there)}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className={`gap-1.5 ${role.color}`}>
@@ -309,7 +303,7 @@ export default async function DashboardPage({
                   {role.label}
                 </Badge>
                 {companyName && (
-                  <span className="text-sm text-muted-foreground">at {companyName}</span>
+                  <span className="text-sm text-muted-foreground">{t.dashboard.atCompany.replace('{company}', companyName)}</span>
                 )}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{role.tagline}</p>
@@ -318,14 +312,14 @@ export default async function DashboardPage({
               <Button asChild size="sm">
                 <Link href="/create-deal">
                   <Plus className="mr-2 h-4 w-4" />
-                  New Deal
+                  {t.dashboard.newDeal}
                 </Link>
               </Button>
             )}
             {userType === 'investor' && (
               <Button asChild size="sm">
                 <Link href="/deals">
-                  Browse Deals
+                  {t.nav.browseDeals}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -336,10 +330,10 @@ export default async function DashboardPage({
         {/* Supplier: Company filter */}
         {userType === 'supplier' && supplierCompanies.length > 1 && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Company:</span>
+            <span className="text-sm text-muted-foreground">{t.dashboard.company}</span>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant={!companyFilterId ? 'default' : 'outline'} size="sm">
-                <Link href="/dashboard">All companies</Link>
+                <Link href="/dashboard">{t.dashboard.allCompanies}</Link>
               </Button>
               {supplierCompanies.map((c) => (
                 <Button
@@ -349,7 +343,7 @@ export default async function DashboardPage({
                   size="sm"
                 >
                   <Link href={`/dashboard?company=${c.id}`}>
-                    {c.company_name || 'Unnamed company'}
+                    {c.company_name || t.dashboard.unnamedCompany}
                   </Link>
                 </Button>
               ))}
@@ -365,7 +359,7 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-1.5">
                     <BarChart3 className="h-3.5 w-3.5" />
-                    Total deals
+                    {t.deals.totalDeals}
                   </CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.totalDeals}</CardTitle>
                 </CardHeader>
@@ -374,7 +368,7 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    Seeking funding
+                    {t.dealStatus.seeking_funding}
                   </CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.seekingFunding}</CardTitle>
                 </CardHeader>
@@ -383,7 +377,7 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-1.5">
                     <Activity className="h-3.5 w-3.5" />
-                    Active
+                    {t.deals.active}
                   </CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.activeDeals}</CardTitle>
                 </CardHeader>
@@ -392,7 +386,7 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Completed
+                    {t.deals.completed}
                   </CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.completedDeals}</CardTitle>
                 </CardHeader>
@@ -401,7 +395,7 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    Pending approvals
+                    {t.dashboard.pendingApprovals}
                   </CardDescription>
                   <CardTitle className="text-3xl tabular-nums">{adminStats.pendingApprovals}</CardTitle>
                 </CardHeader>
@@ -413,7 +407,7 @@ export default async function DashboardPage({
                     className="w-full min-w-0 justify-center"
                   >
                     <Link href="/dashboard/admin">
-                      {adminStats.pendingApprovals > 0 ? 'Review now' : 'View'}
+                      {adminStats.pendingApprovals > 0 ? t.dashboard.reviewNow : t.dashboard.view}
                       <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                     </Link>
                   </Button>
@@ -429,15 +423,17 @@ export default async function DashboardPage({
                       <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                      <p className="font-medium">Milestones awaiting release</p>
+                      <p className="font-medium">{t.dashboard.adminPendingTitle}</p>
                       <p className="text-sm text-muted-foreground">
-                        {adminStats.pendingApprovals} milestone{adminStats.pendingApprovals !== 1 ? 's' : ''} need your approval to release funds on-chain.
+                        {t.dashboard.adminPendingText
+                          .replace('{count}', String(adminStats.pendingApprovals))
+                          .replace('{plural}', adminStats.pendingApprovals !== 1 ? 's' : '')}
                       </p>
                     </div>
                   </div>
                   <Button asChild>
                     <Link href="/dashboard/admin">
-                      Go to approvals
+                      {t.dashboard.goApprovals}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
@@ -457,7 +453,7 @@ export default async function DashboardPage({
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-1.5">
                   <BarChart3 className="h-3.5 w-3.5" />
-                  Total Deals
+                  {t.dashboard.totalDeals}
                   {userType === 'supplier' && !companyFilterId && supplierCompanies.length > 1 && (
                     <span className="ml-auto text-xs font-normal">{supplierCompanies.length} companies</span>
                   )}
@@ -469,7 +465,7 @@ export default async function DashboardPage({
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-1.5">
                   <Activity className="h-3.5 w-3.5" />
-                  Active Deals
+                  {t.dashboard.activeDeals}
                 </CardDescription>
                 <CardTitle className="text-3xl tabular-nums">{roleStats.active}</CardTitle>
               </CardHeader>
@@ -478,7 +474,7 @@ export default async function DashboardPage({
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Completed
+                  {t.dashboard.completed}
                 </CardDescription>
                 <CardTitle className="text-3xl tabular-nums">{roleStats.completed}</CardTitle>
               </CardHeader>
@@ -490,7 +486,7 @@ export default async function DashboardPage({
 
           {/* Quick Actions */}
           <div className="lg:col-span-1">
-            <h2 className="text-base font-semibold mb-3">Quick Actions</h2>
+            <h2 className="text-base font-semibold mb-3">{t.dashboard.quickActions}</h2>
             <div className="flex flex-col gap-2">
               {getQuickActions().map((action) => (
                 <Button
@@ -678,7 +674,9 @@ export default async function DashboardPage({
                           const pending = milestones.filter((m) => m.status === 'in_progress').length
                           const total = milestones.length
                           const hasPendingApproval = pending > 0
-                          const statusLabel = STATUS_LABELS[deal.status] ?? deal.status
+                          const statusLabel =
+                            t.dealStatus[deal.status as keyof typeof t.dealStatus] ??
+                            deal.status
 
                           return (
                             <tr key={deal.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">

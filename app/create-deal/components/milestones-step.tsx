@@ -20,6 +20,7 @@ import {
   MAX_MILESTONES,
   MIN_MILESTONES,
 } from '../types'
+import { useI18n } from '@/lib/i18n/provider'
 
 interface MilestonesStepProps {
   milestones: MilestoneDraft[]
@@ -38,6 +39,7 @@ export function MilestonesStep({
   totalAmount,
   onMilestonesChange,
 }: MilestonesStepProps) {
+  const { t } = useI18n()
   const totalPct = sumMilestonePercentages(milestones)
   const pctBalanced = Math.abs(totalPct - 100) < 0.0001
 
@@ -76,7 +78,7 @@ export function MilestonesStep({
       percentage: pcts[i],
     }))
     next.push({
-      name: `Milestone ${n}`,
+      name: t('createDeal.milestone', { number: n }),
       percentage: pcts[n - 1],
     })
     onMilestonesChange(next)
@@ -96,10 +98,10 @@ export function MilestonesStep({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5" aria-hidden />
-          Payment Milestones
+          {t('createDeal.milestonesTitle')}
         </CardTitle>
         <CardDescription>
-          Define when the supplier gets paid from escrow
+          {t('createDeal.milestonesDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -111,12 +113,10 @@ export function MilestonesStep({
             />
             <div className="space-y-1">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Standard Milestone Structure
+                {t('createDeal.standardMilestones')}
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Most deals use a 50/50 split: 50% after shipment confirmation,
-                and 50% after delivery. Add more milestones if your supplier
-                needs extra release points — percentages must total 100%.
+                {t('createDeal.standardMilestonesBody')}
               </p>
             </div>
           </div>
@@ -133,7 +133,7 @@ export function MilestonesStep({
               className="space-y-4 rounded-lg border border-border p-4"
             >
               <div className="flex items-start justify-between gap-2">
-                <h4 className="font-semibold">Milestone {index + 1}</h4>
+                <h4 className="font-semibold">{t('createDeal.milestone', { number: index + 1 })}</h4>
                 {milestones.length > MIN_MILESTONES && (
                   <Button
                     type="button"
@@ -141,24 +141,24 @@ export function MilestonesStep({
                     size="icon"
                     className="shrink-0 text-muted-foreground hover:text-destructive"
                     onClick={() => removeMilestone(index)}
-                    aria-label={`Remove milestone ${index + 1}`}
+                    aria-label={t('createDeal.removeMilestone', { number: index + 1 })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`milestone-name-${index}`}>Milestone Name</Label>
+                <Label htmlFor={`milestone-name-${index}`}>{t('createDeal.milestoneName')}</Label>
                 <Input
                   id={`milestone-name-${index}`}
                   value={m.name}
                   onChange={(e) => updateAt(index, { name: e.target.value })}
-                  placeholder="e.g. Deposit on order"
+                  placeholder={t('createDeal.milestonePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`milestone-pct-${index}`}>
-                  Payment Percentage
+                  {t('createDeal.paymentPercentage')}
                 </Label>
                 {isTwo ? (
                   <Select
@@ -208,7 +208,7 @@ export function MilestonesStep({
             onClick={addMilestone}
           >
             <Plus className="mr-2 h-4 w-4" aria-hidden />
-            Add milestone
+            {t('createDeal.addMilestone')}
           </Button>
         )}
 
@@ -218,8 +218,8 @@ export function MilestonesStep({
           }`}
           role="status"
         >
-          Total: {totalPct.toFixed(0)}%
-          {!pctBalanced && ' — must equal 100%'}
+          {t('createDeal.totalPercent', { percent: totalPct.toFixed(0) })}
+          {!pctBalanced && t('createDeal.mustEqual100')}
         </p>
       </CardContent>
     </Card>

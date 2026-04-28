@@ -5,42 +5,43 @@ import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { getFundingTimeRemainingMs } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
+import { useI18n } from '@/lib/i18n/provider'
 
 type StatusConfig = { label: string; pill: string; dot: string }
 
-const STATUS_CONFIG: Record<string, StatusConfig> = {
+const STATUS_CONFIG: Record<string, Omit<StatusConfig, 'label'> & { labelKey: string }> = {
   awaiting_funding: {
-    label: 'Open for funding',
+    labelKey: 'dealStatus.awaiting_funding',
     pill: 'bg-accent/10 text-accent ring-1 ring-accent/20',
     dot: 'bg-accent',
   },
   funded: {
-    label: 'Funded',
+    labelKey: 'dealStatus.funded',
     pill: 'bg-success/10 text-success ring-1 ring-success/20',
     dot: 'bg-success',
   },
   in_progress: {
-    label: 'In progress',
+    labelKey: 'dealStatus.in_progress',
     pill: 'bg-primary/10 text-primary ring-1 ring-primary/20',
     dot: 'bg-primary',
   },
   milestone_pending: {
-    label: 'Milestone pending',
+    labelKey: 'dealStatus.milestone_pending',
     pill: 'bg-orange-500/10 text-orange-500 ring-1 ring-orange-500/20',
     dot: 'bg-orange-500',
   },
   completed: {
-    label: 'Completed',
+    labelKey: 'dealStatus.completed',
     pill: 'bg-muted text-muted-foreground',
     dot: 'bg-muted-foreground',
   },
   disputed: {
-    label: 'Disputed',
+    labelKey: 'dealStatus.disputed',
     pill: 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
     dot: 'bg-destructive',
   },
   released: {
-    label: 'Released',
+    labelKey: 'dealStatus.released',
     pill: 'bg-success/10 text-success ring-1 ring-success/20',
     dot: 'bg-success',
   },
@@ -79,11 +80,9 @@ function formatFundingRemaining(ms: number): string {
 }
 
 export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }) {
-  const isFundingPhase = deal.status === 'awaiting_funding'
-  const cfg = isFundingPhase
-    ? FUNDING_STATUS_CONFIG[deal.fundingStatus] ?? FUNDING_STATUS_CONFIG.open
-    : STATUS_CONFIG[deal.status] ?? STATUS_CONFIG.awaiting_funding
-  const isOpen = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
+  const { t } = useI18n()
+  const cfg = STATUS_CONFIG[deal.status] ?? STATUS_CONFIG.awaiting_funding
+  const isOpen = deal.status === 'awaiting_funding'
   const completedMilestones = deal.milestones.filter((m) => m.status === 'completed').length
   const hasBonus =
     typeof deal.yieldBonusApr === 'number' && deal.yieldBonusApr > 0
@@ -127,7 +126,7 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${cfg.pill}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} aria-hidden />
-            {cfg.label}
+            {t(cfg.labelKey)}
           </span>
           {deal.category && (
             <Badge variant="outline" className="text-xs capitalize">
@@ -137,7 +136,7 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
           {hasBonus && (
             <Badge variant="secondary" className="gap-1 bg-success/10 text-[11px] text-success">
               <Sparkles className="h-2.5 w-2.5" aria-hidden />
-              +bonus APR
+              {t('deals.bonusApr')}
             </Badge>
           )}
         </div>
@@ -159,16 +158,16 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
       <div className="mx-5 mb-4 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-muted/30">
         <div className="py-3 text-center">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Amount
+            {t('common.amount')}
           </p>
           <p className="mt-1 text-sm font-bold tabular-nums">
             {formatCurrency(deal.priceUSDC)}
           </p>
-          <p className="text-[10px] text-muted-foreground">USDC</p>
+          <p className="text-[10px] text-muted-foreground">{t('deals.usdc')}</p>
         </div>
         <div className="py-3 text-center">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            APR
+            {t('deals.apr')}
           </p>
           {deal.yieldAPR != null ? (
             <p className="mt-1 text-sm font-bold tabular-nums text-success">
@@ -177,14 +176,14 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
           ) : (
             <p className="mt-1 text-sm text-muted-foreground">—</p>
           )}
-          <p className="text-[10px] text-muted-foreground">yield</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.yield')}</p>
         </div>
         <div className="py-3 text-center">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Term
+            {t('common.term')}
           </p>
           <p className="mt-1 text-sm font-bold tabular-nums">{deal.term}</p>
-          <p className="text-[10px] text-muted-foreground">days</p>
+          <p className="text-[10px] text-muted-foreground">{t('common.days')}</p>
         </div>
       </div>
 
@@ -192,9 +191,12 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
       {deal.milestones.length > 0 && (
         <div className="mx-5 mb-4">
           <div className="mb-1.5 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Milestones</span>
+            <span className="text-muted-foreground">{t('deals.milestones')}</span>
             <span className="tabular-nums">
-              {completedMilestones}/{deal.milestones.length} completed
+              {t('deals.completedProgress', {
+                completed: completedMilestones,
+                total: deal.milestones.length,
+              })}
             </span>
           </div>
           <div className="flex gap-1">
@@ -226,7 +228,7 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
               : 'bg-muted/50 text-foreground group-hover:bg-muted'
           }`}
         >
-          {isOpen ? 'Fund this deal' : 'View deal'}
+          {isOpen ? t('deals.fundThisDeal') : t('deals.viewDeal')}
           <ArrowRight
             className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
             aria-hidden

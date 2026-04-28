@@ -18,8 +18,10 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { MercatoLogo } from '@/components/mercato-logo'
 import { Package, TrendingUp, Users } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/provider'
 
 export default function SignUpPage() {
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
@@ -37,13 +39,13 @@ export default function SignUpPage() {
     setError(null)
 
     if (password !== repeatPassword) {
-      setError('Passwords do not match')
+      setError(t('auth.passwordMismatch'))
       setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('auth.passwordTooShort'))
       setIsLoading(false)
       return
     }
@@ -66,7 +68,7 @@ export default function SignUpPage() {
       if (error) throw error
       router.push('/auth/sign-up-success')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(error instanceof Error ? error.message : t('auth.genericError'))
     } finally {
       setIsLoading(false)
     }
@@ -89,16 +91,16 @@ export default function SignUpPage() {
           <Card className="border-border/80 shadow-lg shadow-black/5">
             <CardHeader className="space-y-1 pb-6 text-center sm:text-left">
               <CardTitle className="text-2xl font-semibold tracking-tight">
-                Create your account
+                {t('auth.signUpTitle')}
               </CardTitle>
               <CardDescription className="text-base">
-                Choose your role and fill in your details
+                {t('auth.signUpDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp} className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">I am a…</Label>
+                  <Label className="text-sm font-medium">{t('auth.roleLabel')}</Label>
                   <RadioGroup
                     value={userType}
                     onValueChange={(v) => setUserType(v as 'pyme' | 'investor' | 'supplier')}
@@ -114,8 +116,8 @@ export default function SignUpPage() {
                     >
                       <RadioGroupItem value="pyme" id="pyme" className="sr-only" />
                       <Package className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">PyME</span>
-                      <span className="text-xs text-muted-foreground">Need capital</span>
+                      <span className="text-sm font-medium">{t('auth.rolePyme')}</span>
+                      <span className="text-xs text-muted-foreground">{t('auth.rolePymeHint')}</span>
                     </label>
                     <label
                       htmlFor="investor"
@@ -127,8 +129,8 @@ export default function SignUpPage() {
                     >
                       <RadioGroupItem value="investor" id="investor" className="sr-only" />
                       <TrendingUp className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">Investor</span>
-                      <span className="text-xs text-muted-foreground">Fund deals</span>
+                      <span className="text-sm font-medium">{t('auth.roleInvestor')}</span>
+                      <span className="text-xs text-muted-foreground">{t('auth.roleInvestorHint')}</span>
                     </label>
                     <label
                       htmlFor="supplier"
@@ -140,15 +142,15 @@ export default function SignUpPage() {
                     >
                       <RadioGroupItem value="supplier" id="supplier" className="sr-only" />
                       <Users className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">Supplier</span>
-                      <span className="text-xs text-muted-foreground">Get paid early</span>
+                      <span className="text-sm font-medium">{t('auth.roleSupplier')}</span>
+                      <span className="text-xs text-muted-foreground">{t('auth.roleSupplierHint')}</span>
                     </label>
                   </RadioGroup>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full name</Label>
+                    <Label htmlFor="fullName">{t('auth.fullName')}</Label>
                     <Input
                       id="fullName"
                       name="fullName"
@@ -162,7 +164,7 @@ export default function SignUpPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Company name</Label>
+                    <Label htmlFor="companyName">{t('auth.companyName')}</Label>
                     <Input
                       id="companyName"
                       name="companyName"
@@ -178,7 +180,7 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('auth.email')}</Label>
                   <Input
                     id="email"
                     name="email"
@@ -195,13 +197,13 @@ export default function SignUpPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t('auth.password')}</Label>
                     <Input
                       id="password"
                       name="password"
                       type="password"
                       autoComplete="new-password"
-                      placeholder="Min. 6 characters"
+                      placeholder={t('auth.minPassword')}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -209,13 +211,13 @@ export default function SignUpPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="repeat-password">Confirm password</Label>
+                    <Label htmlFor="repeat-password">{t('auth.confirmPassword')}</Label>
                     <Input
                       id="repeat-password"
                       name="repeatPassword"
                       type="password"
                       autoComplete="new-password"
-                      placeholder="Repeat password"
+                      placeholder={t('auth.repeatPassword')}
                       required
                       value={repeatPassword}
                       onChange={(e) => setRepeatPassword(e.target.value)}
@@ -240,24 +242,24 @@ export default function SignUpPage() {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating account…' : 'Create account'}
+                  {isLoading ? t('auth.creatingAccount') : t('auth.createAccount')}
                 </Button>
               </form>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
+                {t('auth.hasAccount')}{' '}
                 <Link
                   href="/auth/login"
                   className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
                 >
-                  Log in
+                  {t('auth.logIn')}
                 </Link>
               </p>
             </CardContent>
           </Card>
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            Supply chain finance for PyMEs, investors, and suppliers
+            {t('auth.tagline')}
           </p>
         </div>
       </div>

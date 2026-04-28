@@ -26,8 +26,10 @@ export default function SettingsPage() {
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingStake, setIsSavingStake] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
+  const [stakeAmount, setStakeAmount] = useState('0')
   const [formData, setFormData] = useState({
     full_name: '',
     company_name: '',
@@ -57,6 +59,7 @@ export default function SettingsPage() {
 
       if (profile) {
         setProfile(profile)
+        setStakeAmount(String(Number(profile.stake_amount ?? 0)))
         setFormData({
           full_name: profile.full_name || profile.contact_name || '',
           company_name: profile.company_name || '',
@@ -73,6 +76,53 @@ export default function SettingsPage() {
 
     getProfile()
   }, [router, supabase])
+
+  const handleSaveStake = async () => {
+    const amount = Number(stakeAmount)
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      alert('Stake amount must be a number greater than or equal to 0')
+      return
+    }
+
+    setIsSavingStake(true)
+    try {
+      const response = await fetch('/api/reputation/stake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount }),
+      })
+
+      const result = (await response.json()) as {
+        stakeAmount?: number
+        stakeUpdatedAt?: string | null
+        error?: string
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update stake amount')
+      }
+
+      setStakeAmount(String(Number(result.stakeAmount ?? 0)))
+      setProfile((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              stake_amount: Number(result.stakeAmount ?? 0),
+              stake_updated_at: result.stakeUpdatedAt ?? null,
+            }
+          : prev
+      )
+      alert('Stake signal updated successfully!')
+    } catch (error) {
+      console.error('Error updating stake signal:', error)
+      alert('Error updating stake signal. Please try again.')
+    } finally {
+      setIsSavingStake(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -249,6 +299,33 @@ export default function SettingsPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Your Stellar wallet address for receiving/sending payments
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="stake_amount">Trust Stake (USDC)</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      id="stake_amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={stakeAmount}
+                      onChange={(e) => setStakeAmount(e.target.value)}
+                      placeholder="0"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSaveStake}
+                      disabled={isSavingStake}
+                    >
+                      {isSavingStake ? 'Saving…' : 'Save Stake'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Visible trust commitment in MERCATO Vault (v1 stores the amount; score impact is deferred).
                   </p>
                 </div>
 

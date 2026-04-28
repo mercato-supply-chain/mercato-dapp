@@ -13,9 +13,12 @@ import { MercatoLogo } from '@/components/mercato-logo'
 import { NavLinks } from '@/components/navigation/nav-links'
 import { UserNav, type NavProfile, type NavUser } from '@/components/navigation/user-nav'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import { useI18n } from '@/lib/i18n/provider'
 
 export function Navigation() {
   const router = useRouter()
+  const { t } = useI18n()
   const supabase = useMemo(() => createClient(), [])
   const [user, setUser] = useState<NavUser | null>(null)
   const [profile, setProfile] = useState<NavProfile | null>(null)
@@ -85,6 +88,7 @@ export function Navigation() {
 
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-3 md:flex">
+            <LanguageSwitcher />
             <ThemeToggle />
             {user?.id && <NotificationDropdown userId={user.id} variant="desktop" />}
             <UserNav
@@ -103,16 +107,17 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
+            <LanguageSwitcher />
             <ThemeToggle />
             {user?.id && <NotificationDropdown userId={user.id} variant="mobile" />}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Button variant="ghost" size="icon" aria-label={t('nav.openMenu')}>
                   <Menu className="h-5 w-5" aria-hidden />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] overscroll-contain">
-                <nav className="flex flex-col gap-4" aria-label="Main">
+                <nav className="flex flex-col gap-4" aria-label={t('nav.main')}>
                   <NavLinks variant="mobile" />
                   <div className="my-2 border-t border-border" />
                   <UserNav

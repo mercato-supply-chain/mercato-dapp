@@ -14,11 +14,23 @@ import { Wallet, Sprout, Coins, RefreshCw, AlertCircle } from 'lucide-react'
 import { useWallet } from '@/hooks/use-wallet'
 import { useDefindex } from '@/hooks/useDefindex'
 import { totalCapital } from '@/lib/capital'
+import { buildCapitalState, totalCapital } from '@/lib/capital'
 import { formatDecimal } from '@/lib/format'
 
 export function InvestorCapitalOverview() {
   const { isConnected, handleConnect } = useWallet()
   const { capitalState, isSyncing, error, refreshCapitalState } = useDefindex()
+  const { walletBalance, vaultBalance, isLoading, error, refresh } = useDefindex()
+
+  const capitalState = useMemo(
+    () =>
+      buildCapitalState({
+        wallet: walletBalance,
+        inVault: vaultBalance,
+        allocated: 0,
+      }),
+    [walletBalance, vaultBalance],
+  )
 
   const total = useMemo(() => totalCapital(capitalState), [capitalState])
 
@@ -78,6 +90,13 @@ export function InvestorCapitalOverview() {
           className="gap-1.5 text-xs"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+          onClick={() => void refresh()}
+          variant="ghost"
+          size="sm"
+          disabled={isLoading}
+          className="gap-1.5 text-xs"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
@@ -97,6 +116,7 @@ export function InvestorCapitalOverview() {
           value={capitalState.wallet}
           tone="blue"
           isLoading={isSyncing}
+          isLoading={isLoading}
         />
         <BalanceCard
           icon={Sprout}
@@ -105,6 +125,7 @@ export function InvestorCapitalOverview() {
           value={capitalState.inVault}
           tone="emerald"
           isLoading={isSyncing}
+          isLoading={isLoading}
         />
         <BalanceCard
           icon={Coins}
@@ -113,6 +134,7 @@ export function InvestorCapitalOverview() {
           value={capitalState.wallet}
           tone="amber"
           isLoading={isSyncing}
+          isLoading={isLoading}
         />
       </div>
     </div>

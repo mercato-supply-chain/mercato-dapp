@@ -6,6 +6,9 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { TrustlessWorkProvider } from '@/lib/trustless/config'
 import { WalletProvider } from '@/providers/wallet-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { I18nProvider } from '@/lib/i18n/provider'
+import { getDictionary } from '@/lib/i18n/dictionaries'
+import { getServerLocale } from '@/lib/i18n/server'
 
 import './globals.css'
 
@@ -17,13 +20,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getServerLocale()
+  const messages = getDictionary(locale)
+
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
@@ -33,8 +39,10 @@ export default function RootLayout({
         >
           <TrustlessWorkProvider>
             <WalletProvider>
-              {children}
-              <Toaster />
+              <I18nProvider locale={locale} messages={messages}>
+                {children}
+                <Toaster />
+              </I18nProvider>
             </WalletProvider>
           </TrustlessWorkProvider>
         </ThemeProvider>
