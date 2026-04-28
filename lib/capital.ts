@@ -26,6 +26,18 @@ export function availableCapital(state: CapitalState): number {
   return state.wallet
 }
 
+export function getAvailableCapital({
+  wallet,
+  reserved,
+  stake,
+}: {
+  wallet: number
+  reserved: number
+  stake: number
+}): number {
+  return normalize(Math.max(wallet - reserved - stake, 0))
+}
+
 function normalize(value: number): number {
   if (!Number.isFinite(value) || value < 0) return 0
   return Number(value.toFixed(2))
