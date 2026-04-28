@@ -72,3 +72,17 @@ export interface CapitalState {
   inVault: number
   allocated: number
 }
+
+export interface Reputation {
+  userId: string
+  capitalCommitted: number
+  dealsCompleted: number
+  repaymentPerformance: number
+  reputationScore: number
+  /** Same as reputationScore, for backward compatibility */
+  score: number
+  stakeAmount: number
+  stakeCurrency: string
+  trustLabel: string
+  updatedAt: string
+}
