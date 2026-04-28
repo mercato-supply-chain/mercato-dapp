@@ -66,3 +66,9 @@ export interface User {
   walletAddress?: string
   email?: string
 }
+
+export interface CapitalState {
+  wallet: number
+  inVault: number
+  allocated: number
+}

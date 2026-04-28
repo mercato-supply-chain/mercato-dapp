@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { getFundingTimeRemainingMs, mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
+import { getReputation, type Reputation } from '@/lib/reputation'
 import { useFundEscrow, useSendTransaction, useChangeMilestoneStatus, useApproveMilestone, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { FundEscrowPayload, ChangeMilestoneStatusPayload, ApproveMilestonePayload } from '@trustless-work/escrow'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
@@ -23,6 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { ReputationSummaryCard } from '@/components/reputation-summary-card'
 import { formatDate } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/format'
 import {
@@ -88,9 +90,7 @@ export default function DealDetailPage() {
   const [acceptingMilestoneId, setAcceptingMilestoneId] = useState<string | null>(null)
   const [confirmingDeliveryMilestoneId, setConfirmingDeliveryMilestoneId] = useState<string | null>(null)
   const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
-  const [extendFundingDialogOpen, setExtendFundingDialogOpen] = useState(false)
-  const [extendFundingDays, setExtendFundingDays] = useState('7')
-  const [isExtendingFundingWindow, setIsExtendingFundingWindow] = useState(false)
+  const [pymeReputation, setPymeReputation] = useState<Reputation | null>(null)
 
   const { fundEscrow } = useFundEscrow()
   const { sendTransaction } = useSendTransaction()
@@ -154,6 +154,26 @@ export default function DealDetailPage() {
       setIsLoading(false)
     })
   }, [dealId, fetchDeal])
+
+  useEffect(() => {
+    if (!deal?.pymeId) {
+      setPymeReputation(null)
+      return
+    }
+
+    let cancelled = false
+    getReputation(supabase, deal.pymeId)
+      .then((reputation) => {
+        if (!cancelled) setPymeReputation(reputation)
+      })
+      .catch(() => {
+        if (!cancelled) setPymeReputation(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [deal?.pymeId, supabase])
 
   // Fetch on-chain escrow state from indexer when deal has escrow
   const escrowAddress = deal?.escrowAddress ?? ''
@@ -1174,6 +1194,8 @@ export default function DealDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            <ReputationSummaryCard reputation={pymeReputation} />
 
             {/* Stakeholders */}
             <Card>

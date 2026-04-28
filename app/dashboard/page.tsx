@@ -23,6 +23,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
+import { InvestorCapitalOverview } from '@/components/dashboard/investor-capital-overview'
 import { getServerDictionary } from '@/lib/i18n/server'
 
 type DashboardSearchParams = Promise<{ company?: string }> | { company?: string }
@@ -441,6 +442,9 @@ export default async function DashboardPage({
             )}
           </>
         )}
+
+        {/* Investor: capital overview (wallet ↔ vault) */}
+        {userType === 'investor' && <InvestorCapitalOverview />}
 
         {/* Role stats (non-admin) */}
         {userType !== 'admin' && roleStats && (
