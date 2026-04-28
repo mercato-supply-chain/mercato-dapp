@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { normalizeUSDC } from '@/lib/format'
+import { getAvailableCapital } from '@/lib/capital'
 import { useWallet } from '@/hooks/use-wallet'
 
 type VaultAction<TArgs extends unknown[] = unknown[], TResult = unknown> = (
@@ -145,6 +146,13 @@ export const useDefindex = (options?: UseDefindexOptions) => {
     refreshBalances,
     vaultBalance: normalizeUSDC(vaultBalance),
     walletBalance: normalizeUSDC(walletBalance),
+    availableCapital: normalizeUSDC(
+      getAvailableCapital({
+        wallet: walletBalance,
+        reserved: 0,
+        stake: 0,
+      })
+    ),
     isLoadingBalances,
     balanceError,
   }
