@@ -13,14 +13,19 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Wallet, Sprout, Coins, RefreshCw, AlertCircle } from 'lucide-react'
 import { useWallet } from '@/hooks/use-wallet'
 import { useDefindex } from '@/hooks/useDefindex'
-import { totalCapital } from '@/lib/capital'
 import { buildCapitalState, totalCapital } from '@/lib/capital'
 import { formatDecimal } from '@/lib/format'
 
 export function InvestorCapitalOverview() {
   const { isConnected, handleConnect } = useWallet()
-  const { capitalState, isSyncing, error, refreshCapitalState } = useDefindex()
-  const { walletBalance, vaultBalance, isLoading, error, refresh } = useDefindex()
+  const {
+    walletBalance,
+    vaultBalance,
+    availableCapital,
+    isLoadingBalances,
+    balanceError,
+    refreshBalances,
+  } = useDefindex()
 
   const capitalState = useMemo(
     () =>
@@ -83,28 +88,23 @@ export function InvestorCapitalOverview() {
           </p>
         </div>
         <Button
-          onClick={() => void refreshCapitalState()}
+          onClick={() => void refreshBalances()}
           variant="ghost"
           size="sm"
-          disabled={isSyncing}
+          disabled={isLoadingBalances}
           className="gap-1.5 text-xs"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-          onClick={() => void refresh()}
-          variant="ghost"
-          size="sm"
-          disabled={isLoading}
-          className="gap-1.5 text-xs"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-3.5 w-3.5 ${isLoadingBalances ? 'animate-spin' : ''}`}
+          />
           Refresh
         </Button>
       </div>
 
-      {error && (
+      {balanceError && (
         <div className="mb-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{error}</span>
+          <span>{balanceError}</span>
         </div>
       )}
 
@@ -115,8 +115,7 @@ export function InvestorCapitalOverview() {
           description="Liquid USDC in your wallet"
           value={capitalState.wallet}
           tone="blue"
-          isLoading={isSyncing}
-          isLoading={isLoading}
+          isLoading={isLoadingBalances}
         />
         <BalanceCard
           icon={Sprout}
@@ -124,17 +123,15 @@ export function InvestorCapitalOverview() {
           description="Capital earning DeFindex yield"
           value={capitalState.inVault}
           tone="emerald"
-          isLoading={isSyncing}
-          isLoading={isLoading}
+          isLoading={isLoadingBalances}
         />
         <BalanceCard
           icon={Coins}
           label="Available"
           description="Ready to deploy into deals"
-          value={capitalState.wallet}
+          value={availableCapital}
           tone="amber"
-          isLoading={isSyncing}
-          isLoading={isLoading}
+          isLoading={isLoadingBalances}
         />
       </div>
     </div>
