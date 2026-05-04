@@ -11,6 +11,7 @@ import {
 import {
   PollarProvider as SDKPollarProvider,
   usePollar,
+  type PollarStyles,
 } from '@pollar/react'
 import type {
   PollarApplicationConfigContent,
@@ -26,6 +27,8 @@ type PollarSessionValue = {
   session: PollarApplicationConfigContent | null
   isLoading: boolean
   isAuthenticated: boolean
+  /** True when the embedded SDK is mounted (safe to call openLoginModal). */
+  isPollarEmbedReady: boolean
   walletAddress: string
   walletType: WalletType | null
   txHistory: TxHistoryState
@@ -41,6 +44,7 @@ const emptyContext: PollarSessionValue = {
   session: null,
   isLoading: false,
   isAuthenticated: false,
+  isPollarEmbedReady: false,
   walletAddress: '',
   walletType: null,
   txHistory: { step: 'idle' },
@@ -55,6 +59,21 @@ const emptyContext: PollarSessionValue = {
 }
 
 const PollarSessionContext = createContext<PollarSessionValue>(emptyContext)
+
+/**
+ * When GET /applications/config fails (wrong origin, key, or network), @pollar/react
+ * falls back to empty styles — the login modal then shows only the header/footer with no methods.
+ * These defaults ensure users always see signup options; values merge over the empty fetch result.
+ * Allowlist your app origin in Pollar Dashboard → Domains so remote branding + config still load.
+ */
+const POLLAR_LOGIN_FALLBACK_STYLES: PollarStyles = {
+  emailEnabled: true,
+  embeddedWallets: true,
+  providers: {
+    google: true,
+    github: true,
+  },
+}
 
 function PollarSessionBridge({ children }: { children: ReactNode }) {
   const {
@@ -88,6 +107,7 @@ function PollarSessionBridge({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAuthenticated,
+      isPollarEmbedReady: true,
       walletAddress,
       walletType,
       txHistory,
@@ -125,18 +145,34 @@ export function PollarProvider({
   const apiKey = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY
   const network =
     process.env.NEXT_PUBLIC_POLLAR_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'
+  const [clientMounted, setClientMounted] = useState(false)
 
-  if (!apiKey) {
+  const sdkConfig = useMemo(
+    () =>
+      apiKey
+        ? {
+            apiKey,
+            stellarNetwork: network,
+          }
+        : null,
+    [apiKey, network],
+  )
+
+  useEffect(() => {
+    setClientMounted(true)
+  }, [])
+
+  if (!apiKey || !sdkConfig) {
+    return <PollarSessionContext.Provider value={emptyContext}>{children}</PollarSessionContext.Provider>
+  }
+
+  // @pollar/core constructs PollarClient in useState; that runs during RSC prerender and logs a warning.
+  if (!clientMounted) {
     return <PollarSessionContext.Provider value={emptyContext}>{children}</PollarSessionContext.Provider>
   }
 
   return (
-    <SDKPollarProvider
-      config={{
-        apiKey,
-        stellarNetwork: network,
-      }}
-    >
+    <SDKPollarProvider config={sdkConfig} styles={POLLAR_LOGIN_FALLBACK_STYLES}>
       <PollarSessionBridge>{children}</PollarSessionBridge>
     </SDKPollarProvider>
   )

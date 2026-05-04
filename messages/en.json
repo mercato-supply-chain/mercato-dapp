@@ -94,7 +94,12 @@
     "creatingAccount": "Creating account...",
     "createAccount": "Create account",
     "hasAccount": "Already have an account?",
-    "logIn": "Log in"
+    "logIn": "Log in",
+    "continueWithPollar": "Continue with Pollar",
+    "continueWithPollarShort": "Google, GitHub, email OTP or wallet — no seed phrase",
+    "signInWithPasswordInstead": "Or sign in with email and password",
+    "pollarSignUpHint": "Creates your Mercato account automatically after you authenticate with Pollar.",
+    "or": "Or"
   },
   "deals": {
     "eyebrow": "Supply chain deals",

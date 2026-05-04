@@ -263,17 +263,15 @@ export default function SignUpPage() {
             <Card className="mt-6 border-dashed">
               <CardContent className="flex flex-col gap-3 pt-6">
                 <div>
-                  <p className="text-sm font-medium">Prefer embedded wallet onboarding?</p>
-                  <p className="text-sm text-muted-foreground">
-                    Start with Pollar if you do not want to install Freighter or Albedo yet.
-                  </p>
+                  <p className="text-sm font-medium">{t('auth.continueWithPollar')}</p>
+                  <p className="text-sm text-muted-foreground">{t('auth.pollarSignUpHint')}</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button type="button" variant="outline" onClick={connectExternalWallet} className="sm:flex-1">
                     Connect Stellar Wallet
                   </Button>
                   <Button type="button" variant="secondary" onClick={connectPollarWallet} className="sm:flex-1">
-                    Continue with Pollar Embedded Wallet
+                    {t('auth.continueWithPollar')}
                   </Button>
                 </div>
               </CardContent>

@@ -94,7 +94,12 @@
     "creatingAccount": "Creando cuenta...",
     "createAccount": "Crear cuenta",
     "hasAccount": "¿Ya tienes una cuenta?",
-    "logIn": "Iniciar sesión"
+    "logIn": "Iniciar sesión",
+    "continueWithPollar": "Continuar con Pollar",
+    "continueWithPollarShort": "Google, GitHub, código por correo o billetera — sin frase semilla",
+    "signInWithPasswordInstead": "O inicia sesión con correo y contraseña",
+    "pollarSignUpHint": "Crea tu cuenta de Mercato automáticamente tras autenticarte con Pollar.",
+    "or": "O"
   },
   "deals": {
     "eyebrow": "Órdenes de cadena de suministro",

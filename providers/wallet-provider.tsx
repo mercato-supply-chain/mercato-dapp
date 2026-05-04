@@ -6,9 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { type ISupportedWallet } from '@creit.tech/stellar-wallets-kit'
 import type { TxHistoryState } from '@pollar/core'
 import { createClient } from '@/lib/supabase/client'
@@ -69,6 +72,12 @@ function toWalletInfo(wallet: ConnectedWallet | null) {
 export function WalletProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), [])
   const pollar = usePollarSession()
+  const pollarRef = useRef(pollar)
+  pollarRef.current = pollar
+  const router = useRouter()
+  const pathname = usePathname()
+  const pollarSupabaseSyncCompletedRef = useRef<string | null>(null)
+  const pollarSupabaseSyncInFlightRef = useRef<string | null>(null)
   const [wallet, setWallet] = useState<ConnectedWallet | null>(null)
   const [balances, setBalances] = useState<WalletBalanceSummary | null>(null)
   const [txHistory, setTxHistory] = useState<WalletContextValue['txHistory']>(null)
@@ -212,20 +221,67 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       if (!user || !wallet) return
 
-      const { error } = await supabase.from('profiles').upsert(
-        {
-          id: user.id,
-          wallet_provider: wallet.provider,
-          pollar_wallet_id: wallet.walletId ?? null,
-          stellar_public_key: wallet.publicKey,
-          wallet_status: wallet.status ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' },
-      )
+      const email = user.email?.trim()
+      if (!email) {
+        if (!cancelled) {
+          console.warn('[wallet-provider] skip profile sync: auth user has no email')
+        }
+        return
+      }
 
-      if (!cancelled && error) {
-        console.error('[wallet-provider] failed to sync wallet metadata', error)
+      const metaType = user.user_metadata?.user_type
+      const user_type =
+        metaType === 'pyme' ||
+        metaType === 'investor' ||
+        metaType === 'supplier' ||
+        metaType === 'admin'
+          ? metaType
+          : 'pyme'
+
+      const baseRow = {
+        wallet_provider: wallet.provider,
+        pollar_wallet_id: wallet.walletId ?? null,
+        stellar_public_key: wallet.publicKey,
+        wallet_status: wallet.status ?? null,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { data: existing, error: selectError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!cancelled && selectError) {
+        console.error('[wallet-provider] failed to read profile for wallet sync', selectError)
+        return
+      }
+
+      if (existing) {
+        const { error } = await supabase.from('profiles').update(baseRow).eq('id', user.id)
+        if (!cancelled && error) {
+          console.error('[wallet-provider] failed to sync wallet metadata', error)
+        }
+        return
+      }
+
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: user.id,
+        email,
+        user_type,
+        ...baseRow,
+      })
+
+      if (insertError?.code === '23505') {
+        const { error: retryError } = await supabase.from('profiles').update(baseRow).eq('id', user.id)
+        if (!cancelled && retryError) {
+          console.error('[wallet-provider] failed to sync wallet metadata', retryError)
+        }
+        return
+      }
+
+      if (!cancelled && insertError) {
+        console.error('[wallet-provider] failed to sync wallet metadata', insertError)
       }
     }
 
@@ -235,6 +291,100 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       cancelled = true
     }
   }, [supabase, wallet])
+
+  useEffect(() => {
+    if (!pollar.isAuthenticated || !pollar.session || !pollar.walletAddress) return
+
+    const accessToken = pollar.session.token?.accessToken
+    if (!accessToken) return
+
+    if (pollarSupabaseSyncCompletedRef.current === accessToken) return
+    if (pollarSupabaseSyncInFlightRef.current === accessToken) return
+
+    let cancelled = false
+    pollarSupabaseSyncInFlightRef.current = accessToken
+
+    void (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (cancelled) return
+
+        if (user) {
+          pollarSupabaseSyncCompletedRef.current = accessToken
+          return
+        }
+
+        const session = pollar.session!
+        const mail = session.data?.mail?.trim() ?? ''
+        const uid = session.userId ?? session.clientSessionId ?? ''
+        const firstName = session.data?.first_name?.trim() ?? ''
+        const lastName = session.data?.last_name?.trim() ?? ''
+
+        const res = await fetch('/api/auth/pollar-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accessToken,
+            stellarPublicKey: pollar.walletAddress,
+            email: mail || undefined,
+            pollarUserId: uid || undefined,
+            firstName: firstName || undefined,
+            lastName: lastName || undefined,
+          }),
+        })
+
+        const payload = (await res.json().catch(() => ({}))) as {
+          error?: string
+          token_hash?: string
+        }
+
+        if (cancelled) return
+
+        if (!res.ok) {
+          throw new Error(payload.error || 'Could not link Pollar to your Mercato account')
+        }
+
+        const tokenHash = payload.token_hash
+        if (!tokenHash) {
+          throw new Error('Sign-in response was incomplete')
+        }
+
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'magiclink',
+        })
+
+        if (cancelled) return
+
+        if (otpError) throw otpError
+
+        pollarSupabaseSyncCompletedRef.current = accessToken
+        router.refresh()
+        if (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/sign-up')) {
+          router.push('/dashboard')
+        }
+      } catch (error) {
+        pollarSupabaseSyncCompletedRef.current = null
+        console.error('[wallet-provider] Pollar ↔ Supabase sync failed', error)
+        toast.error(error instanceof Error ? error.message : 'Sign-in failed')
+      } finally {
+        pollarSupabaseSyncInFlightRef.current = null
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    pathname,
+    pollar.isAuthenticated,
+    pollar.session,
+    pollar.walletAddress,
+    router,
+    supabase,
+  ])
 
   const connectExternalWallet = useCallback(async () => {
     if (!stellarWalletKit) return
@@ -256,8 +406,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [persistWallet])
 
   const connectPollarWallet = useCallback(async () => {
-    pollar.openLoginModal()
-  }, [pollar])
+    const tryOpen = () => {
+      const latest = pollarRef.current
+      if (latest.isAuthenticated) {
+        return
+      }
+      latest.openLoginModal()
+    }
+
+    const latest = pollarRef.current
+    if (latest.isAuthenticated) {
+      return
+    }
+
+    if (latest.isPollarEmbedReady) {
+      tryOpen()
+      return
+    }
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          tryOpen()
+          resolve()
+        })
+      })
+    })
+  }, [])
 
   const disconnect = useCallback(async () => {
     try {
@@ -272,10 +447,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // ignore embedded wallet logout failures
     }
 
+    if (wallet?.provider === 'pollar') {
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        // ignore sign-out failures
+      }
+    }
+
+    pollarSupabaseSyncCompletedRef.current = null
+    pollarSupabaseSyncInFlightRef.current = null
+
     persistWallet(null)
     setBalances(null)
     setTxHistory(null)
-  }, [persistWallet, pollar])
+  }, [persistWallet, pollar, supabase, wallet?.provider])
 
   const refreshBalance = useCallback(async () => {
     if (!wallet) return

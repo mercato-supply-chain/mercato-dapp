@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { MercatoLogo } from '@/components/mercato-logo'
 import { useI18n } from '@/lib/i18n/provider'
+import { useWallet } from '@/hooks/use-wallet'
 
 export default function LoginPage() {
   const { t } = useI18n()
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { connectPollarWallet } = useWallet()
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
@@ -70,7 +72,32 @@ export default function LoginPage() {
                 {t('auth.loginDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  className="h-11 w-full font-medium"
+                  size="lg"
+                  onClick={() => connectPollarWallet()}
+                >
+                  {t('auth.continueWithPollar')}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  {t('auth.continueWithPollarShort')}
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden>
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-wide">
+                  <span className="bg-card px-2 text-muted-foreground">{t('auth.or')}</span>
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-muted-foreground">{t('auth.signInWithPasswordInstead')}</p>
+
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('auth.email')}</Label>
