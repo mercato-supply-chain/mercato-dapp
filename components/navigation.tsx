@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { signOutApp } from '@/lib/auth/sign-out-app'
 import { useWallet } from '@/hooks/use-wallet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -69,8 +70,21 @@ export function Navigation() {
   }, [supabase])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    setUser(null)
+    setProfile(null)
+    try {
+      /* Pollar ↔ Supabase sync re-logs in via verifyOtp if the embedded wallet stays
+         authenticated after signOut. Always tear down wallet + Pollar session on app logout. */
+      await handleDisconnect()
+    } catch (e) {
+      console.error('[Navigation] wallet disconnect during logout failed', e)
+    }
+    try {
+      await signOutApp()
+    } catch (e) {
+      console.error('[Navigation] signOutApp failed', e)
+    }
+    router.replace('/')
     router.refresh()
   }
 

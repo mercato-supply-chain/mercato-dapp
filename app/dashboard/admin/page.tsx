@@ -8,6 +8,7 @@ import { ShieldCheck, ArrowLeft, FileCheck } from 'lucide-react'
 import { PendingApprovals } from './pending-approvals'
 import { ReleaseFundsFallback } from './release-funds-fallback'
 import { AdminEscrowsProvider } from './admin-escrows-provider'
+import { AdminDefindexVaultPanel } from '@/components/admin/admin-defindex-vault-panel'
 
 /** Milestone awaiting approval + release (in_progress) */
 export interface PendingApprovalItem {
@@ -61,6 +62,12 @@ export default async function AdminDashboardPage({
   if (profile?.user_type !== 'admin') {
     redirect('/dashboard')
   }
+
+  const configuredVaultAddress =
+    process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
+    process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim() ||
+    process.env.MERCATO_DEFINDEX_VAULT_ADDRESS?.trim() ||
+    ''
 
   const params = searchParams
     ? typeof (searchParams as Promise<{ company?: string; sort?: string }>).then === 'function'
@@ -138,6 +145,10 @@ export default async function AdminDashboardPage({
               </Button>
             </CardContent>
           </Card>
+
+          <div className="mt-8 max-w-3xl">
+            <AdminDefindexVaultPanel configuredVaultAddress={configuredVaultAddress} />
+          </div>
         </div>
       </div>
     )
@@ -345,6 +356,10 @@ export default async function AdminDashboardPage({
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-8 max-w-3xl">
+          <AdminDefindexVaultPanel configuredVaultAddress={configuredVaultAddress} />
         </div>
 
         <AdminEscrowsProvider items={items} releaseFallbackItems={releaseFallbackItems} />

@@ -43,8 +43,7 @@ These come from your Supabase project dashboard.
 ### Optional
 
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_DEFINDEX_API_KEY`
-- `NEXT_PUBLIC_DEFINDEX_API_URL`
+- **DeFindex (Mercato vault)** — `DEFINDEX_API_KEY` (server), `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` (vault `C…` contract), optional `DEFINDEX_API_URL`, `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default `7`)
 - `ETHERFUSE_API_KEY`
 - `ETHERFUSE_BASE_URL`
 - `ALFREDPAY_API_KEY`
@@ -168,3 +167,4 @@ If the Pollar wallet is `pending`:
   - Check the required env vars in `.env.local`.
 - Pollar activation fails
   - Confirm `POLLAR_SECRET_KEY` is set server-side only.
+

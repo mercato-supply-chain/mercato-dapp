@@ -60,7 +60,7 @@ export interface WalletNavProps {
 interface UserNavProps {
   user: NavUser | null
   profile: NavProfile | null
-  onLogout: () => void
+  onLogout: () => void | Promise<void>
   /** Wallet state and handlers; when provided, wallet is shown inside the user menu */
   wallet?: WalletNavProps
   /** Desktop: dropdown. Mobile: vertical links. */
@@ -284,7 +284,12 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onSelect={() => {
+              void onLogout()
+            }}
+          >
             <LogOut className="mr-2 h-4 w-4" aria-hidden />
             {t('nav.logout')}
           </DropdownMenuItem>
@@ -398,7 +403,14 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
         <Settings className="h-4 w-4" aria-hidden />
         {t('nav.settings')}
       </Link>
-      <Button variant="ghost" className="justify-start" onClick={onLogout}>
+      <Button
+        type="button"
+        variant="ghost"
+        className="justify-start"
+        onClick={() => {
+          void onLogout()
+        }}
+      >
         <LogOut className="mr-2 h-4 w-4" aria-hidden />
         {t('nav.logout')}
       </Button>

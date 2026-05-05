@@ -13,18 +13,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Wallet, Sprout, Coins, RefreshCw, AlertCircle } from 'lucide-react'
 import { useWallet } from '@/hooks/use-wallet'
 import { useDefindex } from '@/hooks/useDefindex'
+import { MercatoVaultActions } from '@/components/dashboard/mercato-vault-actions'
 import { buildCapitalState, totalCapital } from '@/lib/capital'
-import { formatDecimal } from '@/lib/format'
+import { formatDecimal, formatPercent } from '@/lib/format'
 
-export function InvestorCapitalOverview() {
-  const { isConnected, handleConnect } = useWallet()
+type ViewerRole = 'investor' | 'pyme'
+
+export function InvestorCapitalOverview({ viewerRole = 'investor' }: { viewerRole?: ViewerRole }) {
+  const { isConnected, handleConnect, canSignTransactions, publicKey, walletInfo } = useWallet()
   const {
     walletBalance,
     vaultBalance,
     availableCapital,
     isLoadingBalances,
     balanceError,
+    vaultInfoError,
+    vaultMeta,
     refreshBalances,
+    depositToVault,
+    withdrawFromVault,
   } = useDefindex()
 
   const capitalState = useMemo(
@@ -55,7 +62,9 @@ export function InvestorCapitalOverview() {
             <div>
               <p className="font-medium">Connect your wallet to view capital</p>
               <p className="text-sm text-muted-foreground">
-                See balances across wallet, vault yield, and available capital in one place.
+                {viewerRole === 'pyme'
+                  ? 'See your business wallet, Mercato vault yield, and funds ready for deals in one place.'
+                  : 'See balances across wallet, vault yield, and available capital in one place.'}
               </p>
             </div>
           </div>
@@ -71,7 +80,9 @@ export function InvestorCapitalOverview() {
     <div className="mb-8">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold">Capital overview</h2>
+          <h2 className="text-base font-semibold">
+            {viewerRole === 'pyme' ? 'Treasury & yield' : 'Capital overview'}
+          </h2>
           <p className="text-xs text-muted-foreground">
             Total capital{' '}
             <span className="font-medium tabular-nums text-foreground">
@@ -82,6 +93,15 @@ export function InvestorCapitalOverview() {
                 {' · '}
                 <span className="tabular-nums">
                   {formatDecimal(yieldShare, { maxFractionDigits: 1 })}% earning yield
+                </span>
+              </>
+            )}
+            {vaultMeta != null && Number.isFinite(vaultMeta.apy) && (
+              <>
+                {' · '}
+                <span className="tabular-nums">
+                  {vaultMeta.name} ({vaultMeta.symbol}) ·{' '}
+                  {formatPercent(vaultMeta.apy, { maxFractionDigits: 1 })} APY
                 </span>
               </>
             )}
@@ -101,10 +121,10 @@ export function InvestorCapitalOverview() {
         </Button>
       </div>
 
-      {balanceError && (
+      {(balanceError || vaultInfoError) && (
         <div className="mb-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{balanceError}</span>
+          <span>{balanceError ?? vaultInfoError}</span>
         </div>
       )}
 
@@ -120,7 +140,11 @@ export function InvestorCapitalOverview() {
         <BalanceCard
           icon={Sprout}
           label="Vault (Yield)"
-          description="Capital earning DeFindex yield"
+          description={
+            vaultMeta
+              ? `Capital in ${vaultMeta.name} (${vaultMeta.symbol})`
+              : 'Capital earning DeFindex yield (Mercato vault)'
+          }
           value={capitalState.inVault}
           tone="emerald"
           isLoading={isLoadingBalances}
@@ -132,6 +156,19 @@ export function InvestorCapitalOverview() {
           value={availableCapital}
           tone="amber"
           isLoading={isLoadingBalances}
+        />
+      </div>
+
+      <div className="mt-4">
+        <MercatoVaultActions
+          vaultMeta={vaultMeta}
+          walletBalance={walletBalance}
+          vaultBalance={vaultBalance}
+          canSignTransactions={canSignTransactions}
+          walletAddress={walletInfo?.address ?? publicKey ?? undefined}
+          isLoadingBalances={isLoadingBalances}
+          depositToVault={depositToVault}
+          withdrawFromVault={withdrawFromVault}
         />
       </div>
     </div>

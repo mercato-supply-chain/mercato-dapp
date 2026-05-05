@@ -26,6 +26,28 @@ export async function requireAuth(): Promise<AuthResult> {
   return { ok: true, userId: user.id, email: user.email }
 }
 
+/** Authenticated user with `profiles.user_type === 'admin'`, or 401/403. */
+export async function requireAdmin(): Promise<AuthResult> {
+  const auth = await requireAuth()
+  if (!auth.ok) return auth
+
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('user_type')
+    .eq('id', auth.userId)
+    .maybeSingle()
+
+  if (profile?.user_type !== 'admin') {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+    }
+  }
+
+  return auth
+}
+
 /**
  * Get current user and anchor for the given provider.
  * Provider is chosen by the user in the UI. Returns 401 if not logged in,

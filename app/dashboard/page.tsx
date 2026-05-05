@@ -448,8 +448,10 @@ export default async function DashboardPage({
           </>
         )}
 
-        {/* Investor: capital overview (wallet ↔ vault) */}
-        {userType === 'investor' && <InvestorCapitalOverview />}
+        {/* Wallet + Mercato vault (investors & PyMEs) */}
+        {(userType === 'investor' || userType === 'pyme') && (
+          <InvestorCapitalOverview viewerRole={userType === 'pyme' ? 'pyme' : 'investor'} />
+        )}
 
         {/* Role stats (non-admin) */}
         {userType !== 'admin' && roleStats && (

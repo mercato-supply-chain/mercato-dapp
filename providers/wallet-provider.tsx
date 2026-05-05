@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { type ISupportedWallet } from '@creit.tech/stellar-wallets-kit'
 import type { TxHistoryState } from '@pollar/core'
 import { createClient } from '@/lib/supabase/client'
+import { signOutApp } from '@/lib/auth/sign-out-app'
 import { usePollarSession } from '@/providers/pollar-provider'
 import { stellarWalletKit } from '@/lib/trustless/wallet-kit'
 import {
@@ -449,7 +450,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     if (wallet?.provider === 'pollar') {
       try {
-        await supabase.auth.signOut()
+        await signOutApp()
       } catch {
         // ignore sign-out failures
       }

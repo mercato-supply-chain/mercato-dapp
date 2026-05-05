@@ -14,6 +14,8 @@ function getSupabaseUrlAndAnonKey() {
   return { url, anonKey }
 }
 
+export { getSupabaseUrlAndAnonKey }
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
