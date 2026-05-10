@@ -21,8 +21,11 @@ import {
 import { Loader2 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS } from '@/lib/constants'
 import { WalletStatusCard } from '@/components/wallet/wallet-status-card'
+import { useI18n } from '@/lib/i18n/provider'
+import { localizedUserType } from '@/components/navigation/user-nav'
 
 export default function SettingsPage() {
+  const { t, messages } = useI18n()
   const router = useRouter()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(true)
@@ -82,7 +85,7 @@ export default function SettingsPage() {
     const amount = Number(stakeAmount)
 
     if (!Number.isFinite(amount) || amount < 0) {
-      alert('Stake amount must be a number greater than or equal to 0')
+      alert(t('settings.stakeInvalid'))
       return
     }
 
@@ -103,7 +106,7 @@ export default function SettingsPage() {
       }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to update stake amount')
+        throw new Error(result.error || t('settings.stakeUpdateFailed'))
       }
 
       setStakeAmount(String(Number(result.stakeAmount ?? 0)))
@@ -116,10 +119,10 @@ export default function SettingsPage() {
             }
           : prev
       )
-      alert('Stake signal updated successfully!')
+      alert(t('settings.stakeSuccess'))
     } catch (error) {
       console.error('Error updating stake signal:', error)
-      alert('Error updating stake signal. Please try again.')
+      alert(t('settings.stakeError'))
     } finally {
       setIsSavingStake(false)
     }
@@ -148,10 +151,10 @@ export default function SettingsPage() {
 
       if (error) throw error
 
-      alert('Profile updated successfully!')
+      alert(t('settings.profileSuccess'))
     } catch (error) {
       console.error('Error updating profile:', error)
-      alert('Error updating profile. Please try again.')
+      alert(t('settings.profileError'))
     } finally {
       setIsSaving(false)
     }
@@ -175,10 +178,8 @@ export default function SettingsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6">
-            <h1 className="mb-2 text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your account settings and profile information
-            </p>
+            <h1 className="mb-2 text-3xl font-bold">{t('settings.title')}</h1>
+            <p className="text-muted-foreground">{t('settings.subtitle')}</p>
           </div>
 
           <div className="mb-6">
@@ -187,128 +188,126 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your profile details and personal information
-              </CardDescription>
+              <CardTitle>{t('settings.profileTitle')}</CardTitle>
+              <CardDescription>{t('settings.profileDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('common.email')}</Label>
                   <Input
                     id="email"
                     type="email"
                     value={user?.email || ''}
                     disabled
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.emailLockedHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="user_type">User Type</Label>
+                  <Label htmlFor="user_type">{t('settings.userTypeLabel')}</Label>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="capitalize">
-                      {profile?.user_type || 'Not set'}
+                    <Badge variant="secondary">
+                      {profile?.user_type
+                        ? localizedUserType(profile.user_type, t)
+                        : t('common.notSet')}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    User type cannot be changed after registration
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.userTypeLockedHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name</Label>
+                  <Label htmlFor="full_name">{t('settings.fullNameLabel')}</Label>
                   <Input
                     id="full_name"
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Enter your full name"
+                    placeholder={t('settings.fullNamePlaceholder')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company_name">Company Name</Label>
+                  <Label htmlFor="company_name">{t('settings.companyNameLabel')}</Label>
                   <Input
                     id="company_name"
                     value={formData.company_name}
                     onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                    placeholder="Enter your company name"
+                    placeholder={t('settings.companyNamePlaceholder')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
+                  <Label htmlFor="country">{t('settings.countryLabel')}</Label>
                   <Select
                     value={formData.country || undefined}
                     onValueChange={(v) => setFormData({ ...formData, country: v })}
                   >
-                    <SelectTrigger id="country" aria-label="Country">
-                      <SelectValue placeholder="Select country" />
+                    <SelectTrigger id="country" aria-label={t('settings.countryLabel')}>
+                      <SelectValue placeholder={t('settings.countryPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {LATAM_COUNTRIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
+                      {LATAM_COUNTRIES.map((c) => {
+                        const label =
+                          messages.geo.countries[c.value as keyof typeof messages.geo.countries] ?? c.label
+                        return (
+                          <SelectItem key={c.value} value={c.value}>
+                            {label}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Your business or primary operation country (LATAM)
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.countryHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sector">Sector</Label>
+                  <Label htmlFor="sector">{t('settings.sectorLabel')}</Label>
                   <Select
                     value={formData.sector || undefined}
                     onValueChange={(v) => setFormData({ ...formData, sector: v })}
                   >
-                    <SelectTrigger id="sector" aria-label="Sector">
-                      <SelectValue placeholder="Select sector" />
+                    <SelectTrigger id="sector" aria-label={t('settings.sectorLabel')}>
+                      <SelectValue placeholder={t('settings.sectorPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {SECTORS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
+                      {SECTORS.map((s) => {
+                        const label =
+                          messages.geo.sectors[s.value as keyof typeof messages.geo.sectors] ?? s.label
+                        return (
+                          <SelectItem key={s.value} value={s.value}>
+                            {label}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Industry sector (e.g. Food Manufacturing, Agriculture)
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.sectorHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">{t('settings.phoneLabel')}</Label>
                   <Input
                     id="phone"
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Enter your phone number"
+                    placeholder={t('settings.phonePlaceholder')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Stellar Wallet Address</Label>
+                  <Label htmlFor="address">{t('settings.walletAddressLabel')}</Label>
                   <Input
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="GA7X... or GD2X..."
+                    placeholder={t('settings.walletAddressPlaceholder')}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Your Stellar wallet address for receiving/sending payments
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.walletAddressHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="stake_amount">Trust Stake (USDC)</Label>
+                  <Label htmlFor="stake_amount">{t('settings.stakeLabel')}</Label>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       id="stake_amount"
@@ -326,32 +325,30 @@ export default function SettingsPage() {
                       onClick={handleSaveStake}
                       disabled={isSavingStake}
                     >
-                      {isSavingStake ? 'Saving…' : 'Save Stake'}
+                      {isSavingStake ? t('common.saving') : t('settings.saveStake')}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Visible trust commitment in MERCATO Vault (v1 stores the amount; score impact is deferred).
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('settings.stakeHint')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="bio">{t('settings.bioLabel')}</Label>
                   <Textarea
                     id="bio"
                     value={formData.bio}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    placeholder="Tell us about yourself or your business"
+                    placeholder={t('settings.bioPlaceholder')}
                     rows={4}
                   />
                 </div>
 
                 {profile?.user_type === 'supplier' && (
                   <p className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-                    As a supplier, manage your products and categories from your{' '}
+                    {t('settings.supplierNoticePrefix')}{' '}
                     <Link href="/dashboard/supplier-profile" className="font-medium underline hover:text-foreground">
-                      Products & Categories
+                      {t('nav.productsCategories')}
                     </Link>{' '}
-                    page (also available in Quick Actions on your dashboard).
+                    {t('settings.supplierNoticeSuffix')}
                   </p>
                 )}
 
@@ -360,10 +357,10 @@ export default function SettingsPage() {
                     {isSaving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving…
+                        {t('common.saving')}
                       </>
                     ) : (
-                      'Save Changes'
+                      t('settings.saveChanges')
                     )}
                   </Button>
                   <Button
@@ -371,7 +368,7 @@ export default function SettingsPage() {
                     variant="outline"
                     onClick={() => router.push('/dashboard')}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                 </div>
               </form>

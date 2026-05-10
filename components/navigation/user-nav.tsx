@@ -70,6 +70,11 @@ interface UserNavProps {
 const displayName = (profile: NavProfile | null, email?: string) =>
   profile?.full_name || profile?.contact_name || profile?.company_name || email
 
+export function localizedUserType(userType: string, t: (key: string) => string) {
+  const label = t(`dashboard.roles.${userType}`)
+  return label === `dashboard.roles.${userType}` ? userType : label
+}
+
 export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavProps) {
   const { t } = useI18n()
 
@@ -82,8 +87,15 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
 
   const walletLabel =
     wallet?.provider === 'pollar' || wallet?.isEmbedded
-      ? 'Pollar Embedded Wallet'
-      : 'Stellar Wallet'
+      ? t('wallet.labelPollarEmbedded')
+      : t('wallet.labelStellar')
+
+  const walletStatusLabel =
+    wallet?.status === 'pending'
+      ? t('wallet.statusPending')
+      : wallet?.status === 'active'
+        ? t('wallet.statusActive')
+        : wallet?.status ?? ''
 
   if (!user) {
     if (variant === 'desktop') {
@@ -146,8 +158,8 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                 {user.email}
               </p>
               {userType && (
-                <p className="text-xs leading-none text-muted-foreground capitalize">
-                  {userType}
+                <p className="text-xs leading-none text-muted-foreground">
+                  {localizedUserType(userType, t)}
                 </p>
               )}
             </div>
@@ -166,7 +178,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                     </p>
                     {wallet.status && (
                       <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Status: {wallet.status}
+                        {t('wallet.statusLabel', { status: walletStatusLabel })}
                       </p>
                     )}
                   </DropdownMenuLabel>
@@ -197,11 +209,11 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                 <>
                   <DropdownMenuItem onClick={wallet.onConnect} className="cursor-pointer">
                     <Wallet className="mr-2 h-4 w-4" aria-hidden />
-                    Connect Stellar Wallet
+                    {t('wallet.connectStellarMenu')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={wallet.onConnectPollar} className="cursor-pointer">
                     <Wallet className="mr-2 h-4 w-4" aria-hidden />
-                    Continue with Pollar Embedded Wallet
+                    {t('wallet.continuePollarEmbedded')}
                   </DropdownMenuItem>
                 </>
               )}
@@ -316,7 +328,7 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                   <p className="text-xs font-mono break-all">{wallet.address}</p>
                   {wallet.status && (
                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Status: {wallet.status}
+                      {t('wallet.statusLabel', { status: walletStatusLabel })}
                     </p>
                   )}
                   <div className="flex gap-2">
@@ -339,11 +351,11 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
                 <div className="flex flex-col gap-2 px-2">
                   <Button variant="outline" size="sm" className="gap-2 justify-start w-full" onClick={wallet.onConnect}>
                     <Wallet className="h-4 w-4" aria-hidden />
-                    Connect Stellar Wallet
+                    {t('wallet.connectStellarMenu')}
                   </Button>
                   <Button variant="secondary" size="sm" className="gap-2 justify-start w-full" onClick={wallet.onConnectPollar}>
                     <Wallet className="h-4 w-4" aria-hidden />
-                    Continue with Pollar Embedded Wallet
+                    {t('wallet.continuePollarEmbedded')}
                   </Button>
                 </div>
               )}

@@ -6,8 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Package, Upload, ArrowRight } from 'lucide-react'
+import { getServerDictionary } from '@/lib/i18n/server'
+
+function tr(template: string, vars: Record<string, string | number>) {
+  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), template)
+}
 
 export default async function DeliveriesPage() {
+  const m = await getServerDictionary()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -49,15 +55,18 @@ export default async function DeliveriesPage() {
     return milestones.some((m) => m.status === 'pending' || m.status === 'in_progress')
   })
 
+  const dealStatusLabel = (status: string) => {
+    const labels = m.dealStatus as Record<string, string>
+    return labels[status] ?? status.replace(/_/g, ' ')
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Delivery proof</h1>
-          <p className="text-muted-foreground">
-            Deals where you are the supplier. Upload proof of shipment or delivery from each deal page.
-          </p>
+          <h1 className="text-3xl font-bold">{m.deliveries.title}</h1>
+          <p className="text-muted-foreground">{m.deliveries.description}</p>
         </div>
 
         {dealsWithPendingMilestones.length === 0 ? (
@@ -65,16 +74,14 @@ export default async function DeliveriesPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" aria-hidden />
-                No deliveries to action
+                {m.deliveries.emptyTitle}
               </CardTitle>
-              <CardDescription>
-                You don’t have any funded deals with pending milestones. When a deal you supply is funded, it will appear here so you can upload proof of shipment or delivery.
-              </CardDescription>
+              <CardDescription>{m.deliveries.emptyDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline">
                 <Link href="/dashboard">
-                  Back to dashboard
+                  {m.deliveries.backDashboard}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                 </Link>
               </Button>
@@ -102,11 +109,13 @@ export default async function DeliveriesPage() {
                       <div>
                         <CardTitle className="text-lg">{title}</CardTitle>
                         <CardDescription className="mt-1">
-                          {pendingCount} milestone{pendingCount !== 1 ? 's' : ''} awaiting proof or approval
+                          {pendingCount === 1
+                            ? tr(m.deliveries.milestonesPending, { count: pendingCount })
+                            : tr(m.deliveries.milestonesPendingPlural, { count: pendingCount })}
                         </CardDescription>
                       </div>
                       <Badge variant={d.status === 'funded' ? 'default' : 'secondary'}>
-                        {d.status === 'funded' ? 'Funded' : d.status.replace('_', ' ')}
+                        {d.status === 'funded' ? m.deliveries.statusFunded : dealStatusLabel(d.status)}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -114,7 +123,7 @@ export default async function DeliveriesPage() {
                     <Button asChild size="sm">
                       <Link href={`/deals/${d.id}`}>
                         <Upload className="mr-2 h-4 w-4" aria-hidden />
-                        Open deal & upload proof
+                        {m.deliveries.openDealUpload}
                         <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                       </Link>
                     </Button>

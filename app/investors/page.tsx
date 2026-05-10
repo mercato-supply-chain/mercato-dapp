@@ -24,6 +24,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
+import { useI18n } from '@/lib/i18n/provider'
 
 type Investor = {
   id: string
@@ -83,6 +84,12 @@ function InvestorCardSkeleton() {
 }
 
 export default function InvestorsPage() {
+  const { t, messages } = useI18n()
+  const countryLabel = (code: string) =>
+    messages.geo.countries[code as keyof typeof messages.geo.countries] ?? getCountryLabel(code)
+  const sectorLabel = (code: string) =>
+    messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
+
   const supabase = createClient()
   const [investors, setInvestors] = useState<Investor[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -175,7 +182,7 @@ export default function InvestorsPage() {
   }, [investors, searchQuery, selectedCountry, selectedSector])
 
   const displayName = (inv: Investor) =>
-    inv.company_name || inv.full_name || inv.contact_name || 'Investor'
+    inv.company_name || inv.full_name || inv.contact_name || t('investorsPage.investorFallback')
 
   const hasActiveFilters = searchQuery || selectedCountry !== 'all' || selectedSector !== 'all'
 
@@ -186,10 +193,8 @@ export default function InvestorsPage() {
       <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">Investor Directory</h1>
-          <p className="text-muted-foreground">
-            Active capital partners funding supply-chain deals on MERCATO
-          </p>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">{t('investorsPage.title')}</h1>
+          <p className="text-muted-foreground">{t('investorsPage.subtitle')}</p>
         </div>
 
         {/* Filters */}
@@ -198,33 +203,33 @@ export default function InvestorsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               type="search"
-              placeholder="Search investors, companies…"
+              placeholder={t('investorsPage.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
-              aria-label="Search investors"
+              aria-label={t('investorsPage.searchAria')}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-              <SelectTrigger className="w-[150px]" aria-label="Filter by country">
-                <SelectValue placeholder="Country" />
+              <SelectTrigger className="w-[150px]" aria-label={t('investorsPage.filterCountryAria')}>
+                <SelectValue placeholder={t('investorsPage.countryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All countries</SelectItem>
+                <SelectItem value="all">{t('investorsPage.allCountries')}</SelectItem>
                 {LATAM_COUNTRIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{countryLabel(c.value)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={selectedSector} onValueChange={setSelectedSector}>
-              <SelectTrigger className="w-[160px]" aria-label="Filter by sector">
-                <SelectValue placeholder="Sector" />
+              <SelectTrigger className="w-[160px]" aria-label={t('investorsPage.filterSectorAria')}>
+                <SelectValue placeholder={t('investorsPage.sectorPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sectors</SelectItem>
+                <SelectItem value="all">{t('investorsPage.allSectors')}</SelectItem>
                 {SECTORS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  <SelectItem key={s.value} value={s.value}>{sectorLabel(s.value)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -236,8 +241,10 @@ export default function InvestorsPage() {
           <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
             <TrendingUp className="h-4 w-4" aria-hidden />
             <span>
-              {filtered.length} {filtered.length === 1 ? 'investor' : 'investors'} found
-              {hasActiveFilters && ' matching your filters'}
+              {filtered.length === 1
+                ? t('investorsPage.foundOne', { count: filtered.length })
+                : t('investorsPage.foundMany', { count: filtered.length })}
+              {hasActiveFilters && t('investorsPage.matchingFilters')}
             </span>
           </div>
         )}
@@ -254,9 +261,9 @@ export default function InvestorsPage() {
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               <TrendingUp className="h-8 w-8 text-muted-foreground" aria-hidden />
             </div>
-            <p className="mb-1 text-lg font-semibold">No investors found</p>
+            <p className="mb-1 text-lg font-semibold">{t('investorsPage.emptyTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              {hasActiveFilters ? 'Try adjusting your search or filters' : 'No investors have joined yet'}
+              {hasActiveFilters ? t('investorsPage.emptyAdjustSearch') : t('investorsPage.emptyNoJoined')}
             </p>
           </div>
         ) : (
@@ -274,12 +281,13 @@ export default function InvestorsPage() {
                         {inv.verified && (
                           <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 gap-1 text-xs">
                             <CheckCircle2 className="h-3 w-3" />
-                            Verified
+                            {t('investorsPage.verified')}
                           </Badge>
                         )}
                         {inv.deal_count > 0 && (
                           <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                            {inv.deal_count} deal{inv.deal_count !== 1 ? 's' : ''}
+                            {inv.deal_count}{' '}
+                            {inv.deal_count === 1 ? t('deals.dealCountOne') : t('deals.dealCountOther')}
                           </span>
                         )}
                       </div>
@@ -293,13 +301,13 @@ export default function InvestorsPage() {
                         {inv.sector && (
                           <span className="flex items-center gap-1">
                             <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
-                            {getSectorLabel(inv.sector)}
+                            {sectorLabel(inv.sector)}
                           </span>
                         )}
                         {inv.country && (
                           <span className="flex items-center gap-1">
                             <Globe className="h-3 w-3 shrink-0" aria-hidden />
-                            {getCountryLabel(inv.country)}
+                            {countryLabel(inv.country)}
                           </span>
                         )}
                       </div>
@@ -319,7 +327,7 @@ export default function InvestorsPage() {
                       {inv.total_invested > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                           <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          {formatUsd(inv.total_invested)} deployed
+                          {formatUsd(inv.total_invested)} {t('investorsPage.deployedSuffix')}
                         </div>
                       )}
 
@@ -327,7 +335,9 @@ export default function InvestorsPage() {
                       {inv.active_deals > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
                           <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          {inv.active_deals} active deal{inv.active_deals !== 1 ? 's' : ''}
+                          {inv.active_deals === 1
+                            ? t('investorsPage.activeDealOne', { count: inv.active_deals })
+                            : t('investorsPage.activeDealMany', { count: inv.active_deals })}
                         </div>
                       )}
 
@@ -335,17 +345,17 @@ export default function InvestorsPage() {
                       {inv.completed_deals > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          {inv.completed_deals} completed
+                          {t('investorsPage.completedShort', { count: inv.completed_deals })}
                         </div>
                       )}
 
                       {inv.deal_count === 0 && (
-                        <p className="text-xs text-muted-foreground">No deals funded yet</p>
+                        <p className="text-xs text-muted-foreground">{t('investorsPage.noDealsFundedYet')}</p>
                       )}
                     </div>
 
                     <div className="mt-3 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 group-hover:gap-2 transition-[gap] duration-200">
-                      View profile
+                      {t('investorsPage.viewProfile')}
                       <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                     </div>
                   </CardContent>

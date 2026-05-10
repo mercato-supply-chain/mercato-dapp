@@ -13,7 +13,6 @@ import { defaultLocale, isLocale, localeCookieName, type Locale } from './config
 import { getDictionary, type Messages } from './dictionaries'
 
 type Replacements = Record<string, string | number>
-type TranslationValue = string | { [key: string]: TranslationValue }
 
 type I18nContextValue = {
   locale: Locale
@@ -25,10 +24,10 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 function lookup(messages: Messages, key: string): string | undefined {
-  const value = key.split('.').reduce<TranslationValue | undefined>((node, part) => {
-    if (!node || typeof node === 'string') return undefined
-    return node[part]
-  }, messages)
+  const value = key.split('.').reduce<unknown>((node, part) => {
+    if (node == null || typeof node !== 'object') return undefined
+    return (node as Record<string, unknown>)[part]
+  }, messages as unknown)
 
   return typeof value === 'string' ? value : undefined
 }

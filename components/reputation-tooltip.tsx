@@ -9,6 +9,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n/provider'
 import type {
   PymeReputation,
   PymeReputationTier,
@@ -21,19 +22,14 @@ const TIER_DOT: Record<PymeReputationTier, string> = {
   new: 'bg-muted-foreground/40',
 }
 
-const TIER_RULES: { tier: PymeReputationTier; label: string; rule: string }[] = [
-  { tier: 'new', label: 'New', rule: 'No funded deals yet' },
-  { tier: 'building', label: 'Building', rule: 'At least one deal funded, none completed' },
-  { tier: 'established', label: 'Established', rule: '1+ completed deal, under top thresholds' },
-  { tier: 'top_performer', label: 'Top performer', rule: '2+ completed deals or $20,000+ repaid' },
-]
+const TIER_TITLE_KEY: Record<PymeReputationTier, string> = {
+  new: 'tierNew',
+  building: 'tierBuilding',
+  established: 'tierEstablished',
+  top_performer: 'tierTopPerformer',
+}
 
-const formatPrice = (value: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)
+const RULE_TIERS: PymeReputationTier[] = ['new', 'building', 'established', 'top_performer']
 
 export interface ReputationTooltipProps {
   reputation: PymeReputation
@@ -58,10 +54,48 @@ export function ReputationTooltip({
   side = 'bottom',
   align = 'center',
 }: ReputationTooltipProps) {
-  const { stats, tier, label, completionRate } = reputation
+  const { t, locale } = useI18n()
+  const { stats, tier } = reputation
   const capitalCommitted = stats.totalRepaid + stats.currentDebt
   const activeDeals = Math.max(0, stats.dealsFunded - stats.dealsCompleted)
-  const completionPct = Math.round(completionRate * 100)
+  const completionPct = Math.round(reputation.completionRate * 100)
+
+  const formatPrice = (value: number) =>
+    new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value)
+
+  const tierRules = React.useMemo(
+    () =>
+      RULE_TIERS.map((r) => {
+        const labelKey =
+          r === 'new'
+            ? 'tierLabelNew'
+            : r === 'building'
+              ? 'tierLabelBuilding'
+              : r === 'established'
+                ? 'tierLabelEstablished'
+                : 'tierLabelTop'
+        const ruleKey =
+          r === 'new'
+            ? 'tierRuleNew'
+            : r === 'building'
+              ? 'tierRuleBuilding'
+              : r === 'established'
+                ? 'tierRuleEstablished'
+                : 'tierRuleTop'
+        return {
+          tier: r,
+          label: t(`reputationTooltip.${labelKey}`),
+          rule: t(`reputationTooltip.${ruleKey}`),
+        }
+      }),
+    [t],
+  )
+
+  const currentTierLabel = t(`pymesPage.${TIER_TITLE_KEY[tier]}`)
 
   return (
     <HoverCard openDelay={120} closeDelay={80}>
@@ -69,7 +103,7 @@ export function ReputationTooltip({
         {children ?? (
           <button
             type="button"
-            aria-label="How is the reputation calculated?"
+            aria-label={t('reputationTooltip.ariaLabel')}
             className={cn(
               'inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               triggerClassName,
@@ -85,14 +119,12 @@ export function ReputationTooltip({
           <div className="flex items-start gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
             <div className="space-y-1">
-              <p className="text-sm font-semibold leading-none">
-                Reputation breakdown
-              </p>
+              <p className="text-sm font-semibold leading-none">{t('reputationTooltip.title')}</p>
               <p className="text-xs text-muted-foreground">
-                Current tier:{' '}
+                {t('reputationTooltip.currentTier')}{' '}
                 <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
                   <span className={cn('inline-block h-2 w-2 rounded-full', TIER_DOT[tier])} />
-                  {label}
+                  {currentTierLabel}
                 </span>
               </p>
             </div>
@@ -102,13 +134,15 @@ export function ReputationTooltip({
             <li className="flex items-start justify-between gap-3">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Coins className="h-3.5 w-3.5" aria-hidden />
-                Capital committed
+                {t('reputationTooltip.capitalCommitted')}
               </span>
               <span className="text-right font-medium tabular-nums">
                 {formatPrice(capitalCommitted)}
                 <span className="block text-[11px] font-normal text-muted-foreground">
-                  {formatPrice(stats.currentDebt)} active ·{' '}
-                  {formatPrice(stats.totalRepaid)} repaid
+                  {t('reputationTooltip.activeRepaidSub', {
+                    active: formatPrice(stats.currentDebt),
+                    repaid: formatPrice(stats.totalRepaid),
+                  })}
                 </span>
               </span>
             </li>
@@ -116,12 +150,15 @@ export function ReputationTooltip({
             <li className="flex items-start justify-between gap-3">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Activity className="h-3.5 w-3.5" aria-hidden />
-                Deal activity
+                {t('reputationTooltip.dealActivity')}
               </span>
               <span className="text-right font-medium tabular-nums">
-                {stats.dealsFunded} funded
+                {t('reputationTooltip.fundedLine', { count: stats.dealsFunded })}
                 <span className="block text-[11px] font-normal text-muted-foreground">
-                  {stats.dealsCompleted} completed · {activeDeals} active
+                  {t('reputationTooltip.completedActiveSub', {
+                    completed: stats.dealsCompleted,
+                    active: activeDeals,
+                  })}
                 </span>
               </span>
             </li>
@@ -129,12 +166,12 @@ export function ReputationTooltip({
             <li className="flex items-start justify-between gap-3">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                Repayment performance
+                {t('reputationTooltip.repaymentPerformance')}
               </span>
               <span className="text-right font-medium tabular-nums">
-                {stats.dealsFunded > 0 ? `${completionPct}%` : '—'}
+                {stats.dealsFunded > 0 ? `${completionPct}%` : t('reputationTooltip.noRate')}
                 <span className="block text-[11px] font-normal text-muted-foreground">
-                  completed ÷ funded
+                  {t('reputationTooltip.ratioHint')}
                 </span>
               </span>
             </li>
@@ -142,10 +179,10 @@ export function ReputationTooltip({
 
           <div className="rounded-md border border-border/60 bg-muted/40 p-2.5">
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              How tiers are assigned
+              {t('reputationTooltip.howTiersTitle')}
             </p>
             <ul className="space-y-1 text-[11px] text-muted-foreground">
-              {TIER_RULES.map((r) => (
+              {tierRules.map((r) => (
                 <li
                   key={r.tier}
                   className={cn(
@@ -162,10 +199,7 @@ export function ReputationTooltip({
             </ul>
           </div>
 
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            All inputs come directly from on-chain deal status and amounts — no
-            manual edits.
-          </p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{t('reputationTooltip.footerNote')}</p>
         </div>
       </HoverCardContent>
     </HoverCard>

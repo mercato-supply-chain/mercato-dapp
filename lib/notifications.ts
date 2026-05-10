@@ -48,8 +48,11 @@ export function mapNotificationFromDb(row: NotificationRow): Notification {
   }
 }
 
-/** Relative time string for display (e.g. "2h ago") */
-export function formatNotificationTime(iso: string): string {
+/** Relative time string for display — pass `t` from useI18n for locale-aware strings. */
+export function formatNotificationTime(
+  iso: string,
+  t: (key: string, replacements?: Record<string, string | number>) => string,
+): string {
   const d = new Date(iso)
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
@@ -57,9 +60,9 @@ export function formatNotificationTime(iso: string): string {
   const diffHours = Math.floor(diffMs / 3_600_000)
   const diffDays = Math.floor(diffMs / 86_400_000)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffMins < 1) return t('notifications.justNow')
+  if (diffMins < 60) return t('notifications.minsAgo', { n: diffMins })
+  if (diffHours < 24) return t('notifications.hoursAgo', { n: diffHours })
+  if (diffDays < 7) return t('notifications.daysAgo', { n: diffDays })
   return d.toLocaleDateString()
 }

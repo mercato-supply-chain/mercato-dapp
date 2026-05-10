@@ -16,6 +16,7 @@ import {
   formatNotificationTime,
   type Notification,
 } from '@/lib/notifications'
+import { useI18n } from '@/lib/i18n/provider'
 
 interface NotificationDropdownProps {
   userId: string
@@ -24,6 +25,7 @@ interface NotificationDropdownProps {
 }
 
 export function NotificationDropdown({ userId, variant = 'desktop' }: NotificationDropdownProps) {
+  const { t } = useI18n()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -104,12 +106,12 @@ export function NotificationDropdown({ userId, variant = 'desktop' }: Notificati
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+        <Button variant="ghost" size="icon" aria-label={t('notifications.ariaLabel')} className="relative">
           <Bell className="h-5 w-5" aria-hidden />
           {unreadCount > 0 && (
             <span
               className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
-              aria-label={`${unreadCount} unread`}
+              aria-label={t('notifications.unreadCount', { count: unreadCount })}
             >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
@@ -118,7 +120,7 @@ export function NotificationDropdown({ userId, variant = 'desktop' }: Notificati
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[340px] p-0" sideOffset={8}>
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-semibold">Notifications</span>
+          <span className="text-sm font-semibold">{t('notifications.title')}</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -126,7 +128,7 @@ export function NotificationDropdown({ userId, variant = 'desktop' }: Notificati
               className="h-auto py-1 text-xs"
               onClick={markAllAsRead}
             >
-              Mark all read
+              {t('notifications.markAllRead')}
             </Button>
           )}
         </div>
@@ -138,7 +140,7 @@ export function NotificationDropdown({ userId, variant = 'desktop' }: Notificati
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
               <Bell className="h-10 w-10" />
-              <p>No notifications yet</p>
+              <p>{t('notifications.empty')}</p>
             </div>
           ) : (
             <ul className="divide-y">
@@ -170,7 +172,7 @@ export function NotificationDropdown({ userId, variant = 'desktop' }: Notificati
                           </p>
                         )}
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {formatNotificationTime(n.created_at)}
+                          {formatNotificationTime(n.created_at, t)}
                         </p>
                       </div>
                     </div>

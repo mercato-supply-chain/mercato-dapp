@@ -19,8 +19,11 @@ import {
   CalendarClock,
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
+import { getServerDictionary } from '@/lib/i18n/server'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+function tr(template: string, vars: Record<string, string | number>) {
+  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), template)
+}
 
 type DealItem = {
   id: string
@@ -38,14 +41,6 @@ type DealItem = {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const STATUS_LABELS: Record<string, string> = {
-  seeking_funding: 'Open for funding',
-  funded: 'Funded',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
 
 function expectedYield(amount: number, apr: number, termDays: number): number {
   return amount * (apr / 100) * (termDays / 365)
@@ -81,9 +76,10 @@ function termProgress(fundedAt: string | null, termDays: number | null): {
 }
 
 function smbName(
-  pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null,
+  pyme: { company_name?: string; full_name?: string; contact_name?: string } | null | undefined,
+  fallback: string,
 ): string {
-  return pyme?.company_name || pyme?.full_name || pyme?.contact_name || 'SMB'
+  return pyme?.company_name || pyme?.full_name || pyme?.contact_name || fallback
 }
 
 function statusBadgeClass(status: string): string {
@@ -103,6 +99,12 @@ function statusBadgeClass(status: string): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardInvestmentsPage() {
+  const m = await getServerDictionary()
+  const dealStatusLabel = (status: string) => {
+    const labels = m.dealStatus as Record<string, string>
+    return labels[status] ?? status.replace(/_/g, ' ')
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -188,11 +190,11 @@ export default async function DashboardInvestmentsPage() {
         {/* Header */}
         <div className="mb-8 rounded-xl border border-border/50 bg-gradient-to-r from-emerald-500/5 to-transparent px-6 py-5">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            {displayName ? `${displayName}'s investments` : 'My investments'}
+            {displayName
+              ? tr(m.investments.titlePossessive, { name: displayName })
+              : m.investments.titleDefault}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track your funded deals, expected yield, and escrow security.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{m.investments.subtitle}</p>
         </div>
 
         {list.length === 0 ? (
@@ -202,13 +204,11 @@ export default async function DashboardInvestmentsPage() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <TrendingUp className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
               </div>
-              <h3 className="mb-1 text-lg font-semibold">No investments yet</h3>
-              <p className="mb-6 max-w-xs text-sm text-muted-foreground">
-                Deals you fund will appear here. Browse open deals to find opportunities.
-              </p>
+              <h3 className="mb-1 text-lg font-semibold">{m.investments.emptyTitle}</h3>
+              <p className="mb-6 max-w-xs text-sm text-muted-foreground">{m.investments.emptyDescription}</p>
               <Button asChild>
                 <Link href="/deals">
-                  Browse Deals
+                  {m.investments.browseDeals}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
                 </Link>
               </Button>
@@ -223,11 +223,13 @@ export default async function DashboardInvestmentsPage() {
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-1.5">
                     <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Total deployed
+                    {m.investments.totalDeployed}
                   </CardDescription>
                   <CardTitle className="text-2xl tabular-nums">{formatUsd(totalDeployed)}</CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {list.length} deal{list.length !== 1 ? 's' : ''} total
+                    {list.length === 1
+                      ? tr(m.investments.dealsTotal, { count: list.length })
+                      : tr(m.investments.dealsTotalPlural, { count: list.length })}
                   </p>
                 </CardHeader>
               </Card>
@@ -235,13 +237,15 @@ export default async function DashboardInvestmentsPage() {
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-1.5">
                     <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                    Active capital
+                    {m.investments.activeCapital}
                   </CardDescription>
                   <CardTitle className="text-2xl tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatUsd(activeCapital)}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {activeDeals.length} active deal{activeDeals.length !== 1 ? 's' : ''}
+                    {activeDeals.length === 1
+                      ? tr(m.investments.activeDealsLine, { count: activeDeals.length })
+                      : tr(m.investments.activeDealsLinePlural, { count: activeDeals.length })}
                   </p>
                 </CardHeader>
               </Card>
@@ -249,27 +253,29 @@ export default async function DashboardInvestmentsPage() {
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                    Pending yield
+                    {m.investments.pendingYield}
                   </CardDescription>
                   <CardTitle className="text-2xl tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatUsd(pendingYield, 2)}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">At maturity · active deals</p>
+                  <p className="text-xs text-muted-foreground">{m.investments.pendingYieldHint}</p>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-1.5">
                     <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
-                    {completedDeals.length > 0 ? 'Realized yield' : 'Weighted APR'}
+                    {completedDeals.length > 0 ? m.investments.realizedYieldShort : m.investments.weightedAprShort}
                   </CardDescription>
                   <CardTitle className="text-2xl tabular-nums">
                     {completedDeals.length > 0 ? formatUsd(realizedYield, 2) : `${weightedApr.toFixed(1)}%`}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
                     {completedDeals.length > 0
-                      ? `${completedDeals.length} completed deal${completedDeals.length !== 1 ? 's' : ''}`
-                      : 'Across active portfolio'}
+                      ? completedDeals.length === 1
+                        ? tr(m.investments.completedDealsLine, { count: completedDeals.length })
+                        : tr(m.investments.completedDealsLinePlural, { count: completedDeals.length })
+                      : m.investments.acrossPortfolio}
                   </p>
                 </CardHeader>
               </Card>
@@ -279,9 +285,8 @@ export default async function DashboardInvestmentsPage() {
             <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Funds are secured in escrow.</span>{' '}
-                Your capital is held in a non-custodial Stellar smart contract. Releases are
-                milestone-gated and controlled by the deal parties and platform.
+                <span className="font-medium text-foreground">{m.investments.securityLead}</span>{' '}
+                {m.investments.securityBody}
               </p>
             </div>
 
@@ -289,19 +294,19 @@ export default async function DashboardInvestmentsPage() {
             {activeDeals.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">Active</h2>
+                  <h2 className="text-lg font-semibold">{m.investments.activeHeading}</h2>
                   <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                     {activeDeals.length}
                   </span>
                 </div>
                 <div className="space-y-4">
                   {activeDeals.map((deal) => {
-                    const title = deal.product_name || deal.title || 'Deal'
+                    const title = deal.product_name || deal.title || m.investments.dealFallbackTitle
                     const amount = Number(deal.amount)
                     const apr = Number(deal.interest_rate ?? 0)
                     const termDays = Number(deal.term_days ?? 0)
                     const yieldAmt = expectedYield(amount, apr, termDays)
-                    const smb = smbName(deal.pyme)
+                    const smb = smbName(deal.pyme, m.investments.smbFallbackName)
                     const openEscrows = deal.pyme_id ? openEscrowsBySmb[deal.pyme_id] ?? 0 : 0
                     const { percent, daysRemaining, maturityDate } = termProgress(deal.funded_at, deal.term_days)
 
@@ -316,13 +321,14 @@ export default async function DashboardInvestmentsPage() {
                               <div>
                                 <CardTitle className="text-base">{title}</CardTitle>
                                 <CardDescription className="mt-0.5 text-xs">
-                                  SMB: {smb}
-                                  {deal.funded_at && ` · Funded ${formatDate(deal.funded_at)}`}
+                                  {m.investments.smbPrefix} {smb}
+                                  {deal.funded_at &&
+                                    ` · ${tr(m.investments.fundedOn, { date: formatDate(deal.funded_at) })}`}
                                 </CardDescription>
                               </div>
                             </div>
                             <Badge className={`text-xs ${statusBadgeClass(deal.status)}`} variant="outline">
-                              {STATUS_LABELS[deal.status] ?? deal.status}
+                              {dealStatusLabel(deal.status)}
                             </Badge>
                           </div>
                         </CardHeader>
@@ -331,27 +337,29 @@ export default async function DashboardInvestmentsPage() {
                           {/* Key numbers row */}
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <div className="rounded-lg border border-border bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground mb-0.5">Amount</p>
+                              <p className="text-xs text-muted-foreground mb-0.5">{m.investments.amount}</p>
                               <p className="text-base font-semibold tabular-nums">{formatUsd(amount)}</p>
-                              <p className="text-xs text-muted-foreground">USDC in escrow</p>
+                              <p className="text-xs text-muted-foreground">{m.investments.usdcInEscrow}</p>
                             </div>
                             <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-3">
-                              <p className="text-xs text-muted-foreground mb-0.5">Expected yield</p>
+                              <p className="text-xs text-muted-foreground mb-0.5">{m.investments.expectedYield}</p>
                               <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                                 {formatUsd(yieldAmt, 2)}
                               </p>
-                              <p className="text-xs text-muted-foreground">At maturity</p>
+                              <p className="text-xs text-muted-foreground">{m.investments.atMaturity}</p>
                             </div>
                             <div className="rounded-lg border border-border bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground mb-0.5">APR</p>
+                              <p className="text-xs text-muted-foreground mb-0.5">{m.investments.apr}</p>
                               <p className="text-base font-semibold tabular-nums">{apr}%</p>
-                              <p className="text-xs text-muted-foreground">{termDays}‑day term</p>
+                              <p className="text-xs text-muted-foreground">
+                                {tr(m.investments.dayTerm, { n: termDays })}
+                              </p>
                             </div>
                             <div className="rounded-lg border border-border bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground mb-0.5">Open escrows</p>
+                              <p className="text-xs text-muted-foreground mb-0.5">{m.investments.openEscrows}</p>
                               <p className="text-base font-semibold tabular-nums">{openEscrows}</p>
                               <p className="text-xs text-muted-foreground">
-                                {openEscrows <= 1 ? 'This deal only' : `With same SMB`}
+                                {openEscrows <= 1 ? m.investments.openEscrowsThisOnly : m.investments.openEscrowsSameSmb}
                               </p>
                             </div>
                           </div>
@@ -362,14 +370,16 @@ export default async function DashboardInvestmentsPage() {
                               <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <CalendarClock className="h-3 w-3" aria-hidden="true" />
-                                  Term progress
+                                  {m.investments.termProgress}
                                 </span>
                                 <span className="tabular-nums font-medium">
                                   {daysRemaining > 0
-                                    ? `${daysRemaining}d remaining`
+                                    ? tr(m.investments.daysRemaining, { n: daysRemaining })
                                     : maturityDate
-                                      ? `Matured ${formatDate(maturityDate.toISOString())}`
-                                      : '—'}
+                                      ? tr(m.investments.maturedOn, {
+                                          date: formatDate(maturityDate.toISOString()),
+                                        })
+                                      : m.investments.progressEmDash}
                                 </span>
                               </div>
                               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -380,7 +390,9 @@ export default async function DashboardInvestmentsPage() {
                               </div>
                               {maturityDate && (
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                  Matures {formatDate(maturityDate.toISOString())}
+                                  {tr(m.investments.maturesOn, {
+                                    date: formatDate(maturityDate.toISOString()),
+                                  })}
                                 </p>
                               )}
                             </div>
@@ -391,14 +403,14 @@ export default async function DashboardInvestmentsPage() {
                             {deal.escrow_contract_address ? (
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <Lock className="h-3 w-3" aria-hidden />
-                                Secured on-chain
+                                {m.investments.securedOnChain}
                               </div>
                             ) : (
                               <span />
                             )}
                             <Button asChild size="sm">
                               <Link href={`/deals/${deal.id}`}>
-                                View Deal
+                                {m.investments.viewDeal}
                                 <ArrowRight className="ml-2 h-3.5 w-3.5" aria-hidden />
                               </Link>
                             </Button>
@@ -415,7 +427,7 @@ export default async function DashboardInvestmentsPage() {
             {completedDeals.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">Completed</h2>
+                  <h2 className="text-lg font-semibold">{m.investments.completedHeading}</h2>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {completedDeals.length}
                   </span>
@@ -424,12 +436,12 @@ export default async function DashboardInvestmentsPage() {
                   <CardContent className="p-0">
                     <ul className="divide-y divide-border">
                       {completedDeals.map((deal) => {
-                        const title = deal.product_name || deal.title || 'Deal'
+                        const title = deal.product_name || deal.title || m.investments.dealFallbackTitle
                         const amount = Number(deal.amount)
                         const apr = Number(deal.interest_rate ?? 0)
                         const termDays = Number(deal.term_days ?? 0)
                         const yieldAmt = expectedYield(amount, apr, termDays)
-                        const smb = smbName(deal.pyme)
+                        const smb = smbName(deal.pyme, m.investments.smbFallbackName)
 
                         return (
                           <li key={deal.id}>
@@ -451,11 +463,11 @@ export default async function DashboardInvestmentsPage() {
                                 <div>
                                   <p className="font-medium tabular-nums">{formatUsd(amount)}</p>
                                   <p className="text-xs text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                    +{formatUsd(yieldAmt, 2)} yield
+                                    {tr(m.investments.yieldEarned, { amount: formatUsd(yieldAmt, 2) })}
                                   </p>
                                 </div>
                                 <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${statusBadgeClass('completed')}`}>
-                                  Completed
+                                  {m.investments.completedBadge}
                                 </span>
                                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                               </div>
@@ -473,7 +485,7 @@ export default async function DashboardInvestmentsPage() {
             {otherDeals.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">Other</h2>
+                  <h2 className="text-lg font-semibold">{m.investments.otherHeading}</h2>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {otherDeals.length}
                   </span>
@@ -482,9 +494,9 @@ export default async function DashboardInvestmentsPage() {
                   <CardContent className="p-0">
                     <ul className="divide-y divide-border">
                       {otherDeals.map((deal) => {
-                        const title = deal.product_name || deal.title || 'Deal'
+                        const title = deal.product_name || deal.title || m.investments.dealFallbackTitle
                         const amount = Number(deal.amount)
-                        const smb = smbName(deal.pyme)
+                        const smb = smbName(deal.pyme, m.investments.smbFallbackName)
 
                         return (
                           <li key={deal.id}>
@@ -502,7 +514,7 @@ export default async function DashboardInvestmentsPage() {
                               <div className="flex items-center gap-3 shrink-0">
                                 <p className="tabular-nums text-sm">{formatUsd(amount)}</p>
                                 <Badge variant="outline" className="text-xs">
-                                  {STATUS_LABELS[deal.status] ?? deal.status}
+                                  {dealStatusLabel(deal.status)}
                                 </Badge>
                                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                               </div>
@@ -519,12 +531,12 @@ export default async function DashboardInvestmentsPage() {
             {/* ── CTA ── */}
             <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/30 px-5 py-4">
               <div>
-                <p className="font-medium text-sm">Looking for more deals?</p>
-                <p className="text-xs text-muted-foreground">Browse open deals seeking funding on the marketplace.</p>
+                <p className="font-medium text-sm">{m.investments.ctaTitle}</p>
+                <p className="text-xs text-muted-foreground">{m.investments.ctaSubtitle}</p>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link href="/deals">
-                  Browse Deals
+                  {m.investments.browseDealsOutline}
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>

@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
+import { useI18n } from '@/lib/i18n/provider'
 
 type Supplier = {
   id: string
@@ -41,18 +42,24 @@ type Supplier = {
   sector: string | null
 }
 
-const CATEGORIES = [
-  { value: 'all', label: 'All' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'textiles', label: 'Textiles' },
-  { value: 'food', label: 'Food' },
-  { value: 'manufacturing', label: 'Manufacturing' },
-  { value: 'agriculture', label: 'Agriculture' },
-  { value: 'construction', label: 'Construction' },
-  { value: 'other', label: 'Other' },
-]
+const SUPPLIER_CATEGORY_VALUES = [
+  'all',
+  'electronics',
+  'textiles',
+  'food',
+  'manufacturing',
+  'agriculture',
+  'construction',
+  'other',
+] as const
 
 export default function SuppliersPage() {
+  const { t, messages } = useI18n()
+  const countryLabel = (code: string) =>
+    messages.geo.countries[code as keyof typeof messages.geo.countries] ?? getCountryLabel(code)
+  const sectorLabel = (code: string) =>
+    messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
+
   const supabase = createClient()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -177,13 +184,10 @@ export default function SuppliersPage() {
         <div className="mb-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/20">
             <Building2 className="h-3 w-3" aria-hidden />
-            Supplier network
+            {t('suppliersPage.eyebrow')}
           </div>
-          <h1 className="mb-2 text-4xl font-bold tracking-tight">Supplier Directory</h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Browse verified suppliers across LATAM. Each supplier can be linked to a deal for
-            milestone-based payment via escrow.
-          </p>
+          <h1 className="mb-2 text-4xl font-bold tracking-tight">{t('suppliersPage.title')}</h1>
+          <p className="max-w-xl text-lg text-muted-foreground">{t('suppliersPage.description')}</p>
         </div>
 
         {/* Stat tiles */}
@@ -193,7 +197,7 @@ export default function SuppliersPage() {
               <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total suppliers</p>
+              <p className="text-sm text-muted-foreground">{t('suppliersPage.totalSuppliers')}</p>
               <p className="text-2xl font-bold tabular-nums">{isLoading ? '—' : stats.total}</p>
             </div>
           </div>
@@ -202,7 +206,7 @@ export default function SuppliersPage() {
               <CheckCircle2 className="h-5 w-5 text-success" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Verified</p>
+              <p className="text-sm text-muted-foreground">{t('suppliersPage.verified')}</p>
               <p className="text-2xl font-bold tabular-nums text-success">
                 {isLoading ? '—' : stats.verified}
               </p>
@@ -213,7 +217,7 @@ export default function SuppliersPage() {
               <Globe className="h-5 w-5 text-muted-foreground" aria-hidden />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Countries</p>
+              <p className="text-sm text-muted-foreground">{t('suppliersPage.countries')}</p>
               <p className="text-2xl font-bold tabular-nums">{isLoading ? '—' : stats.countries}</p>
             </div>
           </div>
@@ -223,18 +227,18 @@ export default function SuppliersPage() {
         <div className="mb-6 space-y-4">
           {/* Category pills */}
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
+            {SUPPLIER_CATEGORY_VALUES.map((cat) => (
               <button
-                key={cat.value}
+                key={cat}
                 type="button"
-                onClick={() => setSelectedCategory(cat.value)}
+                onClick={() => setSelectedCategory(cat)}
                 className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  selectedCategory === cat.value
+                  selectedCategory === cat
                     ? 'bg-foreground text-background'
                     : 'border border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground'
                 }`}
               >
-                {cat.label}
+                {t(`suppliersPage.categories.${cat}`)}
               </button>
             ))}
           </div>
@@ -247,34 +251,34 @@ export default function SuppliersPage() {
                 aria-hidden
               />
               <Input
-                placeholder="Search suppliers or products…"
+                placeholder={t('suppliersPage.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
             <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-              <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by country">
-                <SelectValue placeholder="Country" />
+              <SelectTrigger className="w-full sm:w-[160px]" aria-label={t('suppliersPage.filterCountryAria')}>
+                <SelectValue placeholder={t('suppliersPage.countryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All countries</SelectItem>
+                <SelectItem value="all">{t('suppliersPage.allCountries')}</SelectItem>
                 {LATAM_COUNTRIES.map((c) => (
                   <SelectItem key={c.value} value={c.value}>
-                    {c.label}
+                    {countryLabel(c.value)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={selectedSector} onValueChange={setSelectedSector}>
-              <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by sector">
-                <SelectValue placeholder="Sector" />
+              <SelectTrigger className="w-full sm:w-[180px]" aria-label={t('suppliersPage.filterSectorAria')}>
+                <SelectValue placeholder={t('suppliersPage.sectorPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sectors</SelectItem>
+                <SelectItem value="all">{t('suppliersPage.allSectors')}</SelectItem>
                 {SECTORS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
-                    {s.label}
+                    {sectorLabel(s.value)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -285,13 +289,13 @@ export default function SuppliersPage() {
         {/* Active filter chips */}
         {hasActiveFilters && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Filters:</span>
+            <span className="text-xs text-muted-foreground">{t('suppliersPage.filtersLabel')}</span>
             {selectedCategory !== 'all' && (
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium capitalize">
-                {selectedCategory}
+                {t(`suppliersPage.categories.${selectedCategory as (typeof SUPPLIER_CATEGORY_VALUES)[number]}`)}
                 <button
                   type="button"
-                  aria-label="Remove category filter"
+                  aria-label={t('suppliersPage.removeCategoryFilter')}
                   onClick={() => setSelectedCategory('all')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -301,10 +305,10 @@ export default function SuppliersPage() {
             )}
             {selectedCountry !== 'all' && (
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {getCountryLabel(selectedCountry)}
+                {countryLabel(selectedCountry)}
                 <button
                   type="button"
-                  aria-label="Remove country filter"
+                  aria-label={t('suppliersPage.removeCountryFilter')}
                   onClick={() => setSelectedCountry('all')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -314,10 +318,10 @@ export default function SuppliersPage() {
             )}
             {selectedSector !== 'all' && (
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {getSectorLabel(selectedSector)}
+                {sectorLabel(selectedSector)}
                 <button
                   type="button"
-                  aria-label="Remove sector filter"
+                  aria-label={t('suppliersPage.removeSectorFilter')}
                   onClick={() => setSelectedSector('all')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -330,7 +334,7 @@ export default function SuppliersPage() {
                 &ldquo;{searchQuery}&rdquo;
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('suppliersPage.clearSearchAria')}
                   onClick={() => setSearchQuery('')}
                   className="ml-0.5 text-muted-foreground hover:text-foreground"
                 >
@@ -339,7 +343,7 @@ export default function SuppliersPage() {
               </span>
             )}
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearAll}>
-              Clear all
+              {t('suppliersPage.clearAll')}
             </Button>
           </div>
         )}
@@ -347,8 +351,8 @@ export default function SuppliersPage() {
         {/* Result count */}
         <p className="mb-4 text-sm text-muted-foreground">
           {isLoading
-            ? 'Loading suppliers…'
-            : `${filteredSuppliers.length} ${filteredSuppliers.length === 1 ? 'supplier' : 'suppliers'}`}
+            ? t('suppliersPage.loading')
+            : `${filteredSuppliers.length} ${filteredSuppliers.length === 1 ? t('suppliersPage.supplierOne') : t('suppliersPage.supplierMany')}`}
         </p>
 
         {/* Grid */}
@@ -366,15 +370,13 @@ export default function SuppliersPage() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
               <Building2 className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
-            <p className="mb-1 text-base font-semibold">No suppliers found</p>
+            <p className="mb-1 text-base font-semibold">{t('suppliersPage.noResultsTitle')}</p>
             <p className="mb-5 max-w-xs text-sm text-muted-foreground">
-              {suppliers.length === 0
-                ? 'No suppliers have been registered yet.'
-                : 'Try adjusting your filters or search query.'}
+              {suppliers.length === 0 ? t('suppliersPage.noResultsEmpty') : t('suppliersPage.noResultsFiltered')}
             </p>
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearAll}>
-                Clear filters
+                {t('suppliersPage.clearFilters')}
               </Button>
             )}
           </div>
@@ -396,12 +398,14 @@ export default function SuppliersPage() {
                       {supplier.verified && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success ring-1 ring-success/20">
                           <CheckCircle2 className="h-3 w-3" aria-hidden />
-                          Verified
+                          {t('suppliersPage.verified')}
                         </span>
                       )}
                       {supplier.categories?.[0] && (
                         <Badge variant="outline" className="text-xs capitalize">
-                          {supplier.categories[0]}
+                          {t(
+                            `suppliersPage.categories.${supplier.categories[0] as (typeof SUPPLIER_CATEGORY_VALUES)[number]}`,
+                          )}
                         </Badge>
                       )}
                     </div>
@@ -416,13 +420,13 @@ export default function SuppliersPage() {
                       {supplier.sector && (
                         <span className="flex items-center gap-1">
                           <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
-                          {getSectorLabel(supplier.sector)}
+                          {sectorLabel(supplier.sector)}
                         </span>
                       )}
                       {supplier.country && (
                         <span className="flex items-center gap-1">
                           <Globe className="h-3 w-3 shrink-0" aria-hidden />
-                          {getCountryLabel(supplier.country)}
+                          {countryLabel(supplier.country)}
                         </span>
                       )}
                     </div>
@@ -437,7 +441,7 @@ export default function SuppliersPage() {
                 {supplier.products && supplier.products.length > 0 && (
                   <div className="mx-5 mb-4 rounded-xl border border-border bg-muted/30 px-3 py-2">
                     <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Products
+                      {t('suppliersPage.products')}
                     </p>
                     <p className="mt-0.5 line-clamp-1 text-sm">
                       {supplier.products.join(', ')}
@@ -456,7 +460,7 @@ export default function SuppliersPage() {
                 {/* CTA */}
                 <div className="p-5 pt-0">
                   <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-muted/50 py-2.5 text-sm font-semibold transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                    View supplier
+                    {t('suppliersPage.viewSupplier')}
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </div>
                 </div>
@@ -471,11 +475,11 @@ export default function SuppliersPage() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Package className="h-4 w-4" aria-hidden />
               <span>
-                Looking for a specific supplier?{' '}
+                {t('suppliersPage.bottomCtaPrefix')}{' '}
                 <Link href="/create-deal" className="font-medium text-foreground underline-offset-4 hover:underline">
-                  Start a deal
+                  {t('suppliersPage.bottomCtaLink')}
                 </Link>{' '}
-                and we&apos;ll help you connect.
+                {t('suppliersPage.bottomCtaSuffix')}
               </span>
             </div>
           </div>

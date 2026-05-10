@@ -430,9 +430,12 @@ export default async function DashboardPage({
                     <div>
                       <p className="font-medium">{t.dashboard.adminPendingTitle}</p>
                       <p className="text-sm text-muted-foreground">
-                        {t.dashboard.adminPendingText
-                          .replace('{count}', String(adminStats.pendingApprovals))
-                          .replace('{plural}', adminStats.pendingApprovals !== 1 ? 's' : '')}
+                        {adminStats.pendingApprovals === 1
+                          ? t.dashboard.adminPendingSingle
+                          : t.dashboard.adminPendingPlural.replace(
+                              '{count}',
+                              String(adminStats.pendingApprovals),
+                            )}
                       </p>
                     </div>
                   </div>
@@ -462,7 +465,9 @@ export default async function DashboardPage({
                   <BarChart3 className="h-3.5 w-3.5" />
                   {t.dashboard.totalDeals}
                   {userType === 'supplier' && !companyFilterId && supplierCompanies.length > 1 && (
-                    <span className="ml-auto text-xs font-normal">{supplierCompanies.length} companies</span>
+                    <span className="ml-auto text-xs font-normal">
+                      {t.dashboard.companiesCount.replace('{count}', String(supplierCompanies.length))}
+                    </span>
                   )}
                 </CardDescription>
                 <CardTitle className="text-3xl tabular-nums">{roleStats.total}</CardTitle>
@@ -522,12 +527,12 @@ export default async function DashboardPage({
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                     <Package className="h-4 w-4" />
-                    My Products & Categories
+                    {t.dashboard.supplierCardTitle}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {companyFilterId || supplierCompanies.length === 1
-                      ? 'Your catalog visible to SMBs creating deals'
-                      : 'Select a company above to see its catalog'}
+                      ? t.dashboard.supplierCardDescAll
+                      : t.dashboard.supplierCardDescPickCompany}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -535,7 +540,9 @@ export default async function DashboardPage({
                     <div className="space-y-3">
                       {supplierProductsForCard.categories.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Categories</p>
+                          <p className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t.dashboard.categories}
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {supplierProductsForCard.categories.map((cat) => (
                               <Badge key={cat} variant="secondary" className="capitalize text-xs">
@@ -547,7 +554,9 @@ export default async function DashboardPage({
                       )}
                       {supplierProductsForCard.products.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Products</p>
+                          <p className="mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t.dashboard.products}
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {supplierProductsForCard.products.slice(0, 8).map((product) => (
                               <Badge key={product} variant="outline" className="text-xs">
@@ -556,26 +565,29 @@ export default async function DashboardPage({
                             ))}
                             {supplierProductsForCard.products.length > 8 && (
                               <Badge variant="outline" className="text-xs text-muted-foreground">
-                                +{supplierProductsForCard.products.length - 8} more
+                                {t.dashboard.moreProducts.replace(
+                                  '{count}',
+                                  String(supplierProductsForCard.products.length - 8),
+                                )}
                               </Badge>
                             )}
                           </div>
                         </div>
                       )}
                       {supplierProductsForCard.categories.length === 0 && supplierProductsForCard.products.length === 0 && (
-                        <p className="text-xs text-muted-foreground">No products yet for this company.</p>
+                        <p className="text-xs text-muted-foreground">{t.dashboard.supplierNoProductsCompany}</p>
                       )}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       {supplierCompanies.length === 0
-                        ? 'Add a company to set up your product catalog.'
-                        : 'Select a company above to view products.'}
+                        ? t.dashboard.supplierHintNoCompanies
+                        : t.dashboard.supplierHintPickCompany}
                     </p>
                   )}
                   <Button asChild variant="outline" size="sm" className="mt-4 w-full">
                     <Link href="/dashboard/supplier-profile">
-                      Manage catalog
+                      {t.dashboard.manageCatalog}
                       <ArrowRight className="ml-2 h-3.5 w-3.5" />
                     </Link>
                   </Button>
@@ -588,11 +600,11 @@ export default async function DashboardPage({
           <div className="lg:col-span-2">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold">
-                {userType === 'admin' ? 'Recent platform deals' : 'Recent Deals'}
+                {userType === 'admin' ? t.dashboard.recentPlatformDeals : t.dashboard.recentDeals}
               </h2>
               <Button asChild variant="ghost" size="sm" className="text-xs">
                 <Link href={dealsViewAllHref}>
-                  View all
+                  {t.dashboard.viewAll}
                   <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                 </Link>
               </Button>
@@ -604,35 +616,35 @@ export default async function DashboardPage({
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                     <Clock className="h-7 w-7 text-muted-foreground" />
                   </div>
-                  <h3 className="mb-1 text-base font-semibold">No deals yet</h3>
+                  <h3 className="mb-1 text-base font-semibold">{t.dashboard.noDealsYet}</h3>
                   <p className="mb-5 text-sm text-muted-foreground max-w-xs">
-                    {userType === 'pyme' && 'Create your first deal to start securing supply chain financing.'}
-                    {userType === 'investor' && 'Browse open deals to fund your first investment.'}
+                    {userType === 'pyme' && t.dashboard.noDealsPyme}
+                    {userType === 'investor' && t.dashboard.noDealsInvestor}
                     {userType === 'supplier' &&
                       (supplierCompanies.length === 0
-                        ? 'Add a company and products so SMBs can create deals with you.'
-                        : "Deals assigned to your companies will appear here once investors fund them.")}
-                    {userType === 'admin' && 'No deals on the platform yet.'}
+                        ? t.dashboard.noDealsSupplierOnboard
+                        : t.dashboard.noDealsSupplier)}
+                    {userType === 'admin' && t.dashboard.noDealsAdmin}
                   </p>
                   {userType === 'pyme' && (
                     <Button asChild>
                       <Link href="/create-deal">
                         <Plus className="mr-2 h-4 w-4" />
-                        Create Deal
+                        {t.dashboard.createDealCta}
                       </Link>
                     </Button>
                   )}
                   {userType === 'supplier' && supplierCompanies.length === 0 && (
                     <Button asChild>
                       <Link href="/dashboard/supplier-profile">
-                        Add Company & Products
+                        {t.dashboard.addCompanyProducts}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   )}
                   {(userType === 'investor' || userType === 'admin') && (
                     <Button asChild>
-                      <Link href="/deals">Browse deals</Link>
+                      <Link href="/deals">{t.dashboard.browseDealsCta}</Link>
                     </Button>
                   )}
                 </CardContent>
@@ -644,31 +656,31 @@ export default async function DashboardPage({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
-                          <th className="text-left font-medium p-4">Deal</th>
-                          <th className="text-left font-medium p-4">Status</th>
-                          <th className="text-right font-medium p-4">Amount</th>
+                          <th className="text-left font-medium p-4">{t.dashboard.tableDeal}</th>
+                          <th className="text-left font-medium p-4">{t.dashboard.tableStatus}</th>
+                          <th className="text-right font-medium p-4">{t.dashboard.tableAmount}</th>
                           {userType === 'admin' && (
                             <>
-                              <th className="text-left font-medium p-4 hidden lg:table-cell">SMB (Buyer)</th>
-                              <th className="text-left font-medium p-4 hidden lg:table-cell">Supplier</th>
-                              <th className="text-left font-medium p-4 hidden xl:table-cell">Investor</th>
-                              <th className="text-left font-medium p-4 hidden xl:table-cell">Funded</th>
+                              <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableSmb}</th>
+                              <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableSupplier}</th>
+                              <th className="text-left font-medium p-4 hidden xl:table-cell">{t.dashboard.tableInvestor}</th>
+                              <th className="text-left font-medium p-4 hidden xl:table-cell">{t.dashboard.tableFunded}</th>
                             </>
                           )}
                           {userType === 'supplier' && (
                             <>
-                              <th className="text-left font-medium p-4 hidden lg:table-cell">Company</th>
-                              <th className="text-left font-medium p-4 hidden lg:table-cell">SMB (Buyer)</th>
+                              <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableCompany}</th>
+                              <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableSmb}</th>
                             </>
                           )}
                           {userType === 'investor' && (
-                            <th className="text-left font-medium p-4 hidden lg:table-cell">SMB (Buyer)</th>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableSmb}</th>
                           )}
                           {userType === 'pyme' && (
-                            <th className="text-left font-medium p-4 hidden lg:table-cell">Created</th>
+                            <th className="text-left font-medium p-4 hidden lg:table-cell">{t.dashboard.tableCreated}</th>
                           )}
-                          <th className="text-center font-medium p-4 hidden sm:table-cell">Milestones</th>
-                          <th className="text-right font-medium p-4 w-24">Action</th>
+                          <th className="text-center font-medium p-4 hidden sm:table-cell">{t.dashboard.tableMilestones}</th>
+                          <th className="text-right font-medium p-4 w-24">{t.dashboard.tableAction}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -693,7 +705,7 @@ export default async function DashboardPage({
                                     href={`/deals/${deal.id}`}
                                     className="font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
                                   >
-                                    {deal.product_name || deal.title || 'Deal'}
+                                    {deal.product_name || deal.title || t.dashboard.dealUntitled}
                                   </Link>
                                   {deal.term_days != null && (
                                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -740,7 +752,7 @@ export default async function DashboardPage({
                                 {total > 0 ? (
                                   <span
                                     className={hasPendingApproval ? 'text-amber-600 dark:text-amber-400 font-medium text-xs' : 'text-xs text-muted-foreground'}
-                                    title={hasPendingApproval ? 'Has milestone(s) awaiting approval' : ''}
+                                    title={hasPendingApproval ? t.dashboard.milestonePendingHint : ''}
                                   >
                                     {completed}/{total}
                                     {hasPendingApproval && ' ·'}
@@ -758,13 +770,13 @@ export default async function DashboardPage({
                                 <div className="flex items-center justify-end gap-1">
                                   <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
                                     <Link href={`/deals/${deal.id}`}>
-                                      {userType === 'supplier' && hasPendingApproval ? 'Act' : 'View'}
+                                      {userType === 'supplier' && hasPendingApproval ? t.dashboard.tableAct : t.dashboard.tableView}
                                       <ExternalLink className="ml-1 h-3 w-3 opacity-70" />
                                     </Link>
                                   </Button>
                                   {userType === 'admin' && hasPendingApproval && (
                                     <Button asChild size="sm" className="h-7 px-2 text-xs">
-                                      <Link href="/dashboard/admin">Approve</Link>
+                                      <Link href="/dashboard/admin">{t.dashboard.tableApprove}</Link>
                                     </Button>
                                   )}
                                 </div>
@@ -777,11 +789,13 @@ export default async function DashboardPage({
                   </div>
                   <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3 bg-muted/20">
                     <p className="text-xs text-muted-foreground">
-                      Showing {deals.length} of {roleStats?.total ?? adminStats?.totalDeals ?? deals.length} total
+                      {t.dashboard.showingDeals
+                        .replace('{shown}', String(deals.length))
+                        .replace('{total}', String(roleStats?.total ?? adminStats?.totalDeals ?? deals.length))}
                     </p>
                     <Button asChild variant="outline" size="sm" className="text-xs">
                       <Link href={dealsViewAllHref}>
-                        View all deals
+                        {t.dashboard.viewAllDealsFooter}
                         <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                       </Link>
                     </Button>

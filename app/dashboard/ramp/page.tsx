@@ -19,8 +19,10 @@ import { ProviderSelector } from '@/components/ramp/provider-selector'
 import { WalletBanner } from '@/components/ramp/wallet-banner'
 import { OnRampForm } from '@/components/ramp/on-ramp-form'
 import { OffRampForm } from '@/components/ramp/off-ramp-form'
+import { useI18n } from '@/lib/i18n/provider'
 
 function RampContent() {
+  const { t } = useI18n()
   const { state } = useRamp()
   const [activeTab, setActiveTab] = useState('on-ramp')
 
@@ -29,7 +31,7 @@ function RampContent() {
       <div className="container mx-auto flex flex-1 items-center justify-center px-4 py-8">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-          <p className="text-sm text-muted-foreground">Loading ramp providers…</p>
+          <p className="text-sm text-muted-foreground">{t('ramp.loadingProviders')}</p>
         </div>
       </div>
     )
@@ -41,20 +43,16 @@ function RampContent() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            {t('ramp.backToDashboard')}
           </Link>
         </Button>
         <Card className="mt-6 max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wallet className="h-5 w-5" />
-              Add funds / Cash out
+              {t('ramp.disabledTitle')}
             </CardTitle>
-            <CardDescription>
-              No ramp providers are configured. Set env vars for at least one
-              provider (Etherfuse, AlfredPay, BlindPay) in your environment. See
-              env.sample.
-            </CardDescription>
+            <CardDescription>{t('ramp.disabledDescription')}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -66,19 +64,16 @@ function RampContent() {
       <Button variant="ghost" size="sm" asChild>
         <Link href="/dashboard" className="gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Dashboard
+          {t('ramp.dashboardLink')}
         </Link>
       </Button>
 
       <div className="mt-6 mb-8">
         <h1 className="text-2xl font-bold flex items-center gap-2.5">
           <CircleDollarSign className="h-6 w-6 text-primary" aria-hidden />
-          Add funds & Cash out
+          {t('ramp.pageTitle')}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Convert between local currency and USDC on Stellar. Choose a provider,
-          enter an amount, and follow the steps.
-        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground">{t('ramp.pageDescription')}</p>
       </div>
 
       <ProviderSelector />
@@ -88,11 +83,11 @@ function RampContent() {
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="on-ramp" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
-            Add funds
+            {t('ramp.tabOnRamp')}
           </TabsTrigger>
           <TabsTrigger value="off-ramp" className="gap-2">
             <ArrowUpFromLine className="h-4 w-4" />
-            Cash out
+            {t('ramp.tabOffRamp')}
           </TabsTrigger>
         </TabsList>
 
@@ -108,19 +103,24 @@ function RampContent() {
   )
 }
 
+function RampFallback() {
+  const { t } = useI18n()
+  return (
+    <div className="container mx-auto flex flex-1 items-center justify-center px-4 py-8">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
+        <p className="text-sm text-muted-foreground">{t('ramp.fallbackLoading')}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function RampPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
       <Suspense
-        fallback={
-          <div className="container mx-auto flex flex-1 items-center justify-center px-4 py-8">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            </div>
-          </div>
-        }
+        fallback={<RampFallback />}
       >
         <RampProvider>
           <RampContent />

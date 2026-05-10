@@ -1,0 +1,136 @@
+{
+  "hero": {
+    "badge": "Supply Chain Finance on Stellar",
+    "title": "How MERCATO Works",
+    "description": "MERCATO connects SMBs, investors, and suppliers through non-custodial, milestone-based escrow on Stellar — giving businesses working capital, investors short-term yield, and suppliers faster payments.",
+    "pillEscrow": "Non-custodial escrow",
+    "pillUsdc": "USDC on Stellar",
+    "pillLatam": "LATAM supply chains"
+  },
+  "rolesHeading": "Three roles, one platform",
+  "rolesSub": "Every participant benefits from the same transparent deal lifecycle.",
+  "roles": {
+    "smb": {
+      "label": "SMB (Buyer)",
+      "tagline": "Get working capital for inventory without taking on traditional debt.",
+      "actions": [
+        "Create deals specifying product, supplier, and payment terms",
+        "Deploy a non-custodial Stellar escrow with your wallet",
+        "Confirm deliveries and milestone releases",
+        "Repay investor capital + yield after your sales cycle"
+      ]
+    },
+    "investor": {
+      "label": "Investor",
+      "tagline": "Fund real supply-chain deals and earn short-term yield in USDC.",
+      "actions": [
+        "Browse open deals on the marketplace",
+        "Fund escrow directly from your Stellar wallet in USDC",
+        "Track milestones and deal progress in real time",
+        "Receive repayment with yield once the deal completes"
+      ]
+    },
+    "supplier": {
+      "label": "Supplier",
+      "tagline": "Get paid faster with milestone-based on-chain payments.",
+      "actions": [
+        "Manage your company profile and product catalog",
+        "Accept orders once a deal is funded",
+        "Submit shipment and delivery proof",
+        "Receive 50% on shipment and 50% on delivery — on-chain"
+      ]
+    }
+  },
+  "flowBadge": "The Deal Flow",
+  "flowTitle": "From deal creation to repayment",
+  "flowSub": "4 phases, all secured by Stellar smart contracts via Trustless Work.",
+  "phases": [
+    {
+      "title": "SMB Creates Deal & Deploys Escrow",
+      "actor": "SMB (Buyer)",
+      "description": "An SMB selects a supplier from the catalog, specifies the product, amount, and term, then signs a Stellar wallet transaction to deploy a non-custodial multi-release escrow contract via Trustless Work.",
+      "actions": [
+        "Choose supplier & product from catalog",
+        "Set deal amount, term, and APR",
+        "Sign escrow deployment with Freighter or Albedo",
+        "Deal appears on marketplace as \"Seeking Funding\""
+      ],
+      "tech": ["Trustless Work escrow", "Stellar Network"]
+    },
+    {
+      "title": "Investor Funds the Escrow",
+      "actor": "Investor",
+      "description": "An investor browses the open marketplace, reviews the deal terms, APR, and SMB reputation, then sends USDC directly to the escrow contract from their Stellar wallet. Funds never touch the platform.",
+      "actions": [
+        "Browse marketplace and pick a deal",
+        "Review APR, term, and SMB track record",
+        "Sign transaction to send USDC to escrow",
+        "Deal status updates to \"Funded\" — supplier notified"
+      ],
+      "tech": ["USDC on Stellar", "Non-custodial"]
+    },
+    {
+      "title": "Supplier Ships & Milestones Release",
+      "actor": "Supplier + SMB + Admin",
+      "description": "The supplier accepts the order, submits shipment proof (Milestone 1), and later delivery confirmation (Milestone 2). Each milestone approval by the SMB triggers an on-chain fund release via Trustless Work.",
+      "actions": [
+        "Supplier submits shipment proof (Milestone 1)",
+        "SMB confirms shipment → 50% released to supplier",
+        "Supplier submits delivery proof (Milestone 2)",
+        "Admin approves → final 50% released on-chain"
+      ],
+      "tech": ["Multi-release escrow", "On-chain proof"]
+    },
+    {
+      "title": "SMB Repays Investor — Deal Complete",
+      "actor": "SMB (Buyer)",
+      "description": "After the SMB sells the goods and the term completes, they repay the investor the principal plus the agreed yield. The deal is marked \"Completed\" on-chain, building the SMB's reputation for future financing.",
+      "actions": [
+        "SMB repays principal + yield on Stellar",
+        "Transaction hash recorded for transparency",
+        "Investor receives USDC + yield in their wallet",
+        "Deal marked \"Completed\" — SMB reputation updated"
+      ],
+      "tech": ["Verified on-chain", "Reputation scoring"]
+    }
+  ],
+  "whyTitle": "Why MERCATO?",
+  "whySub": "Designed from the ground up for fair, transparent supply chain finance.",
+  "benefits": [
+    {
+      "title": "Non-Custodial",
+      "body": "Funds go directly into a Stellar smart contract. MERCATO never holds your money — only the contract logic controls release."
+    },
+    {
+      "title": "Fully Transparent",
+      "body": "Every transaction, milestone approval, and proof hash is recorded on-chain. Anyone can verify deal progress at any time."
+    },
+    {
+      "title": "Reputation-Backed",
+      "body": "Each completed deal builds the SMB's on-chain track record. Investors can assess repayment history before funding."
+    },
+    {
+      "title": "LATAM-Focused",
+      "body": "Built for LATAM supply chains with fiat ramps via Etherfuse, Alfred Pay, and BlindPay to convert between USDC and local currency."
+    }
+  ],
+  "poweredBy": "Powered by",
+  "techStack": [
+    { "label": "Stellar Network", "sub": "Smart contracts & USDC" },
+    { "label": "Trustless Work", "sub": "Multi-release escrow API" },
+    { "label": "Freighter / Albedo", "sub": "Non-custodial wallets" },
+    { "label": "Supabase", "sub": "Auth & deal metadata" }
+  ],
+  "fiatTitle": "Convert between USDC and local fiat",
+  "fiatDescription": "Deposit or withdraw via integrated ramp providers. Move money in and out of the Stellar ecosystem without leaving the platform.",
+  "addFunds": "Add Funds",
+  "rampProviders": [
+    { "name": "Etherfuse", "region": "Mexico · SPEI" },
+    { "name": "Alfred Pay", "region": "LATAM · SPEI" },
+    { "name": "BlindPay", "region": "Global" }
+  ],
+  "ctaTitle": "Ready to get started?",
+  "ctaDescription": "Whether you're an SMB seeking financing, an investor seeking yield, or a supplier wanting faster payments — MERCATO has you covered.",
+  "ctaSignUp": "Create Account",
+  "ctaBrowse": "Browse Open Deals"
+}

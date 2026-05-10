@@ -24,6 +24,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
+import { useI18n } from '@/lib/i18n/provider'
 import {
   aggregateDealsToStats,
   computePymeReputation,
@@ -98,7 +99,26 @@ function SmbCardSkeleton() {
   )
 }
 
+const TIER_TITLE_KEY: Record<PymeReputationTier, string> = {
+  new: 'tierNew',
+  building: 'tierBuilding',
+  established: 'tierEstablished',
+  top_performer: 'tierTopPerformer',
+}
+
 export default function SmbsPage() {
+  const { t, messages, locale } = useI18n()
+  const countryLabel = (code: string) =>
+    messages.geo.countries[code as keyof typeof messages.geo.countries] ?? getCountryLabel(code)
+  const sectorLabel = (code: string) =>
+    messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
+  const fmtUsd = (value: number) =>
+    new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value)
+
   const supabase = createClient()
   const [smbs, setSmbs] = useState<Smb[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -187,7 +207,7 @@ export default function SmbsPage() {
   }, [smbs, searchQuery, selectedCountry, selectedSector])
 
   const displayName = (p: Smb) =>
-    p.company_name || p.full_name || p.contact_name || 'SMB'
+    p.company_name || p.full_name || p.contact_name || t('pymesPage.smbFallback')
 
   const hasActiveFilters =
     searchQuery || selectedCountry !== 'all' || selectedSector !== 'all'
@@ -200,10 +220,8 @@ export default function SmbsPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">SMB Directory</h1>
-          <p className="text-muted-foreground">
-            Small and medium businesses seeking supply-chain financing across LATAM
-          </p>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">{t('pymesPage.title')}</h1>
+          <p className="text-muted-foreground">{t('pymesPage.subtitle')}</p>
         </div>
 
         {/* Filters */}
@@ -212,36 +230,36 @@ export default function SmbsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               type="search"
-              placeholder="Search SMBs, company names…"
+              placeholder={t('pymesPage.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
-              aria-label="Search SMBs"
+              aria-label={t('pymesPage.searchAria')}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-              <SelectTrigger className="w-[150px]" aria-label="Filter by country">
-                <SelectValue placeholder="Country" />
+              <SelectTrigger className="w-[150px]" aria-label={t('pymesPage.filterCountryAria')}>
+                <SelectValue placeholder={t('pymesPage.countryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All countries</SelectItem>
+                <SelectItem value="all">{t('pymesPage.allCountries')}</SelectItem>
                 {LATAM_COUNTRIES.map((c) => (
                   <SelectItem key={c.value} value={c.value}>
-                    {c.label}
+                    {countryLabel(c.value)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={selectedSector} onValueChange={setSelectedSector}>
-              <SelectTrigger className="w-[160px]" aria-label="Filter by sector">
-                <SelectValue placeholder="Sector" />
+              <SelectTrigger className="w-[160px]" aria-label={t('pymesPage.filterSectorAria')}>
+                <SelectValue placeholder={t('pymesPage.sectorPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sectors</SelectItem>
+                <SelectItem value="all">{t('pymesPage.allSectors')}</SelectItem>
                 {SECTORS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
-                    {s.label}
+                    {sectorLabel(s.value)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -254,8 +272,10 @@ export default function SmbsPage() {
           <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
             <Store className="h-4 w-4" aria-hidden />
             <span>
-              {filteredSmbs.length} {filteredSmbs.length === 1 ? 'SMB' : 'SMBs'} found
-              {hasActiveFilters && ' matching your filters'}
+              {filteredSmbs.length === 1
+                ? t('pymesPage.foundOne', { count: filteredSmbs.length })
+                : t('pymesPage.foundMany', { count: filteredSmbs.length })}
+              {hasActiveFilters && t('pymesPage.matchingFilters')}
             </span>
           </div>
         )}
@@ -272,9 +292,9 @@ export default function SmbsPage() {
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               <Store className="h-8 w-8 text-muted-foreground" aria-hidden />
             </div>
-            <p className="mb-1 text-lg font-semibold">No SMBs found</p>
+            <p className="mb-1 text-lg font-semibold">{t('pymesPage.emptyTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              {hasActiveFilters ? 'Try adjusting your search or filters' : 'No SMBs have joined yet'}
+              {hasActiveFilters ? t('pymesPage.emptyHint') : t('pymesPage.emptyNoJoined')}
             </p>
           </div>
         ) : (
@@ -293,15 +313,18 @@ export default function SmbsPage() {
                           <ReputationTooltip reputation={smb.reputation} side="bottom" align="end">
                             <span
                               className={`rounded-md px-2 py-0.5 text-xs font-medium ${TIER_STYLES[smb.reputationTier]}`}
-                              title={`Reputation: ${smb.reputationLabel}. Hover for breakdown.`}
+                              title={t('pymesPage.reputationTitle', {
+                                label: t(`pymesPage.${TIER_TITLE_KEY[smb.reputationTier]}`),
+                              })}
                             >
-                              {smb.reputationLabel}
+                              {t(`pymesPage.${TIER_TITLE_KEY[smb.reputationTier]}`)}
                             </span>
                           </ReputationTooltip>
                         )}
                         {typeof smb.deal_count === 'number' && smb.deal_count > 0 && (
                           <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                            {smb.deal_count} deal{smb.deal_count !== 1 ? 's' : ''}
+                            {smb.deal_count}{' '}
+                            {smb.deal_count === 1 ? t('deals.dealCountOne') : t('deals.dealCountOther')}
                           </span>
                         )}
                       </div>
@@ -315,13 +338,13 @@ export default function SmbsPage() {
                         {smb.sector && (
                           <span className="flex items-center gap-1">
                             <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
-                            {getSectorLabel(smb.sector)}
+                            {sectorLabel(smb.sector)}
                           </span>
                         )}
                         {smb.country && (
                           <span className="flex items-center gap-1">
                             <Globe className="h-3 w-3 shrink-0" aria-hidden />
-                            {getCountryLabel(smb.country)}
+                            {countryLabel(smb.country)}
                           </span>
                         )}
                       </div>
@@ -341,7 +364,9 @@ export default function SmbsPage() {
                       {typeof smb.active_deals === 'number' && smb.active_deals > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
                           <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          {smb.active_deals} active deal{smb.active_deals !== 1 ? 's' : ''}
+                          {smb.active_deals === 1
+                            ? t('investorsPage.activeDealOne', { count: smb.active_deals })
+                            : t('investorsPage.activeDealMany', { count: smb.active_deals })}
                         </div>
                       )}
 
@@ -349,12 +374,7 @@ export default function SmbsPage() {
                       {typeof smb.totalRepaid === 'number' && smb.totalRepaid > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          {new Intl.NumberFormat('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 0,
-                          }).format(smb.totalRepaid)}{' '}
-                          repaid
+                          {fmtUsd(smb.totalRepaid)} {t('pymesPage.repaidSuffix')}
                         </div>
                       )}
 
@@ -362,7 +382,7 @@ export default function SmbsPage() {
                       {typeof smb.completionRate === 'number' && smb.completionRate > 0 && (
                         <div className="mt-1">
                           <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Completion rate</span>
+                            <span>{t('pymesPage.completionRate')}</span>
                             <span className="font-medium tabular-nums">
                               {Math.round(smb.completionRate * 100)}%
                             </span>
@@ -378,12 +398,12 @@ export default function SmbsPage() {
 
                       {/* New SMB placeholder */}
                       {(smb.deal_count ?? 0) === 0 && (
-                        <p className="text-xs text-muted-foreground">No deals yet on MERCATO</p>
+                        <p className="text-xs text-muted-foreground">{t('pymesPage.noDealsYetMercato')}</p>
                       )}
                     </div>
 
                     <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary group-hover:gap-2 transition-all">
-                      View profile
+                      {t('pymesPage.viewProfile')}
                       <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                     </div>
                   </CardContent>

@@ -7,9 +7,9 @@ import { getFundingTimeRemainingMs } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/provider'
 
-type StatusConfig = { label: string; pill: string; dot: string }
+type StatusConfig = { pill: string; dot: string }
 
-const STATUS_CONFIG: Record<string, Omit<StatusConfig, 'label'> & { labelKey: string }> = {
+const STATUS_CONFIG: Record<string, StatusConfig & { labelKey: string }> = {
   awaiting_funding: {
     labelKey: 'dealStatus.awaiting_funding',
     pill: 'bg-accent/10 text-accent ring-1 ring-accent/20',
@@ -47,42 +47,11 @@ const STATUS_CONFIG: Record<string, Omit<StatusConfig, 'label'> & { labelKey: st
   },
 }
 
-const FUNDING_STATUS_CONFIG: Record<string, StatusConfig> = {
-  open: {
-    label: 'Open for funding',
-    pill: 'bg-accent/10 text-accent ring-1 ring-accent/20',
-    dot: 'bg-accent',
-  },
-  extended: {
-    label: 'Extended',
-    pill: 'bg-warning/10 text-warning ring-1 ring-warning/20',
-    dot: 'bg-warning',
-  },
-  expired: {
-    label: 'Expired',
-    pill: 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
-    dot: 'bg-destructive',
-  },
-  funded: {
-    label: 'Funded',
-    pill: 'bg-success/10 text-success ring-1 ring-success/20',
-    dot: 'bg-success',
-  },
-}
-
-function formatFundingRemaining(ms: number): string {
-  const totalMinutes = Math.floor(ms / (60 * 1000))
-  if (totalMinutes < 60) return `${Math.max(1, totalMinutes)}m left`
-  const totalHours = Math.floor(totalMinutes / 60)
-  if (totalHours < 24) return `${totalHours}h left`
-  const totalDays = Math.floor(totalHours / 24)
-  return `${totalDays}d left`
-}
-
 export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }) {
   const { t } = useI18n()
   const cfg = STATUS_CONFIG[deal.status] ?? STATUS_CONFIG.awaiting_funding
   const isOpen = deal.status === 'awaiting_funding'
+  const isFundingPhase = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
   const completedMilestones = deal.milestones.filter((m) => m.status === 'completed').length
   const hasBonus =
     typeof deal.yieldBonusApr === 'number' && deal.yieldBonusApr > 0
@@ -92,6 +61,19 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
     isOpen &&
     fundingRemainingMs != null &&
     fundingRemainingMs > 0
+
+  const formatFundingRemaining = (ms: number) => {
+    const totalMinutes = Math.floor(ms / (60 * 1000))
+    if (totalMinutes < 60) {
+      return t('deals.fundingTimeMinutes', { n: Math.max(1, totalMinutes) })
+    }
+    const totalHours = Math.floor(totalMinutes / 60)
+    if (totalHours < 24) {
+      return t('deals.fundingTimeHours', { n: totalHours })
+    }
+    const totalDays = Math.floor(totalHours / 24)
+    return t('deals.fundingTimeDays', { n: totalDays })
+  }
 
   const subtitle = [deal.supplier, deal.pymeName]
     .filter(Boolean)

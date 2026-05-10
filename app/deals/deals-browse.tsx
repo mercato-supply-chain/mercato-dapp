@@ -33,7 +33,7 @@ type SortOption = 'newest' | 'highest_yield' | 'highest_amount' | 'shortest_term
 
 const STATUS_PILLS: { value: StatusQuickFilter; labelKey: string }[] = [
   { value: 'all', labelKey: 'deals.allDeals' },
-  { value: 'awaiting_funding', labelKey: 'deals.openForFunding' },
+  { value: 'open', labelKey: 'deals.openForFunding' },
   { value: 'active', labelKey: 'deals.active' },
   { value: 'completed', labelKey: 'deals.completed' },
 ]

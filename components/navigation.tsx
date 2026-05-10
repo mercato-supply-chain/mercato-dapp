@@ -99,7 +99,7 @@ export function Navigation() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary transition-transform duration-200 ease-out group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
               <MercatoLogo className="h-5" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">MERCATO</span>
+            <span className="text-xl font-semibold tracking-tight">{t('common.brand')}</span>
           </Link>
           <NavLinks variant="desktop" />
         </div>

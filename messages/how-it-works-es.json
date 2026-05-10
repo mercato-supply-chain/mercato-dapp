@@ -1,0 +1,136 @@
+{
+  "hero": {
+    "badge": "Financiamiento de cadena de suministro en Stellar",
+    "title": "Cómo funciona MERCATO",
+    "description": "MERCATO conecta a PyMEs, inversionistas y proveedores mediante escrow no custodial basado en hitos en Stellar: capital de trabajo para negocios, rendimiento a corto plazo para inversionistas y pagos más rápidos para proveedores.",
+    "pillEscrow": "Escrow no custodial",
+    "pillUsdc": "USDC en Stellar",
+    "pillLatam": "Cadenas de suministro LATAM"
+  },
+  "rolesHeading": "Tres roles, una plataforma",
+  "rolesSub": "Todos se benefician del mismo ciclo transparente de cada orden.",
+  "roles": {
+    "smb": {
+      "label": "PyME (comprador)",
+      "tagline": "Obtén capital de trabajo para inventario sin endeudamiento tradicional.",
+      "actions": [
+        "Crea órdenes con producto, proveedor y términos de pago",
+        "Despliega escrow Stellar no custodial con tu billetera",
+        "Confirma entregas y liberaciones por hitos",
+        "Paga capital e intereses a inversionistas tras tu ciclo de ventas"
+      ]
+    },
+    "investor": {
+      "label": "Inversionista",
+      "tagline": "Financia órdenes reales y obtén rendimiento a corto plazo en USDC.",
+      "actions": [
+        "Explora órdenes abiertas en el mercado",
+        "Envía USDC al escrow desde tu billetera Stellar",
+        "Sigue hitos y el avance de cada orden en tiempo real",
+        "Recibe reembolso con rendimiento al completarse la orden"
+      ]
+    },
+    "supplier": {
+      "label": "Proveedor",
+      "tagline": "Cobra antes con pagos por hitos on-chain.",
+      "actions": [
+        "Gestiona el perfil de tu empresa y el catálogo",
+        "Acepta órdenes cuando estén financiadas",
+        "Sube comprobantes de envío y entrega",
+        "Recibe 50% al envío y 50% al entregar — on-chain"
+      ]
+    }
+  },
+  "flowBadge": "Flujo de la orden",
+  "flowTitle": "De la creación de la orden al reembolso",
+  "flowSub": "4 fases protegidas por contratos inteligentes en Stellar con Trustless Work.",
+  "phases": [
+    {
+      "title": "PyME crea la orden y despliega el escrow",
+      "actor": "PyME (comprador)",
+      "description": "Una PyME elige proveedor del catálogo, define producto, monto y plazo, y firma con su billetera Stellar para desplegar un escrow multi-liberación no custodial vía Trustless Work.",
+      "actions": [
+        "Elige proveedor y producto del catálogo",
+        "Define monto, plazo y APR",
+        "Firma el despliegue del escrow con Freighter o Albedo",
+        "La orden aparece como \"Buscando financiamiento\""
+      ],
+      "tech": ["Escrow Trustless Work", "Red Stellar"]
+    },
+    {
+      "title": "El inversionista financia el escrow",
+      "actor": "Inversionista",
+      "description": "El inversionista revisa términos, APR y reputación de la PyME, y envía USDC directo al contrato de escrow. Los fondos no pasan por la plataforma.",
+      "actions": [
+        "Explora el mercado y elige una orden",
+        "Revisa APR, plazo e historial de la PyME",
+        "Firma la transacción para enviar USDC al escrow",
+        "El estado pasa a \"Financiada\" y se notifica al proveedor"
+      ],
+      "tech": ["USDC en Stellar", "No custodial"]
+    },
+    {
+      "title": "Envío del proveedor y liberación por hitos",
+      "actor": "Proveedor + PyME + Admin",
+      "description": "El proveedor acepta la orden, envía prueba de envío (Hito 1) y luego confirmación de entrega (Hito 2). Cada aprobación dispara liberación on-chain vía Trustless Work.",
+      "actions": [
+        "Proveedor sube prueba de envío (Hito 1)",
+        "PyME confirma envío → 50% liberado al proveedor",
+        "Proveedor sube prueba de entrega (Hito 2)",
+        "Admin aprueba → el 50% final se libera on-chain"
+      ],
+      "tech": ["Escrow multi-liberación", "Pruebas on-chain"]
+    },
+    {
+      "title": "PyME paga al inversionista — orden completada",
+      "actor": "PyME (comprador)",
+      "description": "Tras vender y cumplir el plazo, la PyME paga principal más rendimiento acordado. La orden queda \"Completada\" on-chain y mejora la reputación para futuros financiamientos.",
+      "actions": [
+        "PyME paga principal + rendimiento en Stellar",
+        "Hash de transacción registrado para transparencia",
+        "Inversionista recibe USDC + rendimiento en su billetera",
+        "Orden \"Completada\" — se actualiza la reputación de la PyME"
+      ],
+      "tech": ["Verificado on-chain", "Puntuación de reputación"]
+    }
+  ],
+  "whyTitle": "¿Por qué MERCATO?",
+  "whySub": "Diseñado para un financiamiento de cadena de suministro justo y transparente.",
+  "benefits": [
+    {
+      "title": "No custodial",
+      "body": "Los fondos van directo a un contrato en Stellar. MERCATO no custodia tu dinero; solo la lógica del contrato libera pagos."
+    },
+    {
+      "title": "Totalmente transparente",
+      "body": "Cada transacción, aprobación de hito y prueba queda registrada on-chain. Cualquiera puede verificar el avance."
+    },
+    {
+      "title": "Con reputación",
+      "body": "Cada orden completada fortalece el historial on-chain de la PyME. Los inversionistas evalúan antes de financiar."
+    },
+    {
+      "title": "Enfocado en LATAM",
+      "body": "Pensado para cadenas LATAM con rampas fiat vía Etherfuse, Alfred Pay y BlindPay para mover entre USDC y moneda local."
+    }
+  ],
+  "poweredBy": "Impulsado por",
+  "techStack": [
+    { "label": "Red Stellar", "sub": "Contratos inteligentes y USDC" },
+    { "label": "Trustless Work", "sub": "API de escrow multi-liberación" },
+    { "label": "Freighter / Albedo", "sub": "Billeteras no custodiales" },
+    { "label": "Supabase", "sub": "Autenticación y metadatos" }
+  ],
+  "fiatTitle": "Convierte entre USDC y moneda local",
+  "fiatDescription": "Deposita o retira con proveedores de rampa integrados. Entra y sale del ecosistema Stellar sin salir de la plataforma.",
+  "addFunds": "Agregar fondos",
+  "rampProviders": [
+    { "name": "Etherfuse", "region": "México · SPEI" },
+    { "name": "Alfred Pay", "region": "LATAM · SPEI" },
+    { "name": "BlindPay", "region": "Global" }
+  ],
+  "ctaTitle": "¿Listo para empezar?",
+  "ctaDescription": "Si buscas financiamiento como PyME, rendimiento como inversionista o cobros más rápidos como proveedor — MERCATO es para ti.",
+  "ctaSignUp": "Crear cuenta",
+  "ctaBrowse": "Explorar órdenes abiertas"
+}
