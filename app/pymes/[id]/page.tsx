@@ -67,7 +67,7 @@ export default async function SmbDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified, stake_amount, stake_updated_at')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified')
     .eq('id', id)
     .single()
 
@@ -102,7 +102,7 @@ export default async function SmbDetailPage({
   const completionRate =
     fundedDeals.length > 0 ? Math.round((completedDeals / fundedDeals.length) * 100) : null
 
-  const stakeAmount = Math.max(0, Number(profile.stake_amount ?? 0) || 0)
+  const stakeAmount = 0
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || tr(m, 'smbDetail.fallbackSmb')

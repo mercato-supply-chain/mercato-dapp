@@ -101,7 +101,7 @@ export default async function InvestorDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount, stake_updated_at')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified')
     .eq('id', id)
     .single()
 
@@ -120,7 +120,7 @@ export default async function InvestorDetailPage({
   const activeVolume = allDeals
     .filter((d) => d.status === 'funded' || d.status === 'in_progress')
     .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
-  const stakeAmount = Math.max(0, Number(profile.stake_amount ?? 0) || 0)
+  const stakeAmount = 0
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || tr(m, 'investorDetail.fallbackName')
