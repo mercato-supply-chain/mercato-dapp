@@ -12,12 +12,10 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { MercatoLogo } from '@/components/mercato-logo'
-import { Package, TrendingUp, Users } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
 
@@ -28,7 +26,6 @@ export default function SignUpPage() {
   const [repeatPassword, setRepeatPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
-  const [userType, setUserType] = useState<'pyme' | 'investor' | 'supplier'>('pyme')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -63,7 +60,6 @@ export default function SignUpPage() {
           data: {
             full_name: fullName,
             company_name: companyName,
-            user_type: userType,
           },
         },
       })
@@ -101,55 +97,6 @@ export default function SignUpPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp} className="space-y-6">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">{t('auth.roleLabel')}</Label>
-                  <RadioGroup
-                    value={userType}
-                    onValueChange={(v) => setUserType(v as 'pyme' | 'investor' | 'supplier')}
-                    className="grid grid-cols-3 gap-3"
-                  >
-                    <label
-                      htmlFor="pyme"
-                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
-                        userType === 'pyme'
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="pyme" id="pyme" className="sr-only" />
-                      <Package className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">{t('auth.rolePyme')}</span>
-                      <span className="text-xs text-muted-foreground">{t('auth.rolePymeHint')}</span>
-                    </label>
-                    <label
-                      htmlFor="investor"
-                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
-                        userType === 'investor'
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="investor" id="investor" className="sr-only" />
-                      <TrendingUp className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">{t('auth.roleInvestor')}</span>
-                      <span className="text-xs text-muted-foreground">{t('auth.roleInvestorHint')}</span>
-                    </label>
-                    <label
-                      htmlFor="supplier"
-                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-colors ${
-                        userType === 'supplier'
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
-                      }`}
-                    >
-                      <RadioGroupItem value="supplier" id="supplier" className="sr-only" />
-                      <Users className="h-7 w-7 shrink-0" aria-hidden />
-                      <span className="text-sm font-medium">{t('auth.roleSupplier')}</span>
-                      <span className="text-xs text-muted-foreground">{t('auth.roleSupplierHint')}</span>
-                    </label>
-                  </RadioGroup>
-                </div>
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">{t('auth.fullName')}</Label>
