@@ -140,7 +140,7 @@ export default function DealDetailPage() {
         `
         *,
         milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount),
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
         investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
         supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `
