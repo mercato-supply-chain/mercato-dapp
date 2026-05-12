@@ -5,7 +5,7 @@ import {
   mainNet,
   TrustlessWorkConfig,
 } from '@trustless-work/escrow'
-import type React from 'react'
+import React from 'react'
 
 export const TRUSTLESS_BASE_URL =
   process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK === 'mainnet' ? mainNet : development
@@ -19,10 +19,10 @@ interface TrustlessWorkProviderProps {
   children: React.ReactNode
 }
 
-export function TrustlessWorkProvider(props: TrustlessWorkProviderProps): React.JSX.Element {
-  return TrustlessWorkConfig({
+export function TrustlessWorkProvider({ children }: TrustlessWorkProviderProps): React.JSX.Element {
+  return React.createElement(TrustlessWorkConfig, {
     baseURL: TRUSTLESS_BASE_URL,
     apiKey: TRUSTLESS_API_KEY,
-    children: props.children,
+    children,
   })
 }

@@ -161,20 +161,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     setTxHistory(pollar.txHistory)
 
+    if (pollar.walletBalance.step === 'idle') {
+      // Balance hasn't been fetched yet — trigger the initial load.
+      void pollar.refreshWalletBalance()
+      return
+    }
+
     if (pollar.walletBalance.step === 'loaded') {
       const records = pollar.walletBalance.data.balances as Array<Record<string, unknown>>
       setBalances({
         xlm:
           pollar.walletBalance.data.balances.find((record) => {
-            const value = record as any
-            const asset = String(value.asset ?? value.asset_code ?? '').toUpperCase()
-            return asset === 'XLM'
+            // Pollar API uses `code` for the asset identifier (e.g. "XLM", "USDC")
+            const value = record as { code?: string; type?: string }
+            const code = String(value.code ?? '').toUpperCase()
+            return code === 'XLM' || value.type === 'native'
           })?.balance ?? null,
         usdc:
           pollar.walletBalance.data.balances.find((record) => {
-            const value = record as any
-            const asset = String(value.asset ?? value.asset_code ?? '').toUpperCase()
-            return asset === 'USDC'
+            const value = record as { code?: string }
+            return String(value.code ?? '').toUpperCase() === 'USDC'
           })?.balance ?? null,
         records,
         source: 'pollar',
@@ -462,7 +468,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     persistWallet(null)
     setBalances(null)
     setTxHistory(null)
-  }, [persistWallet, pollar, supabase, wallet?.provider])
+  }, [persistWallet, pollar, wallet?.provider])
 
   const refreshBalance = useCallback(async () => {
     if (!wallet) return
@@ -494,7 +500,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       truncatedAddress: truncatePublicKey(wallet?.publicKey),
       balances,
       txHistory: txHistory ?? null,
-      canSignTransactions: wallet?.provider === 'stellar-wallets-kit',
+      canSignTransactions: wallet !== null,
       connectExternalWallet,
       connectPollarWallet,
       disconnect,

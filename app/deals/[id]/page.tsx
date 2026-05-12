@@ -13,6 +13,7 @@ import type { FundEscrowPayload, ChangeMilestoneStatusPayload, ApproveMilestoneP
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
+import { usePollarSession } from '@/providers/pollar-provider'
 import { toast } from 'sonner'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
@@ -104,7 +105,32 @@ export default function DealDetailPage() {
   const { changeMilestoneStatus } = useChangeMilestoneStatus()
   const { approveMilestone } = useApproveMilestone()
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
-  const { walletInfo, isConnected, handleConnect } = useWallet()
+  const { walletInfo, isConnected, handleConnect, provider } = useWallet()
+  const pollar = usePollarSession()
+
+  /**
+   * Sign an unsigned XDR and submit it. Handles both Pollar embedded wallet
+   * (sign+submit via Pollar) and Stellar Wallets Kit (sign then submit via Trustless Work).
+   */
+  const signAndSend = useCallback(
+    async (unsignedTransaction: string, address: string) => {
+      if (provider === 'pollar') {
+        await pollar.signAndSubmitTx(unsignedTransaction)
+      } else {
+        const signedXdr = await signTransaction({ unsignedTransaction, address })
+        if (!signedXdr) throw new Error(t('dealDetail.errorSignedTxMissing'))
+        const txResult = await sendTransaction(signedXdr)
+        if (txResult.status !== 'SUCCESS') {
+          throw new Error(
+            'message' in txResult
+              ? (txResult as { message: string }).message
+              : t('dealDetail.errorTxFailed'),
+          )
+        }
+      }
+    },
+    [pollar, provider, sendTransaction, t],
+  )
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const hasHandledAction = useRef(false)
@@ -341,17 +367,7 @@ export default function DealDetailPage() {
         throw new Error(t('dealDetail.errorFundTxBuild'))
       }
 
-      const signedXdr = await signTransaction({
-        unsignedTransaction: fundResponse.unsignedTransaction,
-        address: investorAddress,
-      })
-      if (!signedXdr) throw new Error(t('dealDetail.errorSignedTxMissing'))
-
-      const txResult = await sendTransaction(signedXdr)
-      if (txResult.status !== 'SUCCESS') {
-        const msg = 'message' in txResult ? (txResult as { message: string }).message : t('dealDetail.errorTxFailed')
-        throw new Error(msg)
-      }
+      await signAndSend(fundResponse.unsignedTransaction, investorAddress)
 
       const { error: updateError } = await supabase
         .from('deals')
@@ -415,15 +431,7 @@ export default function DealDetailPage() {
       if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
         throw new Error(t('dealDetail.errorMilestoneStatusTx'))
       }
-      const signedXdr = await signTransaction({
-        unsignedTransaction: response.unsignedTransaction,
-        address: walletInfo.address,
-      })
-      if (!signedXdr) throw new Error(t('dealDetail.errorSignTx'))
-      const txResult = await sendTransaction(signedXdr)
-      if (txResult.status !== 'SUCCESS') {
-        throw new Error('message' in txResult ? (txResult as { message: string }).message : t('dealDetail.errorTxFailed'))
-      }
+      await signAndSend(response.unsignedTransaction, walletInfo.address)
       const { error: updateError } = await supabase
         .from('milestones')
         .update({
@@ -476,15 +484,7 @@ export default function DealDetailPage() {
       if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
         throw new Error(t('dealDetail.errorApprovalTx'))
       }
-      const signedXdr = await signTransaction({
-        unsignedTransaction: response.unsignedTransaction,
-        address: walletInfo.address,
-      })
-      if (!signedXdr) throw new Error(t('dealDetail.errorSignTx'))
-      const txResult = await sendTransaction(signedXdr)
-      if (txResult.status !== 'SUCCESS') {
-        throw new Error('message' in txResult ? (txResult as { message: string }).message : t('dealDetail.errorTxFailed'))
-      }
+      await signAndSend(response.unsignedTransaction, walletInfo.address)
       const { error: updateError } = await supabase
         .from('milestones')
         .update({

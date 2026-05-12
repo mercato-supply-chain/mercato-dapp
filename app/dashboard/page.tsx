@@ -137,8 +137,8 @@ export default async function DashboardPage({
       const filterByCompany =
         companyFilterId && companyIds.includes(companyFilterId) ? companyFilterId : null
       const dealsBase = filterByCompany
-        ? supabase.from('deals').filter('supplier_id', 'eq', filterByCompany)
-        : supabase.from('deals').filter('supplier_id', 'in', `(${companyIds.map((id) => `"${id}"`).join(',')})`)
+        ? supabase.from('deals').select('*', { count: 'exact', head: true }).eq('supplier_id', filterByCompany)
+        : supabase.from('deals').select('*', { count: 'exact', head: true }).in('supplier_id', companyIds)
 
       const [{ data }, { count: total }, { count: active }, { count: completed }] = await Promise.all([
         (filterByCompany
@@ -149,7 +149,7 @@ export default async function DashboardPage({
               'id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name), milestones(id, status)'
             ).in('supplier_id', companyIds)
         ).order('created_at', { ascending: false }).limit(10),
-        dealsBase.select('*', { count: 'exact', head: true }),
+        dealsBase,
         (filterByCompany
           ? supabase.from('deals').select('*', { count: 'exact', head: true }).eq('supplier_id', filterByCompany)
           : supabase.from('deals').select('*', { count: 'exact', head: true }).in('supplier_id', companyIds)

@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useInitializeEscrow, useSendTransaction } from '@trustless-work/escrow/hooks'
+import { useInitializeEscrow, useSendTransaction, useGetEscrowsFromIndexerBySigner } from '@trustless-work/escrow/hooks'
 import type { InitializeMultiReleaseEscrowPayload } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
+import { usePollarSession } from '@/providers/pollar-provider'
 import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 import { toast } from 'sonner'
@@ -43,7 +44,9 @@ export default function CreateDealContent() {
   const supabase = createClient()
   const { deployEscrow } = useInitializeEscrow()
   const { sendTransaction } = useSendTransaction()
-  const { walletInfo, isConnected, handleConnect } = useWallet()
+  const { getEscrowsBySigner } = useGetEscrowsFromIndexerBySigner()
+  const { walletInfo, isConnected, handleConnect, provider } = useWallet()
+  const pollar = usePollarSession()
   const [currentStep, setCurrentStep] = useState<FormStep>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -346,43 +349,68 @@ export default function CreateDealContent() {
         throw new Error(t('createDeal.escrowFailed'))
       }
 
-      const signedXdr = await signTransaction({
-        unsignedTransaction: deployResponse.unsignedTransaction,
-        address: signerAddress,
-      })
+      let contractId: string | undefined
 
-      if (!signedXdr) {
-        throw new Error(t('createDeal.signedMissing'))
-      }
+      if (provider === 'pollar') {
+        // Pollar embedded wallet: sign + submit via Pollar, then find contract ID from indexer
+        await pollar.signAndSubmitTx(deployResponse.unsignedTransaction)
 
-      const txResult = await sendTransaction(signedXdr)
+        // Poll indexer for up to 15 s to find the newly deployed escrow
+        const maxAttempts = 5
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 3000))
+          }
+          try {
+            const escrows = await getEscrowsBySigner({ signer: signerAddress })
+            const match = escrows.find((e) => e.engagementId === deal.id)
+            if (match?.contractId) {
+              contractId = match.contractId
+              break
+            }
+          } catch {
+            // Indexer might not have caught up yet — retry
+          }
+        }
+      } else {
+        // Stellar Wallets Kit (Freighter / Albedo): sign then submit via Trustless Work
+        const signedXdr = await signTransaction({
+          unsignedTransaction: deployResponse.unsignedTransaction,
+          address: signerAddress,
+        })
 
-      if (txResult.status === 'SUCCESS') {
+        if (!signedXdr) {
+          throw new Error(t('createDeal.signedMissing'))
+        }
+
+        const txResult = await sendTransaction(signedXdr)
+
+        if (txResult.status !== 'SUCCESS') {
+          throw new Error(
+            'message' in txResult
+              ? (txResult as { message: string }).message
+              : t('createDeal.transactionFailed')
+          )
+        }
+
         const escrowResponse = txResult as {
           contractId?: string
           escrow?: { contractId?: string }
         }
-        const contractId =
-          escrowResponse.contractId ?? escrowResponse.escrow?.contractId
-
-        await supabase
-          .from('deals')
-          .update({
-            escrow_id: deal.id,
-            escrow_contract_address: contractId ?? null,
-            escrow_status: 'initialized',
-          })
-          .eq('id', deal.id)
-
-        toast.success(t('createDeal.success'))
-        router.push('/dashboard')
-      } else {
-        throw new Error(
-          'message' in txResult
-            ? (txResult as { message: string }).message
-            : t('createDeal.transactionFailed')
-        )
+        contractId = escrowResponse.contractId ?? escrowResponse.escrow?.contractId
       }
+
+      await supabase
+        .from('deals')
+        .update({
+          escrow_id: deal.id,
+          escrow_contract_address: contractId ?? null,
+          escrow_status: 'initialized',
+        })
+        .eq('id', deal.id)
+
+      toast.success(t('createDeal.success'))
+      router.push('/dashboard')
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t('createDeal.tryAgain')

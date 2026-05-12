@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Wallet, RefreshCw, ExternalLink, Copy, AlertCircle, CircleCheckBig, Loader2 } from 'lucide-react'
+import { Wallet, RefreshCw, ExternalLink, Copy, AlertCircle, CircleCheckBig, Loader2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMercatoWallet } from '@/hooks/use-mercato-wallet'
 import { useI18n } from '@/lib/i18n/provider'
@@ -35,6 +35,20 @@ export function WalletStatusCard() {
     refreshBalance,
   } = useMercatoWallet()
   const [activating, setActivating] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshDone, setRefreshDone] = useState(false)
+
+  const handleRefreshBalance = useCallback(async () => {
+    setRefreshing(true)
+    setRefreshDone(false)
+    try {
+      await refreshBalance()
+      setRefreshDone(true)
+      setTimeout(() => setRefreshDone(false), 2000)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refreshBalance])
 
   const copyAddress = async () => {
     if (!publicKey) return
@@ -152,8 +166,20 @@ export function WalletStatusCard() {
         })()}
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={refreshBalance} variant="outline" size="sm" className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button
+            onClick={() => void handleRefreshBalance()}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : refreshDone ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
             {t('walletStatus.refreshBalance')}
           </Button>
           <Button onClick={copyAddress} variant="outline" size="sm" className="gap-2">

@@ -34,7 +34,10 @@ interface SignTransactionParams {
 }
 
 /**
- * Sign a Stellar transaction using the connected wallet.
+ * Sign a Stellar transaction using Stellar Wallets Kit (Freighter / Albedo).
+ * For Pollar embedded wallets use `usePollarSession().signAndSubmitTx` instead,
+ * which signs AND submits in one step via Pollar's infrastructure.
+ *
  * @param unsignedTransaction - XDR string of the unsigned transaction
  * @param address - Wallet address that will sign the transaction
  * @returns The signed XDR string
@@ -49,7 +52,9 @@ export const signTransaction = async ({
 
   const activeWallet = loadStoredWallet()
   if (activeWallet?.provider === 'pollar') {
-    throw new Error(PollarWalletKitLimitations)
+    throw new Error(
+      'Use Pollar signAndSubmitTx for embedded wallet signing — call usePollarSession().signAndSubmitTx(unsignedXdr) instead.',
+    )
   }
 
   const { signedTxXdr } = await stellarWalletKit.signTransaction(unsignedTransaction, {

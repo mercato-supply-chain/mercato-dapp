@@ -4,12 +4,15 @@ import { useState } from 'react'
 import {
   useInitializeEscrow,
   useSendTransaction,
+  useGetEscrowsFromIndexerBySigner,
 } from '@trustless-work/escrow/hooks'
 import type {
   InitializeMultiReleaseEscrowPayload,
   EscrowType,
 } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
+import { usePollarSession } from '@/providers/pollar-provider'
+import { loadStoredWallet } from '@/lib/mercato-wallet'
 import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 import { showLoading, showSuccess, showError } from '@/hooks/use-toast'
@@ -38,6 +41,8 @@ export function useEscrowIntegration() {
 
   const { deployEscrow } = useInitializeEscrow()
   const { sendTransaction } = useSendTransaction()
+  const { getEscrowsBySigner } = useGetEscrowsFromIndexerBySigner()
+  const pollar = usePollarSession()
 
   const initializeAndDeployEscrow = async (
     params: InitializeEscrowParams
@@ -93,34 +98,63 @@ export function useEscrowIntegration() {
         throw new Error('Failed to create escrow transaction')
       }
 
-      const signedXdr = await signTransaction({
-        unsignedTransaction: deployResponse.unsignedTransaction,
-        address: params.signer,
-      })
-
       setTxState('pending')
-      const sendResponse = await sendTransaction(signedXdr)
 
-      if (sendResponse.status !== 'SUCCESS') {
-        throw new Error(
-          'message' in sendResponse
-            ? sendResponse.message
-            : 'Failed to submit transaction'
-        )
+      const activeWallet = loadStoredWallet()
+      let contractAddress: string | undefined
+
+      if (activeWallet?.provider === 'pollar') {
+        // Pollar embedded wallet: sign + submit via Pollar, then resolve contract ID from indexer
+        await pollar.signAndSubmitTx(deployResponse.unsignedTransaction)
+
+        const maxAttempts = 5
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 3000))
+          }
+          try {
+            const escrows = await getEscrowsBySigner({ signer: params.signer })
+            const match = escrows.find((e) => e.engagementId === params.engagementId)
+            if (match?.contractId) {
+              contractAddress = match.contractId
+              break
+            }
+          } catch {
+            // Indexer might not have caught up yet — retry
+          }
+        }
+      } else {
+        // Stellar Wallets Kit: sign then submit via Trustless Work API
+        const signedXdr = await signTransaction({
+          unsignedTransaction: deployResponse.unsignedTransaction,
+          address: params.signer,
+        })
+
+        const sendResponse = await sendTransaction(signedXdr)
+
+        if (sendResponse.status !== 'SUCCESS') {
+          throw new Error(
+            'message' in sendResponse
+              ? sendResponse.message
+              : 'Failed to submit transaction'
+          )
+        }
+
+        contractAddress =
+          'contractId' in sendResponse
+            ? (sendResponse as { contractId?: string }).contractId
+            : ('escrow' in sendResponse
+                ? (sendResponse as { escrow?: { contractId?: string } }).escrow?.contractId
+                : undefined)
       }
 
       setTxState('success')
       showSuccess('Transaction confirmed')
 
-      const contractId =
-        'contractId' in sendResponse ? sendResponse.contractId : undefined
-      const escrowData =
-        'escrow' in sendResponse ? sendResponse.escrow : undefined
-
       return {
         success: true,
         escrowId: params.engagementId,
-        contractAddress: contractId ?? escrowData?.contractId,
+        contractAddress,
         transactionHash: undefined,
       }
     } catch (err) {

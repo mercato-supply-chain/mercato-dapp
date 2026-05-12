@@ -62,6 +62,11 @@ export function SupplierStep({
   const showBonusCapHint =
     Number.isFinite(rawBonusInput) && rawBonusInput > maxYieldBonusApr
 
+  const PRESET_FUNDING_WINDOWS = ['3', '7', '14']
+  const isCustomFundingWindow =
+    formData.fundingWindowDays !== '' &&
+    !PRESET_FUNDING_WINDOWS.includes(formData.fundingWindowDays)
+
   return (
     <Card>
       <CardHeader>

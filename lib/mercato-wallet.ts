@@ -134,15 +134,17 @@ export function normalizePollarWalletBalance(
   if (!balanceState || balanceState.step !== 'loaded') return null
 
   const records = balanceState.data.balances ?? []
+  // Pollar API returns `code` for the asset identifier (e.g. "XLM", "USDC").
+  // Older paths also checked `asset` / `asset_code` for compatibility.
   const xlm = records.find((record) => {
     const value = record as any
-    const asset = String(value.asset ?? value.asset_code ?? '')
-    return asset === 'XLM' || asset.toUpperCase() === 'XLM' || String(value.asset_code ?? '') === 'XLM'
+    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
+    return code === 'XLM' || value.type === 'native'
   })
   const usdc = records.find((record) => {
     const value = record as any
-    const asset = String(value.asset ?? value.asset_code ?? '')
-    return asset === 'USDC' || asset.toUpperCase() === 'USDC' || String(value.asset_code ?? '') === 'USDC'
+    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
+    return code === 'USDC'
   })
 
   return {
