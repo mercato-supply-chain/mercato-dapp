@@ -666,6 +666,98 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Stellar Ecosystem Partners */}
+      <section className="border-t border-border/50 bg-muted/20 py-12">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-4xl">
+            <p className="mb-8 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Built on the Stellar ecosystem
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+
+              {/* Trustless Work */}
+              <a
+                href="https://trustlesswork.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Trustless Work"
+                className="group flex items-center gap-2.5 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/trustless-work-logo.png"
+                  alt="Trustless Work logo"
+                  className="h-7 w-auto"
+                />
+                <span className="text-sm font-semibold tracking-tight text-foreground/80 group-hover:text-foreground">
+                  Trustless Work
+                </span>
+              </a>
+
+              <span className="hidden h-5 w-px bg-border sm:block" aria-hidden />
+
+              {/* Etherfuse */}
+              <a
+                href="https://etherfuse.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Etherfuse"
+                className="opacity-70 transition-opacity duration-200 hover:opacity-100"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/etherfuse-logo.svg"
+                  alt="Etherfuse logo"
+                  className="h-6 w-auto dark:invert"
+                />
+              </a>
+
+              <span className="hidden h-5 w-px bg-border sm:block" aria-hidden />
+
+              {/* DeFindex */}
+              <a
+                href="https://defindex.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="DeFindex"
+                className="opacity-70 transition-opacity duration-200 hover:opacity-100"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/defindex-logo.svg"
+                  alt="DeFindex logo"
+                  className="h-7 w-auto invert dark:invert-0"
+                />
+              </a>
+
+              <span className="hidden h-5 w-px bg-border sm:block" aria-hidden />
+
+              {/* Stellar */}
+              <a
+                href="https://stellar.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Stellar"
+                className="group flex items-center gap-2 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 fill-foreground/80 group-hover:fill-foreground"
+                  aria-hidden
+                >
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.8 17.4l-1.3.6-8.9-4.1.6-1.3 7.5 3.4-5.5-8.2 1.1-.8 7.5 11.2-.9-.6.6-1.3.9.6-.1.5z"/>
+                </svg>
+                <span className="text-sm font-semibold tracking-tight text-foreground/80 group-hover:text-foreground">
+                  Stellar
+                </span>
+              </a>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container mx-auto px-4">
