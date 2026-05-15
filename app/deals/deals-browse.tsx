@@ -85,7 +85,7 @@ export function DealsBrowse() {
           `
           *,
           milestones(*),
-          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)
+          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount)
         `
         )
         .order('created_at', { ascending: false })

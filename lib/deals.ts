@@ -34,6 +34,7 @@ export interface DealRow {
     company_name?: string
     full_name?: string
     contact_name?: string
+    stake_amount?: number | null
   } | null
   /** From Supabase select with alias: investor:profiles!deals_investor_id_fkey(...) */
   investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
@@ -117,7 +118,7 @@ export function mapDealFromDb(row: DealRow): Deal {
     pymeProfile?.contact_name ||
     'PyME'
 
-  const pymeStakeAmount = 0
+  const pymeStakeAmount = Number(row.pyme?.stake_amount ?? 0)
 
   const investorName =
     row.investor?.company_name ||

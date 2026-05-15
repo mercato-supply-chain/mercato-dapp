@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ReputationSummaryCard } from '@/components/reputation-summary-card'
+import { VaultToDealAllocator } from '@/components/vault-to-deal-allocator'
 import { formatDate } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/format'
 import {
@@ -166,7 +167,7 @@ export default function DealDetailPage() {
         `
         *,
         milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
+        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount),
         investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
         supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `
@@ -654,6 +655,15 @@ export default function DealDetailPage() {
                             </p>
                           </div>
                         </div>
+
+                        {isConnected && (
+                          <VaultToDealAllocator
+                            dealAmount={deal.priceUSDC}
+                            isFundingOpen={isFundingOpen}
+                            disabled={isFunding}
+                            className="border-emerald-200/60 dark:border-emerald-800/40"
+                          />
+                        )}
 
                         {!isConnected ? (
                           <Button type="button" onClick={handleConnect} className="w-full">
@@ -1210,7 +1220,7 @@ export default function DealDetailPage() {
                   </div>
                   {(deal.yieldBonusApr ?? 0) > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {t('dealDetail.includesBonus', { pct: deal.yieldBonusApr })}
+                      {t('dealDetail.includesBonus', { pct: deal.yieldBonusApr ?? 0 })}
                     </p>
                   )}
                 </CardContent>

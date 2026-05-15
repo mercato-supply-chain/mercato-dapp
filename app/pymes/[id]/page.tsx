@@ -23,6 +23,8 @@ import { getReputation } from '@/lib/reputation'
 import { formatCurrency } from '@/lib/format'
 import { ReputationSummaryCard } from '@/components/reputation-summary-card'
 import { getServerDictionary, tr } from '@/lib/i18n/server'
+import { aggregateDealsToStats, computePymeReputation } from '@/lib/pyme-reputation'
+import { ReputationTooltip } from '@/components/reputation-tooltip'
 
 type DealRow = {
   id: string
@@ -67,7 +69,7 @@ export default async function SmbDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified, stake_amount')
     .eq('id', id)
     .single()
 
@@ -102,7 +104,13 @@ export default async function SmbDetailPage({
   const completionRate =
     fundedDeals.length > 0 ? Math.round((completedDeals / fundedDeals.length) * 100) : null
 
-  const stakeAmount = 0
+  const stakeAmount = Number(profile.stake_amount ?? 0)
+
+  // Compute PyME reputation tier from deal data (for tooltip breakdown)
+  const pymeReputationStats = aggregateDealsToStats(
+    (allDeals ?? []).map((d) => ({ status: d.status, amount: Number(d.amount ?? 0) }))
+  )
+  const pymeReputation = computePymeReputation(pymeReputationStats)
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || tr(m, 'smbDetail.fallbackSmb')
@@ -164,14 +172,15 @@ export default async function SmbDetailPage({
                 </p>
               )}
             </div>
-            {reputation?.trustLabel && (
-              <div className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-center text-primary">
-                <p className="mb-0.5 text-xs font-medium opacity-70">{tr(m, 'smbDetail.reputationLabel')}</p>
+            <div className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-center text-primary">
+              <p className="mb-0.5 text-xs font-medium opacity-70">{tr(m, 'smbDetail.reputationLabel')}</p>
+              <div className="flex items-center gap-1.5">
                 <p className="text-sm font-semibold capitalize">
-                  {reputation.trustLabel.replaceAll('_', ' ')}
+                  {pymeReputation.label}
                 </p>
+                <ReputationTooltip reputation={pymeReputation} side="left" />
               </div>
-            )}
+            </div>
           </div>
         </div>
 

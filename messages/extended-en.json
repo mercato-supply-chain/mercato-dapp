@@ -370,6 +370,7 @@
     "verified": "Verified",
     "activeCapital": "Active capital",
     "fallbackName": "Investor",
+    "reputationLabel": "Reputation",
     "statTotalDeals": "Total deals",
     "statTotalDeployed": "Total deployed",
     "statActiveDeals": "Active deals",

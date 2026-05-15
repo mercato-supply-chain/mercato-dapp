@@ -17,10 +17,13 @@ import {
   Activity,
   BarChart3,
   ExternalLink,
+  ShieldCheck,
 } from 'lucide-react'
 import { getCountryLabel, getSectorLabel } from '@/lib/constants'
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getServerLocale, getServerDictionary, tr, formatMoneyServer } from '@/lib/i18n/server'
+import { getReputation } from '@/lib/reputation'
+import { InvestorReputationCard } from '@/components/investor-reputation-card'
 
 type DealRow = {
   id: string
@@ -101,7 +104,7 @@ export default async function InvestorDetailPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified')
+    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount')
     .eq('id', id)
     .single()
 
@@ -109,7 +112,10 @@ export default async function InvestorDetailPage({
     notFound()
   }
 
-  const { data: fundedDeals } = await dealsPromise
+  const [{ data: fundedDeals }, reputation] = await Promise.all([
+    dealsPromise,
+    getReputation(supabase, id),
+  ])
 
   const allDeals = fundedDeals ?? []
   const dealsList = allDeals.slice(0, 10) as DealRow[]
@@ -120,7 +126,7 @@ export default async function InvestorDetailPage({
   const activeVolume = allDeals
     .filter((d) => d.status === 'funded' || d.status === 'in_progress')
     .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
-  const stakeAmount = 0
+  const stakeAmount = Number(profile.stake_amount ?? 0)
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || tr(m, 'investorDetail.fallbackName')
@@ -184,6 +190,18 @@ export default async function InvestorDetailPage({
                 </p>
               )}
             </div>
+
+            {reputation?.trustLabel && (
+              <div className="shrink-0 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 text-center">
+                <p className="mb-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 opacity-80">
+                  {tr(m, 'investorDetail.reputationLabel')}
+                </p>
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 capitalize flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                  {reputation.trustLabel.replaceAll('_', ' ')}
+                </p>
+              </div>
+            )}
 
             {/* Active volume pill */}
             {activeVolume > 0 && (
@@ -251,6 +269,9 @@ export default async function InvestorDetailPage({
             </CardHeader>
           </Card>
         </div>
+
+        {/* Reputation card */}
+        <InvestorReputationCard reputation={reputation} className="mb-8" />
 
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Contact */}

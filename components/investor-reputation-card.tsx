@@ -2,31 +2,24 @@
 
 import * as React from 'react'
 import { ShieldCheck, Info, Coins, Activity, CheckCircle2, Star } from 'lucide-react'
-
-import type { Reputation } from '@/lib/types'
-import { formatCurrency, formatDecimal } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-import { useI18n } from '@/lib/i18n/provider'
+import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/format'
+import type { Reputation } from '@/lib/types'
 import {
   computeReputationScore,
   getTrustTier,
   TRUST_TIERS,
+  type TrustTier,
 } from '@/lib/reputation-score'
 
-interface ReputationSummaryCardProps {
+interface InvestorReputationCardProps {
   reputation: Reputation | null
   className?: string
 }
@@ -43,16 +36,19 @@ function ScoreBar({ value, max, colorClass }: { value: number; max: number; colo
   )
 }
 
-function ReputationBreakdownTooltip({ reputation }: { reputation: Reputation }) {
-  const score = reputation.reputationScore ?? reputation.score ?? 0
-  const tier = getTrustTier(score)
-
+function BreakdownTooltip({
+  reputation,
+  tier,
+}: {
+  reputation: Reputation
+  tier: TrustTier
+}) {
   const breakdown = React.useMemo(
     () =>
       computeReputationScore({
         capitalCommitted: reputation.capitalCommitted,
         dealsCompleted: reputation.dealsCompleted,
-        dealsFunded: reputation.dealsCompleted > 0 ? Math.max(reputation.dealsCompleted, Math.round(reputation.dealsCompleted / Math.max(reputation.repaymentPerformance, 0.01))) : 0,
+        dealsFunded: reputation.dealsCompleted, // approximate; full rate = 100% if we only have completed
         stakeAmount: reputation.stakeAmount,
       }),
     [reputation],
@@ -71,14 +67,15 @@ function ReputationBreakdownTooltip({ reputation }: { reputation: Reputation }) 
           <Info className="h-3.5 w-3.5" aria-hidden />
         </button>
       </HoverCardTrigger>
+
       <HoverCardContent side="bottom" align="center" className="w-80 p-0">
         <div className="space-y-3 p-4">
           <div className="flex items-start gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold leading-none">Reputation Score Breakdown</p>
+              <p className="text-sm font-semibold leading-none">Reputation Score</p>
               <p className="text-xs text-muted-foreground">
-                Tier:{' '}
+                Current tier:{' '}
                 <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
                   <span className={cn('inline-block h-2 w-2 rounded-full', tier.dotClass)} />
                   {tier.displayLabel}
@@ -92,39 +89,50 @@ function ReputationBreakdownTooltip({ reputation }: { reputation: Reputation }) 
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Coins className="h-3.5 w-3.5" aria-hidden />
-                  Capital committed
+                  Capital deployed
                 </span>
-                <span className="font-medium tabular-nums">{breakdown.capitalScore}/30 pts</span>
+                <span className="font-medium tabular-nums">
+                  {breakdown.capitalScore}/30 pts
+                </span>
               </div>
               <ScoreBar value={breakdown.capitalScore} max={30} colorClass="bg-blue-500" />
               <p className="text-[11px] text-muted-foreground">
-                {formatCurrency(reputation.capitalCommitted)} in deals
+                {formatCurrency(reputation.capitalCommitted)} deployed across deals
               </p>
             </li>
+
             <li className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Activity className="h-3.5 w-3.5" aria-hidden />
                   Deals completed
                 </span>
-                <span className="font-medium tabular-nums">{breakdown.dealsScore}/30 pts</span>
+                <span className="font-medium tabular-nums">
+                  {breakdown.dealsScore}/30 pts
+                </span>
               </div>
               <ScoreBar value={breakdown.dealsScore} max={30} colorClass="bg-violet-500" />
               <p className="text-[11px] text-muted-foreground">
                 {reputation.dealsCompleted} deal{reputation.dealsCompleted !== 1 ? 's' : ''} fully completed
               </p>
             </li>
+
             <li className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                  Repayment rate
+                  Repayment performance
                 </span>
-                <span className="font-medium tabular-nums">{breakdown.repaymentScore}/40 pts</span>
+                <span className="font-medium tabular-nums">
+                  {breakdown.repaymentScore}/40 pts
+                </span>
               </div>
               <ScoreBar value={breakdown.repaymentScore} max={40} colorClass="bg-emerald-500" />
-              <p className="text-[11px] text-muted-foreground">{repaymentPct}% on-time completion</p>
+              <p className="text-[11px] text-muted-foreground">
+                {repaymentPct}% completion rate
+              </p>
             </li>
+
             {reputation.stakeAmount > 0 && (
               <li className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -138,7 +146,7 @@ function ReputationBreakdownTooltip({ reputation }: { reputation: Reputation }) 
                 </div>
                 <ScoreBar value={breakdown.stakeBonus} max={10} colorClass="bg-amber-500" />
                 <p className="text-[11px] text-muted-foreground">
-                  {formatCurrency(reputation.stakeAmount)} staked (earning vault yield)
+                  {formatCurrency(reputation.stakeAmount)} staked as trust signal
                 </p>
               </li>
             )}
@@ -164,40 +172,44 @@ function ReputationBreakdownTooltip({ reputation }: { reputation: Reputation }) 
               ))}
             </ul>
           </div>
+
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Score auto-updates based on on-platform activity: capital deployed, completed deals, and repayment rate. Staking capital adds a trust bonus.
+          </p>
         </div>
       </HoverCardContent>
     </HoverCard>
   )
 }
 
-export function ReputationSummaryCard({
-  reputation,
-  className,
-}: ReputationSummaryCardProps) {
-  const { t } = useI18n()
-  const hasStake = (reputation?.stakeAmount ?? 0) > 0
+export function InvestorReputationCard({ reputation, className }: InvestorReputationCardProps) {
   const score = reputation?.reputationScore ?? reputation?.score ?? 0
   const tier = React.useMemo(() => getTrustTier(score), [score])
+  const hasStake = (reputation?.stakeAmount ?? 0) > 0
 
   return (
     <Card className={cn('border-primary/20 bg-primary/5', className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
-          {t('reputationCard.title')}
-          {reputation && <ReputationBreakdownTooltip reputation={reputation} />}
+          Reputation & Trust
+          {reputation && (
+            <BreakdownTooltip reputation={reputation} tier={tier} />
+          )}
         </CardTitle>
-        <CardDescription>{t('reputationCard.description')}</CardDescription>
+        <CardDescription>
+          Investor trust score based on capital deployed and deal performance
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className={cn('grid gap-4', hasStake ? 'sm:grid-cols-2' : 'sm:grid-cols-1')}>
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {t('reputationCard.score')}
+              Score
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-3xl font-semibold tabular-nums">
-                {reputation?.score != null ? formatDecimal(score) : '-'}
+                {reputation != null ? score : '—'}
               </p>
               {tier && (
                 <Badge
@@ -214,7 +226,7 @@ export function ReputationSummaryCard({
           {hasStake && (
             <div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t('reputationCard.stake')}
+                Trust Stake
               </p>
               <p className="text-3xl font-semibold tabular-nums">
                 {formatCurrency(reputation?.stakeAmount ?? 0)}{' '}
