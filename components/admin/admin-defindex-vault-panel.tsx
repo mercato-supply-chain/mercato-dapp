@@ -24,6 +24,8 @@ import {
   Copy,
   CheckCircle2,
   ExternalLink,
+  Wand2,
+  Info,
 } from 'lucide-react'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
@@ -61,6 +63,23 @@ const DEFAULTS: VaultFormState = {
   strategyAddress: '',
   strategyName: 'Primary Strategy',
 }
+
+// Verified testnet contract addresses from DeFindex testnet.contracts.json
+// https://github.com/paltalabs/defindex/blob/main/public/testnet.contracts.json
+const TESTNET_PRESETS = {
+  blendUsdc: {
+    label: 'BlendUSDC',
+    asset: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU',
+    strategy: 'CALLOM5I7XLQPPOPQMYAHUWW4N7O3JKT42KQ4ASEEVBXDJQNJOALFSUY',
+    strategyName: 'USDC Blend Strategy',
+  },
+  xlm: {
+    label: 'XLM',
+    asset: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+    strategy: 'CDVLOSPJPQOTB6ZCWO5VSGTOLGMKTXSFWYTUP572GTPNOWX4F76X3HPM',
+    strategyName: 'XLM Blend Strategy',
+  },
+} as const
 
 async function readErrorMessage(response: Response): Promise<string> {
   try {
@@ -118,6 +137,15 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
   const set = (key: keyof VaultFormState) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value }))
+
+  const fillPreset = (preset: typeof TESTNET_PRESETS[keyof typeof TESTNET_PRESETS]) => {
+    setForm((prev) => ({
+      ...prev,
+      assetAddress: preset.asset,
+      strategyAddress: preset.strategy,
+      strategyName: preset.strategyName,
+    }))
+  }
 
   const previewJson = JSON.stringify(
     buildConfig(form, walletInfo?.address ?? 'G…your-wallet'),
@@ -186,8 +214,8 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
       }
 
       if (submitted?.txHash) setLastTxHash(submitted.txHash)
-      toast.success('Vault created successfully!', {
-        description: submitted?.txHash ? `Tx: ${submitted.txHash}` : 'Set NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS to the new vault address.',
+      toast.success('Vault deployed! Check the next steps below.', {
+        description: submitted?.txHash ? `Tx: ${submitted.txHash}` : undefined,
       })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Vault creation failed.')
@@ -241,17 +269,17 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Create new vault</CardTitle>
           <CardDescription>
-            Fill in the vault parameters. Fields left blank in the roles section default to your connected wallet address.
+            Fill in the parameters or use the testnet presets below. Role fields left blank default to your connected wallet.
             See the{' '}
             <a
-              href="https://docs.defindex.io"
+              href="https://docs.defindex.io/api-integration-guide/creating-a-defindex-vault"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-0.5 underline underline-offset-2"
             >
-              DeFindex docs <ExternalLink className="h-3 w-3" />
+              DeFindex vault guide <ExternalLink className="h-3 w-3" />
             </a>{' '}
-            for strategy addresses.
+            for full documentation.
           </CardDescription>
         </CardHeader>
 
@@ -262,6 +290,37 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
               <span>Use a Stellar Wallets Kit wallet (e.g. Freighter) to sign vault deployment.</span>
             </div>
           )}
+
+          {/* Testnet presets */}
+          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Info className="h-3.5 w-3.5 shrink-0 text-blue-500" aria-hidden />
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">Testnet quick-fill</p>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              On testnet, DeFindex strategies use <strong>BlendUSDC</strong> — a test token from{' '}
+              <a href="https://testnet.blend.capital" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                testnet.blend.capital
+              </a>
+              , <em>not</em> regular USDC. Get BlendUSDC from their faucet before deploying a USDC vault.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(TESTNET_PRESETS).map(([key, preset]) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => fillPreset(preset)}
+                  disabled={busy}
+                >
+                  <Wand2 className="h-3 w-3" aria-hidden />
+                  Fill {preset.label} preset
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {/* Basic info */}
           <div>
@@ -334,10 +393,13 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
                   id="asset-address"
                   value={form.assetAddress}
                   onChange={set('assetAddress')}
-                  placeholder="C… (e.g. Soroban USDC SAC)"
+                  placeholder="C… (use preset above for testnet)"
                   className="font-mono text-xs"
                   disabled={busy}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Testnet BlendUSDC: <code className="rounded bg-muted px-0.5">CAQCFVL…RCJU</code>
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="strategy-address">Strategy contract address</Label>
@@ -425,18 +487,74 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
             )}
           </div>
 
-          {/* Success state */}
+          {/* Post-deployment checklist */}
           {lastTxHash && (
-            <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs">
-              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
-              <div>
-                <p className="font-medium text-emerald-700 dark:text-emerald-400">Vault deployed!</p>
-                <p className="mt-0.5 break-all font-mono text-muted-foreground">{lastTxHash}</p>
-                <p className="mt-1 text-muted-foreground">
-                  Copy the new vault <code>C…</code> contract address from the transaction and set{' '}
-                  <code className="rounded bg-muted px-0.5">NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS</code>.
+            <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  Vault deployed — complete these 3 steps to go live
                 </p>
               </div>
+              <p className="break-all font-mono text-muted-foreground">{lastTxHash}</p>
+
+              <ol className="space-y-3 pl-1">
+                <li className="flex gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">1</span>
+                  <div>
+                    <p className="font-medium text-foreground">Find the vault contract address</p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      Open the transaction on{' '}
+                      <a
+                        href={`https://testnet.stellar.expert/explorer/testnet/tx/${lastTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-0.5 underline underline-offset-2"
+                      >
+                        Stellar Expert <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                      {' '}and copy the new <code className="rounded bg-muted px-0.5">C…</code> contract address from the result.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">2</span>
+                  <div>
+                    <p className="font-medium text-foreground">Set the env var &amp; redeploy</p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      Add the address to <code className="rounded bg-muted px-0.5">.env</code>:
+                    </p>
+                    <pre className="mt-1 rounded bg-muted px-2 py-1 text-[11px] leading-relaxed">
+{`NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS=C…
+MERCATO_DEFINDEX_VAULT_ADDRESS=C…`}
+                    </pre>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">3</span>
+                  <div>
+                    <p className="font-medium text-foreground">First deposit + first rebalance</p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      Deposit a minimum of <strong>1001 stroops</strong> (≈ 0.0001001 USDC — practically free) to
+                      initialize the vault, then call <strong>rebalance</strong> to allocate funds into the strategy.
+                      You can do this via the{' '}
+                      <a
+                        href="https://docs.defindex.io/api-integration-guide/creating-a-defindex-vault"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-0.5 underline underline-offset-2"
+                      >
+                        DeFindex API or stellar-cli <ExternalLink className="h-2.5 w-2.5" />
+                      </a>.
+                    </p>
+                    <pre className="mt-1 rounded bg-muted px-2 py-1 text-[11px] leading-relaxed whitespace-pre-wrap">
+{`curl -X POST https://api.defindex.io/vault/VAULT_ADDRESS/rebalance?network=testnet \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -d '{"caller":"YOUR_MANAGER_ADDRESS","instructions":[{"type":"Invest","strategy_address":"STRATEGY_ADDRESS","amount":1000000}]}'`}
+                    </pre>
+                  </div>
+                </li>
+              </ol>
             </div>
           )}
 
