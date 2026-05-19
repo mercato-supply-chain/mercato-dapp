@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
-import { PollarWalletKitLimitations } from '@/lib/mercato-wallet'
+import { usePollarSession } from '@/providers/pollar-provider'
 import type { SendTransactionResponse } from '@defindex/sdk'
 
 type Props = {
@@ -125,7 +125,8 @@ function buildConfig(form: VaultFormState, callerAddress: string): Record<string
 }
 
 export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
-  const { walletInfo, canSignTransactions } = useWallet()
+  const { walletInfo, provider } = useWallet()
+  const pollar = usePollarSession()
   const [form, setForm] = useState<VaultFormState>(DEFAULTS)
   const [busy, setBusy] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -161,6 +162,13 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
 
   const signAndSubmit = useCallback(
     async (unsignedXdr: string, signerAddress: string): Promise<SendTransactionResponse> => {
+      if (provider === 'pollar') {
+        // Pollar embedded wallet: signs + submits in one step, returns tx hash directly
+        const txHash = await pollar.signAndSubmitTx(unsignedXdr)
+        return { success: true, txHash } as SendTransactionResponse
+      }
+
+      // External wallet (Freighter / Albedo): sign then submit via our API
       const signedXdr = await signTransaction({
         unsignedTransaction: unsignedXdr,
         address: signerAddress,
@@ -174,17 +182,13 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
       if (!submitResponse.ok) throw new Error(await readErrorMessage(submitResponse))
       return (await submitResponse.json()) as SendTransactionResponse
     },
-    []
+    [pollar, provider]
   )
 
   const onDeploy = useCallback(async () => {
     const address = walletInfo?.address?.trim()
     if (!address) {
-      toast.error('Connect your admin wallet first (Freighter / Albedo).')
-      return
-    }
-    if (!canSignTransactions) {
-      toast.error(PollarWalletKitLimitations)
+      toast.error('Connect your admin wallet first.')
       return
     }
     if (!form.assetAddress.trim()) {
@@ -222,7 +226,7 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
     } finally {
       setBusy(false)
     }
-  }, [canSignTransactions, form, signAndSubmit, walletInfo?.address])
+  }, [form, signAndSubmit, walletInfo?.address])
 
   return (
     <div className="space-y-4">
@@ -284,10 +288,12 @@ export function AdminDefindexVaultPanel({ configuredVaultAddress }: Props) {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {!canSignTransactions && walletInfo?.address && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>Use a Stellar Wallets Kit wallet (e.g. Freighter) to sign vault deployment.</span>
+          {walletInfo?.address && provider !== 'pollar' && (
+            <div className="flex items-start gap-2 rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Signing with <strong>Freighter / Albedo</strong>. If you&apos;re using a Pollar embedded wallet, sign in via the wallet button and it will be used automatically.
+              </span>
             </div>
           )}
 
