@@ -50,13 +50,32 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    request.nextUrl.pathname.startsWith('/dashboard') &&
-    !user
-  ) {
+  const pathname = request.nextUrl.pathname
+
+  if (pathname.startsWith('/dashboard') && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
+  }
+
+  if (
+    user &&
+    !pathname.startsWith('/settings') &&
+    !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/api')
+  ) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.user_type) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/settings'
+      url.search = 'onboarding=1'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

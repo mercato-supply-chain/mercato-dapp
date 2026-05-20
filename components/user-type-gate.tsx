@@ -1,24 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { SelectRoleModal } from '@/components/select-role-modal'
-import { usePathname } from 'next/navigation'
+import { needsOnboarding, ONBOARDING_SETTINGS_PATH } from '@/lib/profile/onboarding'
 
-type UserType = 'pyme' | 'investor' | 'supplier'
-
-/** Paths where we never want to show the role-selection modal. */
-const AUTH_PREFIXES = ['/auth', '/api']
+/** Paths where we skip onboarding redirect checks. */
+const SKIP_PREFIXES = ['/auth', '/api', '/settings']
 
 export function UserTypeGate() {
   const pathname = usePathname()
-  const [userId, setUserId] = useState<string | null>(null)
-  const [needsRole, setNeedsRole] = useState(false)
+  const router = useRouter()
 
-  const isAuthRoute = AUTH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  const shouldSkip = SKIP_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 
   useEffect(() => {
-    if (isAuthRoute) return
+    if (shouldSkip) return
 
     const supabase = createClient()
 
@@ -35,24 +32,13 @@ export function UserTypeGate() {
         .eq('id', user.id)
         .single()
 
-      if (!profile?.user_type) {
-        setUserId(user.id)
-        setNeedsRole(true)
+      if (needsOnboarding(profile?.user_type)) {
+        router.replace(ONBOARDING_SETTINGS_PATH)
       }
     }
 
-    checkProfile()
-  }, [isAuthRoute, pathname])
+    void checkProfile()
+  }, [shouldSkip, pathname, router])
 
-  if (!needsRole || !userId) return null
-
-  const handleComplete = (userType: UserType) => {
-    // Reload the page so the dashboard re-fetches with the new user_type.
-    // We pass the chosen type in the URL so the server page can act on it immediately
-    // without waiting for a cache refresh.
-    setNeedsRole(false)
-    window.location.reload()
-  }
-
-  return <SelectRoleModal userId={userId} onComplete={handleComplete} />
+  return null
 }
