@@ -216,6 +216,8 @@ pnpm start
 
 ---
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/mercato-supply-chain/mercato-dapp?utm_source=oss&utm_medium=github&utm_campaign=mercato-supply-chain%2Fmercato-dapp&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 ## License
 
 MERCATO is released under the **[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)** (SPDX `Apache-2.0`). See the [`LICENSE`](LICENSE) file in the repository root for the full terms.
