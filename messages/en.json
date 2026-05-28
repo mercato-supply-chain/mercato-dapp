@@ -526,5 +526,22 @@
       "logistics": "Logistics",
       "other": "Other"
     }
+  },
+  "ourStory": {
+  "meta": {
+    "title": "Nuestra Historia | Mercato Supply Chain Finance",
+    "description": "Descubre por qué se creó Mercato: cerrando la brecha de financiamiento para PyMEs en América Latina."
+  },
+  "hero": {
+    "heading": "Nuestra Historia",
+    "sub": "Por qué construimos Mercato, a quién sirve y cómo funciona."
+  },
+  "sections": {
+    "what": "¿Qué es Mercato?",
+    "why": "¿Por qué se creó Mercato?",
+    "who": "¿A quién sirve Mercato?",
+    "how": "¿Cómo funciona Mercato?",
+    "blockchain": "¿Por qué escrow en blockchain?"
   }
+}
 }
