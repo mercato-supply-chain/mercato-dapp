@@ -17,6 +17,8 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
+import useEmblaCarousel from 'embla-carousel-react'
+import Autoplay from 'embla-carousel-autoplay'
 
 type AccessLevel = 'high' | 'medium' | 'low'
 
@@ -163,14 +165,16 @@ export function LandingRateComparison() {
   const { t } = useI18n()
   const { ref, visible } = useReveal<HTMLElement>(0.08)
   const financingOptions = React.useMemo(() => useFinancingOptions(t), [t])
-  const stats = React.useMemo(
-    () => [
-      { value: t('landing.rates.stat1Value'), label: t('landing.rates.stat1Label'), icon: Users },
-      { value: t('landing.rates.stat2Value'), label: t('landing.rates.stat2Label'), icon: Scale },
-      { value: t('landing.rates.stat3Value'), label: t('landing.rates.stat3Label'), icon: Percent },
-    ],
-    [t],
-  )
+  
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'center' }, [Autoplay({ delay: 5000 })])
+  const [selectedIndex, setSelectedIndex] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!emblaApi) return
+    emblaApi.on('select', () => {
+      setSelectedIndex(emblaApi.selectedScrollSnap())
+    })
+  }, [emblaApi])
 
   return (
     <section
@@ -212,136 +216,129 @@ export function LandingRateComparison() {
             </p>
           </div>
 
-          <div className="mb-12 grid gap-4 sm:grid-cols-3 md:mb-16">
-            {stats.map(({ value, label, icon: Icon }) => (
-              <div
-                key={label}
-                className="glass rounded-2xl border border-brand-light/20 px-5 py-5 dark:border-white/10"
-              >
-                <Icon className="mb-3 h-5 w-5 text-brand-mid dark:text-brand-light" aria-hidden />
-                <p className="font-display text-3xl font-normal tracking-tight text-foreground">{value}</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{label}</p>
-              </div>
-            ))}
-          </div>
+          <div className="relative mb-12">
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {financingOptions.map((option, index) => {
+                  const Icon = option.icon
+                  const isActive = index === selectedIndex
+                  
+                  return (
+                    <div key={option.id} className="flex-[0_0_100%] min-w-0 px-4 md:flex-[0_0_80%] lg:flex-[0_0_60%]">
+                      <div
+                        className={cn(
+                          'relative h-full rounded-3xl border p-6 transition-all duration-500 md:p-10',
+                          option.mercato
+                            ? 'border-brand-light/50 bg-gradient-to-br from-brand-pale/90 via-background to-brand-ultra shadow-glow-brand dark:border-brand-light/25 dark:from-brand-mid/10 dark:via-card dark:to-background'
+                            : 'border-border/60 bg-card/80 dark:bg-card/50',
+                          !isActive && 'scale-95 opacity-40 grayscale blur-[1px]'
+                        )}
+                      >
+                        <div className="flex flex-col gap-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-4">
+                              <div
+                                className={cn(
+                                  'flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm',
+                                  option.mercato
+                                    ? 'bg-brand-mid text-white'
+                                    : 'bg-muted text-muted-foreground dark:bg-white/[0.06]',
+                                )}
+                              >
+                                <Icon className="h-7 w-7" aria-hidden />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-xl font-bold text-foreground">{option.label}</h3>
+                                  {option.mercato && (
+                                    <span className="rounded-full bg-brand-mid px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                                      {t('landing.rates.bestFit')}
+                                    </span>
+                                  )}
+                                </div>
+                                {option.subtitle && (
+                                  <p className="mt-1 text-sm text-muted-foreground">{option.subtitle}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p
+                                className={cn(
+                                  'text-3xl font-bold tabular-nums tracking-tight',
+                                  option.mercato ? 'text-brand-mid dark:text-brand-light' : 'text-foreground',
+                                )}
+                              >
+                                {option.rateLabel}
+                              </p>
+                              <AccessPill level={option.access} t={t} />
+                            </div>
+                          </div>
 
-          <div className="mb-6 flex items-end justify-between gap-4 px-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {t('landing.rates.chartLabel')}
-            </p>
-            <div className="hidden items-center gap-4 text-[10px] text-muted-foreground sm:flex">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-6 rounded-full bg-gradient-to-r from-brand-mid to-brand-light" />
-                {t('landing.rates.chartLegendMercato')}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-6 rounded-full bg-muted-foreground/35" />
-                {t('landing.rates.chartLegendAlt')}
-              </span>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                              <span>{t('landing.rates.chartLabel')}</span>
+                              <div className="flex items-center gap-4">
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2 w-4 rounded-full bg-brand-mid" />
+                                  {t('landing.rates.chartLegendMercato')}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <span className="h-2 w-4 rounded-full bg-muted-foreground/35" />
+                                  {t('landing.rates.chartLegendAlt')}
+                                </span>
+                              </div>
+                            </div>
+                            <RateBar min={option.rateMin} max={option.rateMax} highlighted={option.mercato} />
+                          </div>
+
+                          <div className="grid gap-6 md:grid-cols-2">
+                            <div className="rounded-2xl bg-muted/30 p-5 dark:bg-white/[0.02]">
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                {t('landing.rates.requirementsLabel')}
+                              </p>
+                              <p className="text-sm leading-relaxed text-foreground/90">
+                                {option.requirements}
+                              </p>
+                            </div>
+                            {option.caveat && (
+                              <div className="rounded-2xl border border-brand-light/20 bg-brand-pale/20 p-5 dark:border-white/5 dark:bg-white/[0.01]">
+                                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-brand-mid dark:text-brand-light/70">
+                                  {t('landing.rates.noteLabel')}
+                                </p>
+                                <p className="text-sm italic leading-relaxed text-muted-foreground">
+                                  {option.caveat}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-center gap-2">
+              {financingOptions.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => emblaApi?.scrollTo(i)}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-300',
+                    i === selectedIndex ? 'w-8 bg-brand-mid' : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                  )}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
             </div>
           </div>
 
-          <div className="space-y-3">
-            {financingOptions.map((option) => {
-              const Icon = option.icon
-              return (
-                <div
-                  key={option.id}
-                  className={cn(
-                    'rounded-2xl border p-4 transition-shadow md:p-5',
-                    option.mercato
-                      ? 'border-brand-light/50 bg-gradient-to-br from-brand-pale/90 via-background to-brand-ultra shadow-glow-brand dark:border-brand-light/25 dark:from-brand-mid/10 dark:via-card dark:to-background'
-                      : 'border-border/60 bg-card/80 dark:bg-card/50',
-                  )}
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
-                    <div className="flex min-w-0 flex-1 items-start gap-3 lg:max-w-[280px]">
-                      <div
-                        className={cn(
-                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                          option.mercato
-                            ? 'bg-brand-mid text-white'
-                            : 'bg-muted text-muted-foreground dark:bg-white/[0.06]',
-                        )}
-                      >
-                        <Icon className="h-5 w-5" aria-hidden />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{option.label}</h3>
-                          {option.mercato && (
-                            <span className="rounded-full bg-brand-mid px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                              {t('landing.rates.bestFit')}
-                            </span>
-                          )}
-                        </div>
-                        {option.subtitle && (
-                          <p className="text-xs text-muted-foreground">{option.subtitle}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end lg:w-28">
-                      <p
-                        className={cn(
-                          'text-xl font-bold tabular-nums tracking-tight',
-                          option.mercato ? 'text-brand-mid dark:text-brand-light' : 'text-foreground',
-                        )}
-                      >
-                        {option.rateLabel}
-                      </p>
-                      <AccessPill level={option.access} t={t} />
-                    </div>
-
-                    <div className="min-w-0 flex-[1.4]">
-                      <RateBar min={option.rateMin} max={option.rateMax} highlighted={option.mercato} />
-                    </div>
-
-                    <div className="min-w-0 flex-1 lg:max-w-xs">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{option.requirements}</p>
-                      {option.caveat && (
-                        <p
-                          className={cn(
-                            'mt-1 text-xs font-medium',
-                            option.mercato ? 'text-brand-mid dark:text-brand-light' : 'text-foreground/70',
-                          )}
-                        >
-                          {option.caveat}
-                        </p>
-                      )}
-                      {option.source && (
-                        <p className="mt-1 text-[10px] text-muted-foreground/70">
-                          {t('landing.rates.sourcePrefix')} {option.source}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="mt-10 rounded-2xl border border-brand-light/30 bg-brand-dark px-6 py-6 text-white dark:border-brand-light/20 md:px-8 md:py-8">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-light">
-              {t('landing.rates.closingEyebrow')}
-            </p>
-            <p className="font-display max-w-3xl text-xl leading-snug tracking-tight text-white md:text-2xl">
-              {t('landing.rates.closingTitle', {
-                accessible: t('landing.rates.closingAccessible'),
-                bank: t('landing.rates.closingBank'),
-              })}
-            </p>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/60">
-              {t('landing.rates.closingDisclaimer')}
-            </p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-6 h-11 rounded-full bg-white px-7 font-semibold text-brand-dark hover:bg-brand-ultra"
-            >
+          <div className="mt-12 text-center">
+            <Button asChild size="lg" className="rounded-full bg-brand-mid px-8 text-white hover:bg-brand-dark dark:bg-brand-light dark:text-brand-dark dark:hover:bg-brand-light/90">
               <Link href="/auth/sign-up">
-                {t('landing.rates.closingCta')}
-                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                {t('landing.rates.cta')}
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
           </div>
