@@ -75,11 +75,6 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
     return t('deals.fundingTimeDays', { n: totalDays })
   }
 
-  const subtitle = [deal.supplier, deal.pymeName]
-    .filter(Boolean)
-    .filter((v, i, arr) => arr.indexOf(v) === i)
-    .join(' · ')
-
   const staggerMs =
     listIndex != null ? Math.min(listIndex * 42, 360) : undefined
 
@@ -126,8 +121,24 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
         <h3 className="mb-1 line-clamp-2 text-base font-bold leading-snug transition-colors group-hover:text-accent">
           {deal.productName}
         </h3>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        {(deal.pymeName || deal.supplier) && (
+          <div className="mt-1.5 space-y-0.5">
+            {deal.pymeName && (
+              <p className="text-xs text-muted-foreground">
+                🏢 {t('common.buyer')}: <span className="font-semibold text-foreground">{deal.pymeName}</span>
+              </p>
+            )}
+            {deal.supplier && (
+              <p className="text-xs text-muted-foreground">
+                🏭 {t('common.supplier')}: <span className="font-semibold text-foreground">{deal.supplier}</span>
+              </p>
+            )}
+          </div>
+        )}
+        {deal.description && (
+          <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+            {deal.description}
+          </p>
         )}
         {showRemainingFundingTime && (
           <p className="mt-1 text-xs font-medium text-muted-foreground">

@@ -17,7 +17,9 @@
     "save": "Save",
     "saving": "Saving…",
     "email": "Email",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "buyer": "Buyer",
+    "supplier": "Supplier"
   },
   "locale": {
     "label": "Language",
