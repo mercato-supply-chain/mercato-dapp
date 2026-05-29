@@ -804,7 +804,14 @@
     "formDescriptionPh": "ej. Harina de trigo industrial (sacos 25 y 50 kg)",
     "placeholderCompanyPh": "ej. Suministros Acme",
     "placeholderPhonePh": "ej. +595 21 123 456",
-    "placeholderBioPh": "ej. Suministramos ingredientes mayoristas a panaderías y restaurantes…"
+    "placeholderBioPh": "ej. Suministramos ingredientes mayoristas a panaderías y restaurantes…",
+    "formProductImage": "Imagen del producto",
+    "formProductImageSelect": "Arrastra y suelta una imagen aquí, o haz clic para seleccionar",
+    "formProductImageSelectMobile": "Haz clic para seleccionar la imagen del producto",
+    "formProductImageHint": "PNG, JPG o WEBP. Máx. 5MB.",
+    "formProductImageRemove": "Eliminar imagen",
+    "toastImageSizeError": "El archivo es demasiado grande. El tamaño máximo es 5MB.",
+    "toastImageTypeError": "Formato de archivo no soportado. Por favor sube una imagen JPEG, PNG o WEBP."
   },
   "reputationTooltip": {
     "ariaLabel": "¿Cómo se calcula la reputación?",

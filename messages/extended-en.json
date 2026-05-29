@@ -804,7 +804,14 @@
     "formDescriptionPh": "e.g. Industrial wheat flour (25kg & 50kg sacks)",
     "placeholderCompanyPh": "e.g. Acme Supplies",
     "placeholderPhonePh": "e.g. +595 21 123 456",
-    "placeholderBioPh": "e.g., We supply wholesale ingredients to bakeries and restaurants…"
+    "placeholderBioPh": "e.g., We supply wholesale ingredients to bakeries and restaurants…",
+    "formProductImage": "Product Image",
+    "formProductImageSelect": "Drag & drop an image here, or click to select",
+    "formProductImageSelectMobile": "Click to select product image",
+    "formProductImageHint": "PNG, JPG or WEBP. Max 5MB.",
+    "formProductImageRemove": "Remove image",
+    "toastImageSizeError": "File is too large. Maximum size is 5MB.",
+    "toastImageTypeError": "Unsupported file format. Please upload a JPEG, PNG, or WEBP image."
   },
   "reputationTooltip": {
     "ariaLabel": "How is the reputation calculated?",

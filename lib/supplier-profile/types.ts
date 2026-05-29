@@ -16,6 +16,7 @@ export type SupplierProduct = {
   description: string | null
   minimum_order: number | null
   delivery_time: string | null
+  image_url: string | null
 }
 
 export type ProductFormState = {
@@ -25,6 +26,8 @@ export type ProductFormState = {
   description: string
   minimum_order: string
   delivery_time: string
+  imageFile: File | null
+  imagePreview: string | null
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormState = {
@@ -34,6 +37,8 @@ export const EMPTY_PRODUCT_FORM: ProductFormState = {
   description: '',
   minimum_order: '',
   delivery_time: '',
+  imageFile: null,
+  imagePreview: null,
 }
 
 export type CompanyFormState = {

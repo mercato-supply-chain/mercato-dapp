@@ -1,5 +1,9 @@
 'use client'
 
+import { useRef, useState } from 'react'
+import { Upload } from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,6 +25,63 @@ type SupplierProductFormProps = {
 
 export function SupplierProductForm({ formProduct, onChange }: SupplierProductFormProps) {
   const { t } = useI18n()
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0])
+    }
+  }
+
+  const handleFile = (file: File) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      toast.error(t('supplierProfile.toastImageTypeError'))
+      return
+    }
+
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      toast.error(t('supplierProfile.toastImageSizeError'))
+      return
+    }
+
+    if (formProduct.imagePreview && formProduct.imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formProduct.imagePreview)
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    onChange({ imageFile: file, imagePreview: previewUrl })
+  }
+
+  const handleRemoveImage = () => {
+    if (formProduct.imagePreview && formProduct.imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formProduct.imagePreview)
+    }
+    onChange({ imageFile: null, imagePreview: null })
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
 
   return (
     <div className="space-y-4">
@@ -102,6 +163,69 @@ export function SupplierProductForm({ formProduct, onChange }: SupplierProductFo
           rows={3}
           className="resize-none"
         />
+      </div>
+      <div className="space-y-2">
+        <Label>{t('supplierProfile.formProductImage')}</Label>
+        {formProduct.imagePreview ? (
+          <div className="flex items-center gap-4 p-4 border border-border/70 bg-muted/20 rounded-xl">
+            <div className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border border-border/60 bg-muted/40">
+              <img
+                src={formProduct.imagePreview}
+                alt="Product Preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-medium text-foreground truncate">
+                {formProduct.imageFile ? formProduct.imageFile.name : t('supplierProfile.formProductImage')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formProduct.imageFile
+                  ? `${(formProduct.imageFile.size / (1024 * 1024)).toFixed(2)} MB`
+                  : ''}
+              </p>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-8 text-xs rounded-full mt-1"
+                onClick={handleRemoveImage}
+              >
+                {t('supplierProfile.formProductImageRemove')}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={triggerFileInput}
+            className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+              isDragging
+                ? 'border-primary bg-primary/5'
+                : 'border-muted-foreground/20 hover:border-primary/50 bg-muted/5 hover:bg-muted/10'
+            }`}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm font-medium text-foreground text-center hidden sm:block">
+              {t('supplierProfile.formProductImageSelect')}
+            </p>
+            <p className="text-sm font-medium text-foreground text-center sm:hidden">
+              {t('supplierProfile.formProductImageSelectMobile')}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('supplierProfile.formProductImageHint')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
