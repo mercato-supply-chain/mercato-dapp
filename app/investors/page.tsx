@@ -1,5 +1,39 @@
 import { createClient } from '@/lib/supabase/server'
 import { InvestorsList, type Investor } from './investors-list'
+import { JsonLd } from '@/components/seo/json-ld'
+
+export async function generateMetadata() {
+  return {
+    title: 'Investor Directory | Mercato Supply Chain Finance',
+    description: 'Explore the directory of active investors funding supply chain deals in Latin America on Mercato.',
+    alternates: {
+      canonical: '/investors',
+      languages: {
+        en: '/investors?lang=en',
+        es: '/investors?lang=es',
+      },
+    },
+  }
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://mercato.app"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Investors",
+      "item": "https://mercato.app/investors"
+    }
+  ]
+}
 
 export default async function InvestorsPage() {
   const supabase = await createClient()
@@ -54,5 +88,10 @@ export default async function InvestorsPage() {
       return b.total_invested - a.total_invested
     })
 
-  return <InvestorsList initialInvestors={investors} />
+  return (
+    <>
+      <JsonLd data={breadcrumbSchema} />
+      <InvestorsList initialInvestors={investors} />
+    </>
+  )
 }
