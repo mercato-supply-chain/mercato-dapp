@@ -34,6 +34,7 @@ type ProductRow = {
   description: string | null
   minimum_order: number | null
   delivery_time: string | null
+  image_url: string | null
 }
 
 type DealRow = {
@@ -125,7 +126,7 @@ export default async function SupplierDetailPage({
       supabase.from('profiles').select('email').eq('id', company.owner_id).single(),
       supabase
         .from('supplier_products')
-        .select('id, name, category, price_per_unit, description, minimum_order, delivery_time')
+        .select('id, name, category, price_per_unit, description, minimum_order, delivery_time, image_url')
         .eq('supplier_id', id)
         .order('name'),
       supabase.from('deals').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
@@ -315,6 +316,13 @@ export default async function SupplierDetailPage({
                         key={p.id}
                         className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
                       >
+                        {p.image_url && (
+                          <img
+                            src={p.image_url}
+                            alt={p.name}
+                            className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-medium">{p.name}</p>
