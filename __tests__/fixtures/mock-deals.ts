@@ -1,4 +1,8 @@
-import { Deal } from './types'
+if (process.env.NODE_ENV === 'production') {
+  throw new Error('[mock-deals] should never be imported in production')
+}
+
+import type { Deal } from '@/lib/types'
 
 export const mockDeals: Deal[] = [
   {

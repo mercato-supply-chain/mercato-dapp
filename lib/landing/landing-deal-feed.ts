@@ -1,5 +1,4 @@
 import { heroIllustrativeDeals } from '@/lib/hero-illustrative-deals'
-import { mockDeals } from '@/lib/mock-data'
 import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 
@@ -121,7 +120,7 @@ export function buildLandingFeed(deals: Deal[]): LandingFeedItem[] {
   const source =
     deals.length > 0
       ? deals.map(dealToFeedItem)
-      : [...mockDeals.map(dealToFeedItem), ...illustrativeToFeed()]
+      : illustrativeToFeed()
 
   const unique = Array.from(new Map(source.map((item) => [item.id, item])).values())
   if (unique.length >= 12) return unique
