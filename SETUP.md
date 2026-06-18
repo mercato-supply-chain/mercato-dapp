@@ -55,7 +55,7 @@ These come from your Supabase project dashboard.
 
 ## 3. Bootstrap Supabase schema
 
-If your Supabase project is empty, run the SQL files in this exact order.
+All schema changes now live in `supabase/migrations/`. If you need a new migration, create it with `supabase migration new <name>`. Do not add SQL files under `scripts/`.
 
 ### Local CLI path
 
@@ -70,7 +70,7 @@ npx supabase start
 npx supabase status
 ```
 
-Copy the local `DB URL` from `supabase status`, then run the files one by one:
+Copy the local `DB URL` from `supabase status`, then push the tracked migrations:
 
 ```bash
 export DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -79,24 +79,7 @@ export DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 Replace the value above with the real local DB URL from `supabase status`.
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/001_create_profiles.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/002_create_deals.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/003_create_milestones.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/004_profile_trigger.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/005_add_supplier_fields.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/006_add_escrow_fields.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/007_add_full_name.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/008_add_admin_user_type.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/009_deals_allow_investor_fund_update.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/010_milestones_allow_admin_update.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/011_latam_supplier_fields.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/012_supplier_companies_multi_company.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/013_supplier_products_select_public.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/014_create_notifications.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/015_add_yield_bonus_apr.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/016_add_deal_funding_window.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/017_add_profile_stake_signal.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260428000100_add_pollar_wallet_metadata.sql
+npx supabase db push --db-url "$DATABASE_URL"
 ```
 
 ### Dashboard path
@@ -106,12 +89,10 @@ If you prefer the browser:
 1. Open your project.
 2. Click `SQL Editor`.
 3. Click `New query`.
-4. Paste one file at a time.
-5. Run each file in sequence.
+4. Paste the migration files from `supabase/migrations/` in timestamp order.
+5. Run each migration once.
 
-If you run `012_supplier_companies_multi_company.sql` by itself, it can fail because it expects the earlier tables from `001`, `002`, `003`, `004`, `005`, `006`, `007`, `008`, `009`, `010`, and `011` to already exist.
-
-If the schema already exists in a real project, only apply the last migration if needed.
+If the schema already exists in a real project, use `npx supabase migration list` to inspect the recorded history before applying anything manually.
 
 ## 4. Start the app
 
@@ -162,9 +143,8 @@ If the Pollar wallet is `pending`:
 ## 7. Common problems
 
 - `relation "public.profiles" does not exist`
-  - The base schema has not been applied yet. Run the SQL files starting with `scripts/001_create_profiles.sql`.
+  - The base schema has not been applied yet. Start the local stack and run `npx supabase db push`.
 - Blank wallet buttons
   - Check the required env vars in `.env.local`.
 - Pollar activation fails
   - Confirm `POLLAR_SECRET_KEY` is set server-side only.
-

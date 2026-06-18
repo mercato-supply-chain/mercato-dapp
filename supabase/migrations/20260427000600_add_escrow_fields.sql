@@ -1,12 +1,10 @@
--- Add escrow-related fields to deals table
 alter table public.deals
-add column if not exists escrow_id text,
-add column if not exists escrow_contract_address text,
-add column if not exists escrow_transaction_hash text,
-add column if not exists escrow_status text default 'pending',
-add column if not exists platform_fee numeric default 2.5;
+  add column if not exists escrow_id text,
+  add column if not exists escrow_contract_address text,
+  add column if not exists escrow_transaction_hash text,
+  add column if not exists escrow_status text default 'pending',
+  add column if not exists platform_fee numeric default 2.5;
 
--- Add comment
 comment on column public.deals.escrow_id is 'Unique identifier for the TrustlessWork escrow';
 comment on column public.deals.escrow_contract_address is 'Stellar smart contract address for the escrow';
 comment on column public.deals.escrow_transaction_hash is 'Transaction hash of escrow initialization';

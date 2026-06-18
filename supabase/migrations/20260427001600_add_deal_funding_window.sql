@@ -1,12 +1,9 @@
--- Add funding window and extension metadata for deal lifecycle state
 alter table public.deals
-add column if not exists funding_expires_at timestamp with time zone,
-add column if not exists funding_window_days integer,
-add column if not exists extension_count integer not null default 0,
-add column if not exists extended_at timestamp with time zone;
+  add column if not exists funding_expires_at timestamp with time zone,
+  add column if not exists funding_window_days integer,
+  add column if not exists extension_count integer not null default 0,
+  add column if not exists extended_at timestamp with time zone;
 
--- Backfill existing open deals so they do not remain open indefinitely.
--- Existing funded/completed records keep nullable values for historical compatibility.
 update public.deals
 set funding_window_days = coalesce(funding_window_days, 14)
 where status = 'seeking_funding'

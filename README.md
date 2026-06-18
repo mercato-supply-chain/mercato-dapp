@@ -164,28 +164,13 @@ Pollar keys are required only if you want the embedded wallet onboarding path en
 
 ### Supabase schema setup
 
-If your Supabase project is empty, run the schema scripts in order before applying any newer migrations:
+If your Supabase project is empty, apply the tracked Supabase migrations instead of running ad-hoc SQL files:
 
-1. `scripts/001_create_profiles.sql`
-2. `scripts/002_create_deals.sql`
-3. `scripts/003_create_milestones.sql`
-4. `scripts/004_profile_trigger.sql`
-5. `scripts/005_add_supplier_fields.sql`
-6. `scripts/006_add_escrow_fields.sql`
-7. `scripts/007_add_full_name.sql`
-8. `scripts/008_add_admin_user_type.sql`
-9. `scripts/009_deals_allow_investor_fund_update.sql`
-10. `scripts/010_milestones_allow_admin_update.sql`
-11. `scripts/011_latam_supplier_fields.sql`
-12. `scripts/012_supplier_companies_multi_company.sql`
-13. `scripts/013_supplier_products_select_public.sql`
-14. `scripts/014_create_notifications.sql`
-15. `scripts/015_add_yield_bonus_apr.sql`
-16. `scripts/016_add_deal_funding_window.sql`
-17. `scripts/017_add_profile_stake_signal.sql`
-18. `supabase/migrations/20260428000100_add_pollar_wallet_metadata.sql`
+```bash
+npx supabase db push
+```
 
-The easiest way to do this in the browser is Supabase Dashboard -> `SQL Editor` -> `New query`, then paste each file in sequence.
+Create future schema changes with `supabase migration new <name>` and commit the generated file under `supabase/migrations/`.
 
 ### 3. Run the app
 

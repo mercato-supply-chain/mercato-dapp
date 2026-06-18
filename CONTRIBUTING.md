@@ -44,6 +44,8 @@ pnpm build
 
 Fix any **lint** and **build** errors unless the issue explicitly says otherwise (for example a tracked follow-up).
 
+Database changes must use the Supabase CLI migration workflow. Create new schema changes with `supabase migration new <name>` and commit the generated file under `supabase/migrations/`. Do not add new SQL migrations under `scripts/`.
+
 ---
 
 ## How we like pull requests

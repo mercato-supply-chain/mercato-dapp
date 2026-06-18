@@ -1,4 +1,3 @@
--- Create function to auto-create profile on signup
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -20,7 +19,6 @@ begin
 end;
 $$;
 
--- Create trigger
 drop trigger if exists on_auth_user_created on auth.users;
 
 create trigger on_auth_user_created

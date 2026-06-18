@@ -1,4 +1,3 @@
--- Allow 'admin' in profiles.user_type for platform admins who approve milestones
 alter table public.profiles
   drop constraint if exists profiles_user_type_check;
 

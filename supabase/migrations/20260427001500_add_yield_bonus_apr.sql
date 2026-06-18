@@ -1,4 +1,3 @@
--- Optional extra APR (percentage points) PyMEs can add on top of the formula rate to attract investors.
 alter table public.deals
   add column if not exists yield_bonus_apr numeric(5, 2) not null default 0;
 

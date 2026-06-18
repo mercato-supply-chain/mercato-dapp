@@ -654,7 +654,7 @@ A `notifications` table stores lifecycle events. **DB triggers** create notifica
 | PyME × Investor deal created | PyME, Investor (when repayment escrow exists) |
 | PyME × Investor deal complete | PyME, Investor (when repayment escrow exists) |
 
-The bell icon in the nav shows unread count; clicking opens a dropdown with recent notifications and links to deals. Apply `scripts/014_create_notifications.sql` to enable.
+The bell icon in the nav shows unread count; clicking opens a dropdown with recent notifications and links to deals. Apply the tracked Supabase migrations in `supabase/migrations/` to enable.
 
 ---
 
