@@ -29,7 +29,7 @@ import { formatCurrency, formatPercent } from '@/lib/format'
 import type { VaultMonitorAlertSeverity } from '@/lib/defindex/vault-monitor'
 import { cn } from '@/lib/utils'
 
-const LAST_DEPLOY_STORAGE_KEY = 'mercato:admin-last-vault-deploy'
+import { LAST_DEPLOY_STORAGE_KEY } from '@/components/admin/vault-create-panel'
 
 type AdminVaultMonitorProps = {
   configuredVaultAddress: string
