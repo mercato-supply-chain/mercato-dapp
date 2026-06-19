@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useReveal } from '@/lib/landing/use-scroll-motion'
+import { useReveal } from '@/hooks/use-scroll-motion'
 import { useI18n } from '@/lib/i18n/provider'
 import {
   ArrowRight,

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { useReveal, useParallax } from '@/lib/landing/use-scroll-motion'
+import { useReveal, useParallax } from '@/hooks/use-scroll-motion'
 import { Package, TrendingUp, ShieldCheck, Star } from 'lucide-react'
 
 const NODES = [

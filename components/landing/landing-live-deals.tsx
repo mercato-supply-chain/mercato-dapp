@@ -10,7 +10,7 @@ import {
   splitIntoColumns,
   type LandingFeedItem,
 } from '@/lib/landing/landing-deal-feed'
-import { useReveal, useScrollProgress } from '@/lib/landing/use-scroll-motion'
+import { useReveal, useScrollProgress } from '@/hooks/use-scroll-motion'
 import { LandingDealCard } from '@/components/landing/landing-deal-card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'

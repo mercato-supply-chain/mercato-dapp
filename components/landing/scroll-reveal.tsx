@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { useReveal } from '@/lib/landing/use-scroll-motion'
+import { useReveal } from '@/hooks/use-scroll-motion'
 
 type ScrollRevealProps = {
   children: React.ReactNode
