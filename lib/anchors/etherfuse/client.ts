@@ -36,6 +36,7 @@ import type {
     TransactionStatus,
 } from '../types';
 import { AnchorError } from '../types';
+import { BaseAnchorClient } from '../base-anchor-client';
 import type {
     EtherfuseConfig,
     EtherfuseOnboardingResponse,
@@ -48,7 +49,6 @@ import type {
     EtherfuseBankAccountResponse,
     EtherfuseBankAccountListResponse,
     EtherfuseAssetsResponse,
-    EtherfuseErrorResponse,
     EtherfuseOrderStatus,
     EtherfuseKycIdentityRequest,
     EtherfuseKycDocumentRequest,
@@ -61,7 +61,7 @@ import type {
  * (MXN → CETES) and off-ramp (CETES → MXN) transactions on the Stellar
  * network via Mexico's SPEI payment rail.
  */
-export class EtherfuseClient implements Anchor {
+export class EtherfuseClient extends BaseAnchorClient implements Anchor {
     readonly name = 'etherfuse';
     readonly capabilities: AnchorCapabilities = {
         kycUrl: true,
@@ -76,6 +76,10 @@ export class EtherfuseClient implements Anchor {
 
     /** @param config - API key, base URL, and optional defaults. */
     constructor(config: EtherfuseConfig) {
+        super({
+            baseUrl: config.baseUrl,
+            defaultHeaders: () => ({ Authorization: config.apiKey }),
+        });
         this.config = config;
         this.blockchain = config.defaultBlockchain || 'stellar';
     }
@@ -106,64 +110,6 @@ export class EtherfuseClient implements Anchor {
             identifiers.get(fromCurrency) ?? fromCurrency,
             identifiers.get(toCurrency) ?? toCurrency,
         ];
-    }
-
-    /**
-     * Send an authenticated JSON request to the Etherfuse API.
-     *
-     * @typeParam T - Expected response body type.
-     * @param method - HTTP method.
-     * @param endpoint - API path appended to {@link EtherfuseConfig.baseUrl}.
-     * @param body - Optional JSON request body.
-     * @returns Parsed response body.
-     * @throws {AnchorError} On non-2xx responses.
-     */
-    private async request<T>(
-        method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-        endpoint: string,
-        body?: unknown,
-    ): Promise<T> {
-        const url = `${this.config.baseUrl}${endpoint}`;
-
-        console.log(`[Etherfuse] ${method} ${url}`, body ? JSON.stringify(body) : '');
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: this.config.apiKey,
-            },
-            body: body ? JSON.stringify(body) : undefined,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[Etherfuse] Error ${response.status}:`, errorText);
-
-            let errorData: EtherfuseErrorResponse = {
-                error: { code: 'UNKNOWN_ERROR', message: '' },
-            };
-            try {
-                errorData = JSON.parse(errorText) as EtherfuseErrorResponse;
-            } catch {
-                // Not JSON
-            }
-
-            throw new AnchorError(
-                errorData.error?.message || errorText || `Etherfuse API error: ${response.status}`,
-                errorData.error?.code || 'UNKNOWN_ERROR',
-                response.status,
-            );
-        }
-
-        const text = await response.text();
-        console.log(`[Etherfuse] Response:`, text || '(empty)');
-
-        if (!text) {
-            return undefined as T;
-        }
-
-        return JSON.parse(text) as T;
     }
 
     // =========================================================================
@@ -798,27 +744,7 @@ export class EtherfuseClient implements Anchor {
      */
     async acceptAgreements(presignedUrl: string): Promise<unknown> {
         console.log(`[Etherfuse] POST ${presignedUrl} (accept agreements)`);
-
-        const response = await fetch(presignedUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: this.config.apiKey,
-            },
-            body: JSON.stringify({ acceptAll: true }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[Etherfuse] Error ${response.status}:`, errorText);
-            throw new AnchorError(
-                errorText || `Etherfuse API error: ${response.status}`,
-                'AGREEMENT_ERROR',
-                response.status,
-            );
-        }
-
-        return response.json();
+        return this.request('POST', presignedUrl, { acceptAll: true });
     }
 
     /**
@@ -830,10 +756,7 @@ export class EtherfuseClient implements Anchor {
      * @returns The HTTP status code from the Etherfuse API (200, 400, or 404).
      */
     async simulateFiatReceived(orderId: string): Promise<number> {
-        const url = `${this.config.baseUrl}/ramp/order/fiat_received`;
-        console.log(`[Etherfuse] POST ${url}`, JSON.stringify({ orderId }));
-
-        const response = await fetch(url, {
+        const response = await this.fetchWithRetry(this.buildUrl('/ramp/order/fiat_received'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

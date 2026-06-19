@@ -31,6 +31,7 @@ import type {
     TransactionStatus,
 } from '../types';
 import { AnchorError } from '../types';
+import { BaseAnchorClient } from '../base-anchor-client';
 import type {
     BlindPayConfig,
     BlindPayTosResponse,
@@ -42,7 +43,6 @@ import type {
     BlindPayPayoutAuthorizeResponse,
     BlindPayPayoutResponse,
     BlindPayPayinResponse,
-    BlindPayErrorResponse,
     BlindPayPayoutStatus,
     BlindPayPayinStatus,
     BlindPayReceiverStatus,
@@ -57,7 +57,7 @@ import type {
  * payin quotes, on-ramp (MXN → USDC) and off-ramp (USDC → MXN)
  * transactions on the Stellar network via Mexico's SPEI payment rail.
  */
-export class BlindPayClient implements Anchor {
+export class BlindPayClient extends BaseAnchorClient implements Anchor {
     readonly name = 'blindpay';
     readonly capabilities: AnchorCapabilities = {
         kycUrl: true,
@@ -75,6 +75,10 @@ export class BlindPayClient implements Anchor {
     private readonly network: string;
 
     constructor(config: BlindPayConfig) {
+        super({
+            baseUrl: config.baseUrl,
+            defaultHeaders: () => ({ Authorization: `Bearer ${config.apiKey}` }),
+        });
         this.config = config;
         this.network = config.network || 'stellar_testnet';
     }
@@ -190,57 +194,6 @@ export class BlindPayClient implements Anchor {
             createdAt: response.created_at,
             updatedAt: response.updated_at,
         };
-    }
-
-    /**
-     * Send an authenticated JSON request to the BlindPay API.
-     *
-     * @typeParam T - Expected response body type.
-     * @param method - HTTP method.
-     * @param endpoint - API path appended to base URL.
-     * @param body - Optional JSON request body.
-     * @returns Parsed response body.
-     * @throws {AnchorError} On non-2xx responses.
-     */
-    private async request<T>(
-        method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-        endpoint: string,
-        body?: unknown,
-    ): Promise<T> {
-        const url = `${this.config.baseUrl}${endpoint}`;
-
-        console.log(`[BlindPay] ${method} ${url}`, body ? JSON.stringify(body) : '');
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${this.config.apiKey}`,
-            },
-            body: body ? JSON.stringify(body) : undefined,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[BlindPay] Error ${response.status}:`, errorText);
-
-            let errorData: BlindPayErrorResponse = {};
-            try {
-                errorData = JSON.parse(errorText) as BlindPayErrorResponse;
-            } catch {
-                // Not JSON
-            }
-
-            throw new AnchorError(
-                errorData.error?.message || errorText || `BlindPay API error: ${response.status}`,
-                errorData.error?.code || 'UNKNOWN_ERROR',
-                response.status,
-            );
-        }
-
-        const data = await response.json();
-        console.log(`[BlindPay] Response:`, JSON.stringify(data));
-        return data as T;
     }
 
     // =========================================================================

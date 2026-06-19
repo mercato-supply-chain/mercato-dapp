@@ -25,6 +25,7 @@ import {
 } from '../sep/sep10';
 
 import { sep6, sep12, sep24, sep31, sep38 } from '../sep';
+import { BaseAnchorClient } from '../base-anchor-client';
 
 import type {
     Sep6Info,
@@ -65,18 +66,21 @@ const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
  * Provides a unified interface for interacting with the Stellar test anchor.
  * Handles authentication, token management, and all supported SEP operations.
  */
-export class TestAnchorClient {
+export class TestAnchorClient extends BaseAnchorClient {
     private domain: string;
     private networkPassphrase: string;
     private toml: StellarTomlRecord | null = null;
     private token: string | null = null;
     private account: string | null = null;
-    private fetchFn: typeof fetch;
+    private sepFetchFn: typeof fetch;
+
+    readonly name = 'testanchor';
 
     constructor(config: TestAnchorConfig = {}, fetchFn: typeof fetch = fetch) {
+        super({ baseUrl: `https://${config.domain || DEFAULT_DOMAIN}`, fetchFn });
         this.domain = config.domain || DEFAULT_DOMAIN;
         this.networkPassphrase = config.networkPassphrase || TESTNET_PASSPHRASE;
-        this.fetchFn = fetchFn;
+        this.sepFetchFn = this.createRetryingFetch();
     }
 
     // ===========================================================================
@@ -154,7 +158,7 @@ export class TestAnchorClient {
             account,
             signer,
             { validateChallenge: !!signingKey },
-            this.fetchFn,
+            this.sepFetchFn,
         );
 
         this.account = account;
@@ -217,7 +221,7 @@ export class TestAnchorClient {
         const kycServer = getSep12Endpoint(toml);
         if (!kycServer) throw new Error('Anchor does not support SEP-12');
 
-        return sep12.getCustomer(kycServer, this.requireAuth(), { type }, this.fetchFn);
+        return sep12.getCustomer(kycServer, this.requireAuth(), { type }, this.sepFetchFn);
     }
 
     /**
@@ -228,7 +232,7 @@ export class TestAnchorClient {
         const kycServer = getSep12Endpoint(toml);
         if (!kycServer) throw new Error('Anchor does not support SEP-12');
 
-        return sep12.putCustomer(kycServer, this.requireAuth(), data, this.fetchFn);
+        return sep12.putCustomer(kycServer, this.requireAuth(), data, this.sepFetchFn);
     }
 
     /**
@@ -239,7 +243,7 @@ export class TestAnchorClient {
         const kycServer = getSep12Endpoint(toml);
         if (!kycServer) throw new Error('Anchor does not support SEP-12');
 
-        return sep12.deleteCustomer(kycServer, this.requireAuth(), {}, this.fetchFn);
+        return sep12.deleteCustomer(kycServer, this.requireAuth(), {}, this.sepFetchFn);
     }
 
     // ===========================================================================
@@ -254,7 +258,7 @@ export class TestAnchorClient {
         const quoteServer = getSep38Endpoint(toml);
         if (!quoteServer) throw new Error('Anchor does not support SEP-38');
 
-        return sep38.getInfo(quoteServer, this.fetchFn);
+        return sep38.getInfo(quoteServer, this.sepFetchFn);
     }
 
     /**
@@ -265,7 +269,7 @@ export class TestAnchorClient {
         const quoteServer = getSep38Endpoint(toml);
         if (!quoteServer) throw new Error('Anchor does not support SEP-38');
 
-        return sep38.getPrice(quoteServer, request, this.fetchFn);
+        return sep38.getPrice(quoteServer, request, this.sepFetchFn);
     }
 
     /**
@@ -276,7 +280,7 @@ export class TestAnchorClient {
         const quoteServer = getSep38Endpoint(toml);
         if (!quoteServer) throw new Error('Anchor does not support SEP-38');
 
-        return sep38.postQuote(quoteServer, this.requireAuth(), request, this.fetchFn);
+        return sep38.postQuote(quoteServer, this.requireAuth(), request, this.sepFetchFn);
     }
 
     /**
@@ -287,7 +291,7 @@ export class TestAnchorClient {
         const quoteServer = getSep38Endpoint(toml);
         if (!quoteServer) throw new Error('Anchor does not support SEP-38');
 
-        return sep38.getQuote(quoteServer, this.requireAuth(), quoteId, this.fetchFn);
+        return sep38.getQuote(quoteServer, this.requireAuth(), quoteId, this.sepFetchFn);
     }
 
     // ===========================================================================
@@ -302,7 +306,7 @@ export class TestAnchorClient {
         const transferServer = getSep6Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-6');
 
-        return sep6.getInfo(transferServer, this.fetchFn);
+        return sep6.getInfo(transferServer, this.sepFetchFn);
     }
 
     /**
@@ -313,7 +317,7 @@ export class TestAnchorClient {
         const transferServer = getSep6Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-6');
 
-        return sep6.deposit(transferServer, this.requireAuth(), request, this.fetchFn);
+        return sep6.deposit(transferServer, this.requireAuth(), request, this.sepFetchFn);
     }
 
     /**
@@ -324,7 +328,7 @@ export class TestAnchorClient {
         const transferServer = getSep6Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-6');
 
-        return sep6.withdraw(transferServer, this.requireAuth(), request, this.fetchFn);
+        return sep6.withdraw(transferServer, this.requireAuth(), request, this.sepFetchFn);
     }
 
     /**
@@ -335,7 +339,7 @@ export class TestAnchorClient {
         const transferServer = getSep6Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-6');
 
-        return sep6.getTransaction(transferServer, this.requireAuth(), transactionId, this.fetchFn);
+        return sep6.getTransaction(transferServer, this.requireAuth(), transactionId, this.sepFetchFn);
     }
 
     /**
@@ -350,7 +354,7 @@ export class TestAnchorClient {
             transferServer,
             this.requireAuth(),
             { asset_code: assetCode, limit },
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -366,7 +370,7 @@ export class TestAnchorClient {
         const transferServer = getSep24Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-24');
 
-        return sep24.getInfo(transferServer, this.fetchFn);
+        return sep24.getInfo(transferServer, this.sepFetchFn);
     }
 
     /**
@@ -378,7 +382,7 @@ export class TestAnchorClient {
         const transferServer = getSep24Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-24');
 
-        return sep24.deposit(transferServer, this.requireAuth(), request, this.fetchFn);
+        return sep24.deposit(transferServer, this.requireAuth(), request, this.sepFetchFn);
     }
 
     /**
@@ -390,7 +394,7 @@ export class TestAnchorClient {
         const transferServer = getSep24Endpoint(toml);
         if (!transferServer) throw new Error('Anchor does not support SEP-24');
 
-        return sep24.withdraw(transferServer, this.requireAuth(), request, this.fetchFn);
+        return sep24.withdraw(transferServer, this.requireAuth(), request, this.sepFetchFn);
     }
 
     /**
@@ -405,7 +409,7 @@ export class TestAnchorClient {
             transferServer,
             this.requireAuth(),
             transactionId,
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -421,7 +425,7 @@ export class TestAnchorClient {
             transferServer,
             this.requireAuth(),
             { asset_code: assetCode, limit },
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -441,7 +445,7 @@ export class TestAnchorClient {
             this.requireAuth(),
             transactionId,
             { onStatusChange },
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -457,7 +461,7 @@ export class TestAnchorClient {
         const directPaymentServer = getSep31Endpoint(toml);
         if (!directPaymentServer) throw new Error('Anchor does not support SEP-31');
 
-        return sep31.getInfo(directPaymentServer, this.fetchFn);
+        return sep31.getInfo(directPaymentServer, this.sepFetchFn);
     }
 
     /**
@@ -474,7 +478,7 @@ export class TestAnchorClient {
             directPaymentServer,
             this.requireAuth(),
             request,
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -490,7 +494,7 @@ export class TestAnchorClient {
             directPaymentServer,
             this.requireAuth(),
             transactionId,
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -510,7 +514,7 @@ export class TestAnchorClient {
             this.requireAuth(),
             transactionId,
             fields,
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 
@@ -530,7 +534,7 @@ export class TestAnchorClient {
             this.requireAuth(),
             transactionId,
             { onStatusChange },
-            this.fetchFn,
+            this.sepFetchFn,
         );
     }
 }

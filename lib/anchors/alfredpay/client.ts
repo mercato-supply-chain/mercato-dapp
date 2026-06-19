@@ -37,6 +37,7 @@ import type {
     PaymentInstructions,
 } from '../types';
 import { AnchorError } from '../types';
+import { BaseAnchorClient } from '../base-anchor-client';
 import type {
     AlfredPayConfig,
     AlfredPayCreateCustomerResponse,
@@ -45,7 +46,6 @@ import type {
     AlfredPayOnRampResponse,
     AlfredPayOnRampFlatResponse,
     AlfredPayOffRampResponse,
-    AlfredPayErrorResponse,
     AlfredPayKycRequirementsResponse,
     AlfredPayKycSubmissionRequest,
     AlfredPayKycSubmissionResponse,
@@ -64,7 +64,7 @@ import type {
  * (MXN → USDC) and off-ramp (USDC → MXN) transactions on the Stellar network
  * via Mexico's SPEI payment rail.
  */
-export class AlfredPayClient implements Anchor {
+export class AlfredPayClient extends BaseAnchorClient implements Anchor {
     readonly name = 'alfredpay';
     readonly capabilities: AnchorCapabilities = {
         emailLookup: true,
@@ -77,61 +77,14 @@ export class AlfredPayClient implements Anchor {
 
     /** @param config - API credentials and base URL. */
     constructor(config: AlfredPayConfig) {
-        this.config = config;
-    }
-
-    /**
-     * Send an authenticated JSON request to the AlfredPay API.
-     *
-     * @typeParam T - Expected response body type.
-     * @param method - HTTP method.
-     * @param endpoint - API path appended to {@link AlfredPayConfig.baseUrl}.
-     * @param body - Optional JSON request body.
-     * @returns Parsed response body.
-     * @throws {AnchorError} On non-2xx responses.
-     */
-    private async request<T>(
-        method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-        endpoint: string,
-        body?: unknown,
-    ): Promise<T> {
-        const url = `${this.config.baseUrl}${endpoint}`;
-
-        console.log(`[AlfredPay] ${method} ${url}`, body ? JSON.stringify(body) : '');
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'api-key': this.config.apiKey,
-                'api-secret': this.config.apiSecret,
-            },
-            body: body ? JSON.stringify(body) : undefined,
+        super({
+            baseUrl: config.baseUrl,
+            defaultHeaders: () => ({
+                'api-key': config.apiKey,
+                'api-secret': config.apiSecret,
+            }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[AlfredPay] Error ${response.status}:`, errorText);
-
-            let errorData: AlfredPayErrorResponse = {
-                error: { code: 'UNKNOWN_ERROR', message: '' },
-            };
-            try {
-                errorData = JSON.parse(errorText) as AlfredPayErrorResponse;
-            } catch {
-                // Not JSON
-            }
-
-            throw new AnchorError(
-                errorData.error?.message || errorText || `AlfredPay API error: ${response.status}`,
-                errorData.error?.code || 'UNKNOWN_ERROR',
-                response.status,
-            );
-        }
-
-        const data = await response.json();
-        console.log(`[AlfredPay] Response:`, JSON.stringify(data));
-        return data as T;
+        this.config = config;
     }
 
     /**
@@ -728,46 +681,17 @@ export class AlfredPayClient implements Anchor {
         file: Blob,
         filename: string,
     ): Promise<AlfredPayKycFileResponse> {
-        const url = `${this.config.baseUrl}/customers/${customerId}/kyc/${submissionId}/files`;
-
-        console.log(`[AlfredPay] POST ${url} (file upload: ${fileType})`);
+        console.log(`[AlfredPay] POST /customers/${customerId}/kyc/${submissionId}/files (file upload: ${fileType})`);
 
         const formData = new FormData();
         formData.append('fileBody', file, filename);
         formData.append('fileType', fileType);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'api-key': this.config.apiKey,
-                'api-secret': this.config.apiSecret,
-            },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[AlfredPay] Error ${response.status}:`, errorText);
-
-            let errorData: AlfredPayErrorResponse = {
-                error: { code: 'UNKNOWN_ERROR', message: '' },
-            };
-            try {
-                errorData = JSON.parse(errorText) as AlfredPayErrorResponse;
-            } catch {
-                // Not JSON
-            }
-
-            throw new AnchorError(
-                errorData.error?.message || errorText || `AlfredPay API error: ${response.status}`,
-                errorData.error?.code || 'UNKNOWN_ERROR',
-                response.status,
-            );
-        }
-
-        const data = await response.json();
-        console.log(`[AlfredPay] Response:`, JSON.stringify(data));
-        return data as AlfredPayKycFileResponse;
+        return this.requestRaw<AlfredPayKycFileResponse>(
+            'POST',
+            `/customers/${customerId}/kyc/${submissionId}/files`,
+            formData,
+        );
     }
 
     // ========== Sandbox-only methods ==========
