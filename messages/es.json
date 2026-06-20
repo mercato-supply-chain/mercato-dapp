@@ -2034,7 +2034,24 @@
       "description": "Haz trabajar USDC ocioso entre órdenes — o crea una cuenta y explora órdenes de compra activas.",
       "primaryCta": "Abrir vault de Mercato",
       "secondaryCta": "Crear cuenta",
-      "tertiaryCta": "Ver órdenes"
+      "tertiaryCta": "Ver órdenes",
+      "pyme": {
+        "title": "¿Listo para financiar tu próxima orden de compra?",
+        "description": "Crea una orden y deja que los inversionistas financien tu inventario — lo pagas tras tu ciclo de ventas.",
+        "primaryCta": "Crear una orden",
+        "secondaryCta": "Ver órdenes"
+      },
+      "supplier": {
+        "title": "¿Listo para ganar más órdenes de compra?",
+        "description": "Configura tu perfil de proveedor para que las PyMEs te encuentren, confíen en ti y te compren.",
+        "primaryCta": "Configura tu perfil",
+        "secondaryCta": "Explorar proveedores"
+      },
+      "all": {
+        "title": "¿Listo para empezar en Mercato?",
+        "description": "Seas PyME, proveedor o inversionista, hay un lugar para ti en Mercato.",
+        "primaryCta": "Crear cuenta"
+      }
     },
     "liveDeals": {
       "badgeLive": "En vivo en Mercato",

@@ -3,6 +3,7 @@ import { BlogEndCta } from '@/components/blog/blog-end-cta'
 import { BlogArticleBody } from '@/components/blog/blog-article-body'
 import { BlogBreadcrumbs, BlogLayout } from '@/components/blog/blog-layout'
 import { BlogPostCard } from '@/components/blog/blog-post-card'
+import { BlogIndexExplorer, type BlogExplorerCopy } from '@/components/blog/blog-index-explorer'
 import { Button } from '@/components/ui/button'
 import { getAllBlogPosts } from '@/lib/blog/posts'
 import { getBlogLocaleContent } from '@/lib/blog/content'
@@ -12,23 +13,61 @@ import { ArrowRight } from 'lucide-react'
 const COPY = {
   en: {
     title: 'Mercato Blog',
+    tagline: 'Learn · Grow · Succeed',
     subtitle:
-      'Plain-language guides on vaults, yield, and supply chain finance — written for investors who do not live in crypto Twitter.',
-    vaultSeries: 'DeFindex vault series',
-    vaultSeriesDesc:
-      'New to vaults? Start here. We explain what they are, where yield comes from, and how they fit alongside deal investing on Mercato.',
-    allArticles: 'All articles',
+      'Plain-language guides on supply chain finance for PyMEs, suppliers, and investors — no crypto background required.',
+    howItWorks: 'How Mercato works',
     openVault: 'Open Mercato vault',
+    explorer: {
+      tabs: { all: 'All', pyme: 'PyMEs', supplier: 'Suppliers', investor: 'Investors' },
+      sections: {
+        pyme: {
+          title: 'For PyMEs',
+          description:
+            'Practical guides for buyers: create deals, understand purchase order financing, and how escrow protects your business.',
+        },
+        supplier: {
+          title: 'For Suppliers',
+          description:
+            'For suppliers: set up your profile, showcase your products, and see how purchase order deals pay you.',
+        },
+        investor: {
+          title: 'For Investors',
+          description:
+            'New to vaults and deals? Learn where yield comes from and how to put idle USDC to work between deals.',
+        },
+      },
+      empty: 'No articles for this audience yet — check back soon.',
+    } satisfies BlogExplorerCopy,
   },
   es: {
     title: 'Blog de Mercato',
+    tagline: 'Aprende · Crece · Triunfa',
     subtitle:
-      'Guías en lenguaje claro sobre vaults, rendimiento y financiamiento de cadena de suministro — para inversionistas fuera del mundo crypto.',
-    vaultSeries: 'Serie DeFindex vault',
-    vaultSeriesDesc:
-      '¿Nuevo en vaults? Empieza aquí. Explicamos qué son, de dónde sale el rendimiento y cómo encajan con invertir en órdenes.',
-    allArticles: 'Todos los artículos',
+      'Guías en lenguaje claro sobre financiamiento de cadena de suministro para PyMEs, proveedores e inversionistas.',
+    howItWorks: 'Cómo funciona Mercato',
     openVault: 'Abrir vault de Mercato',
+    explorer: {
+      tabs: { all: 'Todas', pyme: 'PyMEs', supplier: 'Proveedores', investor: 'Inversionistas' },
+      sections: {
+        pyme: {
+          title: 'Para PyMEs',
+          description:
+            'Guías prácticas para compradores: crea órdenes, entiende el financiamiento de órdenes de compra y cómo el escrow protege tu negocio.',
+        },
+        supplier: {
+          title: 'Para proveedores',
+          description:
+            'Para proveedores: configura tu perfil, muestra tus productos y descubre cómo te pagan las órdenes de compra.',
+        },
+        investor: {
+          title: 'Para inversionistas',
+          description:
+            '¿Nuevo en vaults y órdenes? Aprende de dónde sale el rendimiento y cómo poner a trabajar USDC ocioso entre órdenes.',
+        },
+      },
+      empty: 'Aún no hay artículos para esta audiencia — vuelve pronto.',
+    } satisfies BlogExplorerCopy,
   },
 } as const
 
@@ -36,7 +75,6 @@ export async function BlogIndexView() {
   const locale = await getServerLocale()
   const copy = COPY[locale]
   const posts = getAllBlogPosts()
-  const vaultPosts = posts.filter((post) => post.category === 'vault')
 
   return (
     <BlogLayout>
@@ -45,7 +83,7 @@ export async function BlogIndexView() {
 
         <div className="mb-12 max-w-3xl">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
-            Learn · Earn · Invest
+            {copy.tagline}
           </p>
           <h1 className="font-display text-4xl font-normal tracking-tight sm:text-5xl">{copy.title}</h1>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{copy.subtitle}</p>
@@ -57,31 +95,14 @@ export async function BlogIndexView() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full">
-              <Link href="/how-it-works">How Mercato works</Link>
+              <Link href="/how-it-works">{copy.howItWorks}</Link>
             </Button>
           </div>
         </div>
 
-        <section className="mb-14">
-          <h2 className="mb-2 font-display text-2xl font-normal tracking-tight">{copy.vaultSeries}</h2>
-          <p className="mb-6 max-w-2xl text-sm text-muted-foreground">{copy.vaultSeriesDesc}</p>
-          <div className="grid gap-5 md:grid-cols-2">
-            {vaultPosts.map((post) => (
-              <BlogPostCard key={post.slug} post={post} locale={locale} />
-            ))}
-          </div>
-        </section>
+        <BlogIndexExplorer posts={posts} locale={locale} copy={copy.explorer} />
 
-        <section>
-          <h2 className="mb-6 font-display text-2xl font-normal tracking-tight">{copy.allArticles}</h2>
-          <div className="grid gap-5 md:grid-cols-2">
-            {posts.map((post) => (
-              <BlogPostCard key={post.slug} post={post} locale={locale} />
-            ))}
-          </div>
-        </section>
-
-        <BlogEndCta />
+        <BlogEndCta audience="all" />
       </main>
     </BlogLayout>
   )
@@ -128,14 +149,7 @@ export async function BlogPostView({ slug }: { slug: string }) {
 
         <BlogArticleBody sections={content.sections} />
 
-        <div className="mt-12 flex flex-wrap gap-3 border-t border-border/60 pt-8">
-          <Button asChild className="rounded-full bg-emerald-600 hover:bg-emerald-700">
-            <Link href="/dashboard/vault">Try the Mercato vault</Link>
-          </Button>
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/blog">More articles</Link>
-          </Button>
-        </div>
+        <BlogEndCta audience={post.audience} />
 
         {related.length > 0 && (
           <section className="mt-16">

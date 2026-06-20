@@ -4,9 +4,57 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n/provider'
+import type { BlogAudience } from '@/lib/blog/types'
 
-export function BlogEndCta() {
+type CtaLink = { href: string; labelKey: string }
+
+type CtaConfig = {
+  titleKey: string
+  descriptionKey: string
+  primary: CtaLink
+  secondary: CtaLink[]
+}
+
+const CTA_BY_AUDIENCE: Record<BlogAudience, CtaConfig> = {
+  investor: {
+    titleKey: 'landing.blogEndCta.title',
+    descriptionKey: 'landing.blogEndCta.description',
+    primary: { href: '/dashboard/vault', labelKey: 'landing.blogEndCta.primaryCta' },
+    secondary: [
+      { href: '/auth/sign-up', labelKey: 'landing.blogEndCta.secondaryCta' },
+      { href: '/deals', labelKey: 'landing.blogEndCta.tertiaryCta' },
+    ],
+  },
+  pyme: {
+    titleKey: 'landing.blogEndCta.pyme.title',
+    descriptionKey: 'landing.blogEndCta.pyme.description',
+    primary: { href: '/create-deal', labelKey: 'landing.blogEndCta.pyme.primaryCta' },
+    secondary: [{ href: '/deals', labelKey: 'landing.blogEndCta.pyme.secondaryCta' }],
+  },
+  supplier: {
+    titleKey: 'landing.blogEndCta.supplier.title',
+    descriptionKey: 'landing.blogEndCta.supplier.description',
+    primary: {
+      href: '/dashboard/supplier-profile',
+      labelKey: 'landing.blogEndCta.supplier.primaryCta',
+    },
+    secondary: [{ href: '/suppliers', labelKey: 'landing.blogEndCta.supplier.secondaryCta' }],
+  },
+  all: {
+    titleKey: 'landing.blogEndCta.all.title',
+    descriptionKey: 'landing.blogEndCta.all.description',
+    primary: { href: '/auth/sign-up', labelKey: 'landing.blogEndCta.all.primaryCta' },
+    secondary: [
+      { href: '/create-deal', labelKey: 'landing.blogEndCta.pyme.primaryCta' },
+      { href: '/dashboard/supplier-profile', labelKey: 'landing.blogEndCta.supplier.primaryCta' },
+      { href: '/dashboard/vault', labelKey: 'landing.blogEndCta.primaryCta' },
+    ],
+  },
+}
+
+export function BlogEndCta({ audience = 'all' }: { audience?: BlogAudience }) {
   const { t } = useI18n()
+  const config = CTA_BY_AUDIENCE[audience]
 
   return (
     <section
@@ -22,27 +70,36 @@ export function BlogEndCta() {
             id="blog-end-cta-heading"
             className="font-display text-2xl font-normal tracking-tight text-balance sm:text-3xl"
           >
-            {t('landing.blogEndCta.title')}
+            {t(config.titleKey)}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            {t('landing.blogEndCta.description')}
+            {t(config.descriptionKey)}
           </p>
         </div>
 
         <div className="flex shrink-0 flex-col gap-2.5 sm:items-end">
           <Button asChild className="h-11 rounded-full bg-emerald-600 px-6 hover:bg-emerald-700">
-            <Link href="/dashboard/vault">
-              {t('landing.blogEndCta.primaryCta')}
+            <Link href={config.primary.href}>
+              {t(config.primary.labelKey)}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </Link>
           </Button>
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Button asChild variant="outline" size="sm" className="rounded-full">
-              <Link href="/auth/sign-up">{t('landing.blogEndCta.secondaryCta')}</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="rounded-full text-muted-foreground">
-              <Link href="/deals">{t('landing.blogEndCta.tertiaryCta')}</Link>
-            </Button>
+            {config.secondary.map((link, index) => (
+              <Button
+                key={link.href}
+                asChild
+                variant={index === 0 ? 'outline' : 'ghost'}
+                size="sm"
+                className={
+                  index === 0
+                    ? 'rounded-full'
+                    : 'rounded-full text-muted-foreground'
+                }
+              >
+                <Link href={link.href}>{t(link.labelKey)}</Link>
+              </Button>
+            ))}
           </div>
         </div>
       </div>

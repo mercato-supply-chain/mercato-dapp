@@ -2034,7 +2034,24 @@
       "description": "Put idle USDC to work between deals — or create an account and explore live purchase orders.",
       "primaryCta": "Open Mercato vault",
       "secondaryCta": "Create account",
-      "tertiaryCta": "Browse deals"
+      "tertiaryCta": "Browse deals",
+      "pyme": {
+        "title": "Ready to fund your next purchase order?",
+        "description": "Create a deal and let investors fund your inventory — repaid after your sales cycle.",
+        "primaryCta": "Create a deal",
+        "secondaryCta": "Browse deals"
+      },
+      "supplier": {
+        "title": "Ready to win more purchase orders?",
+        "description": "Set up your supplier profile so PyMEs can find, trust, and source from you.",
+        "primaryCta": "Set up your profile",
+        "secondaryCta": "Explore suppliers"
+      },
+      "all": {
+        "title": "Ready to get started on Mercato?",
+        "description": "Whether you are a PyME, a supplier, or an investor, there is a place for you on Mercato.",
+        "primaryCta": "Create account"
+      }
     },
     "liveDeals": {
       "badgeLive": "Live on Mercato",

@@ -6,12 +6,13 @@ import { getServerLocale } from '@/lib/i18n/server'
 
 export async function generateMetadata() {
   return {
-    title: 'Blog | Mercato — Vault Guides & Supply Chain Finance',
+    title: 'Blog | Mercato — Supply Chain Finance Guides',
     description:
-      'Plain-language articles on DeFindex vaults, yield, and how Mercato helps investors earn on idle USDC between deals.',
+      'Educational guides on supply chain finance, purchase order deals, and the Mercato platform — for PyMEs, suppliers, and investors.',
     openGraph: {
       title: 'Mercato Blog',
-      description: 'Educational guides on vaults, yield, and supply chain finance for non-crypto investors.',
+      description:
+        'Educational guides on supply chain finance, purchase order deals, and the Mercato platform — for PyMEs, suppliers, and investors.',
       url: 'https://mercato.app/blog',
       type: 'website',
     },
@@ -33,7 +34,8 @@ export default async function BlogPage() {
     '@context': 'https://schema.org',
     '@type': 'Blog',
     name: 'Mercato Blog',
-    description: 'Educational content on DeFindex vaults and supply chain finance.',
+    description:
+      'Educational guides on supply chain finance, purchase order deals, and the Mercato platform — for PyMEs, suppliers, and investors.',
     url: 'https://mercato.app/blog',
     publisher: { '@type': 'Organization', name: 'Mercato' },
     blogPost: posts.map((post) => {
