@@ -11,6 +11,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
     overflow-x: hidden;
   }
 
@@ -231,7 +232,7 @@
 
 /* Landing in-page nav targets (sticky header offset) */
 .landing-section-anchor {
-  scroll-margin-top: 5.5rem;
+  scroll-margin-top: 6rem;
 }
 
 /* ─── Hero ambient glow animation ──────────────────────── */
