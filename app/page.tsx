@@ -7,6 +7,7 @@ import { LandingLiveDeals } from '@/components/landing/landing-live-deals'
 import { LandingFaq } from '@/components/landing/landing-faq'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
+import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { JsonLd } from '@/components/seo/json-ld'
 import { getLandingPlatformStats } from '@/lib/landing/get-platform-stats'
 
@@ -66,6 +67,8 @@ export default async function HomePage() {
       </section>
 
       <LandingFaq />
+
+      <LandingPartnersStrip />
 
       <LandingFooter />
     </div>
