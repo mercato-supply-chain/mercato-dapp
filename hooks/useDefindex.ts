@@ -28,7 +28,6 @@ export const useDefindex = (options?: UseDefindexOptions) => {
     vaultMeta,
     vaultInfoError,
     vaultMetaRef,
-    fetchVaultMeta,
     fetchVaultMetaRef,
     setVaultMeta,
     setVaultInfoError,
