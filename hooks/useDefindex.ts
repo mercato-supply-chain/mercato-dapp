@@ -7,7 +7,15 @@ import { useWallet } from '@/hooks/use-wallet'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { PollarWalletKitLimitations } from '@/lib/mercato-wallet'
 import type { SendTransactionResponse } from '@defindex/sdk'
-import { createDedupedFetcher } from '@/lib/client/deduped-fetch'
+import {
+  readErrorMessage,
+  hasClientVaultConfigured,
+  vaultMetaRequest,
+  vaultBalanceRequest,
+  sacBalanceRequest,
+  invalidateVaultDataCache,
+  isRateLimitMessage,
+} from '@/lib/defindex/vault-cache'
 
 type VaultAction<TArgs extends unknown[] = unknown[], TResult = unknown> = (
   ...args: TArgs
@@ -36,91 +44,6 @@ export type MercatoVaultMeta = {
   }
   assetRows?: VaultMonitorAssetRow[]
   explorerContractUrl?: string
-}
-
-type BalanceApiOk = {
-  underlyingTotal: number
-  underlyingTotalRaw?: number
-  dfTokens: number
-  vaultAddress: string
-  network: string
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { error?: unknown }
-    if (typeof data?.error === 'string' && data.error) return data.error
-  } catch {
-    /* ignore */
-  }
-  return `Request failed (${response.status})`
-}
-
-/** Skip hammering the API when the browser has no public vault id (same as MercatoVaultActions). */
-function hasClientVaultConfigured(): boolean {
-  if (typeof process === 'undefined') return false
-  return Boolean(
-    process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
-      process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim()
-  )
-}
-
-const vaultMetaRequest = createDedupedFetcher(
-  async (): Promise<MercatoVaultMeta> => {
-    const response = await fetch('/api/defindex/vault', { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as MercatoVaultMeta
-  },
-  () => 'vault-meta',
-  60_000,
-)
-
-const vaultBalanceRequest = createDedupedFetcher(
-  async (address: string): Promise<BalanceApiOk> => {
-    const url = new URL('/api/defindex/balance', window.location.origin)
-    url.searchParams.set('caller', address)
-    const response = await fetch(url.toString(), { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as BalanceApiOk
-  },
-  (address) => `vault-balance:${address}`,
-  8_000,
-)
-
-type SacBalancePayload = {
-  displayBalance?: number
-  rawBalance?: string
-}
-
-const sacBalanceRequest = createDedupedFetcher(
-  async (address: string, assetContract: string): Promise<SacBalancePayload> => {
-    const url = new URL('/api/stellar/sac-balance', window.location.origin)
-    url.searchParams.set('account', address)
-    url.searchParams.set('assetContract', assetContract)
-    const response = await fetch(url.toString(), { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as SacBalancePayload
-  },
-  (address, assetContract) => `sac-balance:${address}:${assetContract}`,
-  20_000,
-)
-
-function invalidateVaultDataCache(address: string, assetContract?: string) {
-  vaultMetaRequest.invalidate()
-  vaultBalanceRequest.invalidate(address)
-  if (assetContract) {
-    sacBalanceRequest.invalidate(address, assetContract)
-  }
-}
-
-function isRateLimitMessage(message: string): boolean {
-  return /rate limit/i.test(message)
 }
 
 export const useDefindex = (options?: UseDefindexOptions) => {
