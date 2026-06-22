@@ -20,7 +20,7 @@ interface DeployEscrowParams {
 }
 
 interface CreateDealParams {
-  userId: string
+  userId: string | null
   signerAddress: string
   supplierId: string
   productName: string
@@ -140,6 +140,11 @@ export function useCreateDealSubmit() {
     setError(null)
 
     try {
+      if (!params.userId) return { ok: false, error: 'User not authenticated' }
+      if (!params.signerAddress) throw new Error('Wallet not connected')
+      if (!MERCATO_PLATFORM_ADDRESS) throw new Error('Platform address not configured')
+      if (!USDC_TRUSTLINE.address) throw new Error('USDC trustline not configured')
+
       const { data: company } = await supabase
         .from('supplier_companies')
         .select('id, address, owner_id')
