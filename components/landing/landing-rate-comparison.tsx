@@ -36,7 +36,7 @@ type FinancingOption = {
 
 const RATE_SCALE_MAX = 120
 
-function useFinancingOptions(t: (key: string) => string): FinancingOption[] {
+function getFinancingOptions(t: (key: string) => string): FinancingOption[] {
   return [
     {
       id: 'mercato',
@@ -161,7 +161,7 @@ function AccessPill({ level, t }: { level: AccessLevel; t: (key: string) => stri
 export function LandingRateComparison() {
   const { t } = useI18n()
   const { ref, visible } = useReveal<HTMLElement>(0.08)
-  const financingOptions = React.useMemo(() => useFinancingOptions(t), [t])
+  const financingOptions = React.useMemo(() => getFinancingOptions(t), [t])
   
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'center' }, [Autoplay({ delay: 5000 })])
   const [selectedIndex, setSelectedIndex] = React.useState(0)
