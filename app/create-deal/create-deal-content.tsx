@@ -40,7 +40,7 @@ export default function CreateDealContent() {
   const router = useRouter()
   const supabase = createClient()
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
-  const { deployAndSignEscrow } = useCreateDealSubmit()
+  const { createDealAndEscrow } = useCreateDealSubmit()
   const [currentStep, setCurrentStep] = useState<FormStep>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -227,102 +227,34 @@ export default function CreateDealContent() {
 
     setIsLoading(true)
     try {
-      const { data: company } = await supabase
-        .from('supplier_companies')
-        .select('id, address, owner_id')
-        .eq('id', formData.supplierId)
-        .single()
-
-      const supplierAddress = company?.address?.trim()
-      if (!supplierAddress) {
-        toast.error(
-          t('createDeal.supplierWalletMissing')
-        )
-        setIsLoading(false)
-        return
-      }
-
-      const { data: ownerProfile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', company?.owner_id)
-        .single()
-
-      const productName = selectedProduct.name
-      const productUnitPrice = Number(selectedProduct.price_per_unit)
-      const fundingExpiresAt = new Date(
-        Date.now() + fundingWindowDays * 24 * 60 * 60 * 1000
-      ).toISOString()
-
-      const { data: deal, error: dealError } = await supabase
-        .from('deals')
-        .insert({
-          pyme_id: userId,
-          title: productName,
-          description: formData.description || selectedProduct.description || t('createDeal.missingDescription'),
-          product_name: productName,
-          product_quantity: Number(formData.quantity),
-          product_unit_price: productUnitPrice,
-          amount: totalAmount,
-          term_days: Number(formData.term),
-          interest_rate: effectiveAPR,
-          yield_bonus_apr: yieldBonusApr,
-          category: formData.category || selectedProduct.category || 'other',
-          status: 'seeking_funding',
-          supplier_id: formData.supplierId,
-          supplier_name: formData.supplierName,
-          supplier_email: ownerProfile?.email ?? null,
-          supplier_contact: formData.supplierContact || null,
-          platform_fee: 2.5,
-          funding_window_days: fundingWindowDays,
-          funding_expires_at: fundingExpiresAt,
-          extension_count: 0,
-        })
-        .select()
-        .single()
-
-      if (dealError) throw dealError
-
-      const milestones = formData.milestones.map((m) => {
-        const pct = Number(m.percentage)
-        const amount = (totalAmount * pct) / 100
-        return {
-          deal_id: deal.id,
-          title: m.name.trim(),
-          description: `${m.name.trim()} — ${m.percentage}% of deal amount`,
-          percentage: pct,
-          amount,
-          status: 'pending' as const,
-        }
-      })
-
-      const { error: milestonesError } = await supabase
-        .from('milestones')
-        .insert(milestones)
-
-      if (milestonesError) throw milestonesError
-
-      const { contractId } = await deployAndSignEscrow({
-        dealId: deal.id,
+      const { dealId, contractId } = await createDealAndEscrow({
+        userId,
         signerAddress,
-        supplierAddress,
-        productName,
+        supplierId: formData.supplierId,
+        productName: selectedProduct.name,
         description: formData.description || selectedProduct.description || t('createDeal.missingDescription'),
-        milestones: milestones.map((m) => ({
-          title: m.title,
-          amount: Math.round(m.amount * 100) / 100,
-        })),
+        productQuantity: Number(formData.quantity),
+        productUnitPrice: Number(selectedProduct.price_per_unit),
+        totalAmount,
+        termDays: Number(formData.term),
+        effectiveAPR,
+        yieldBonusApr,
+        category: formData.category || selectedProduct.category || 'other',
+        supplierName: formData.supplierName,
+        supplierContact: formData.supplierContact || null,
+        fundingWindowDays,
+        milestones: formData.milestones,
         provider,
       })
 
       await supabase
         .from('deals')
         .update({
-          escrow_id: deal.id,
+          escrow_id: dealId,
           escrow_contract_address: contractId ?? null,
           escrow_status: 'initialized',
         })
-        .eq('id', deal.id)
+        .eq('id', dealId)
 
       toast.success(t('createDeal.success'))
       router.push('/dashboard')
