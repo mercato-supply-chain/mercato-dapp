@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { normalizeUSDC } from '@/lib/format'
 import { getAvailableCapital } from '@/lib/capital'
 import { useWallet } from '@/hooks/use-wallet'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { PollarWalletKitLimitations } from '@/lib/mercato-wallet'
 import type { SendTransactionResponse } from '@defindex/sdk'
-import { createDedupedFetcher } from '@/lib/client/deduped-fetch'
+import { readErrorMessage, invalidateVaultDataCache } from '@/lib/defindex/vault-cache'
+import { useVaultMeta } from '@/hooks/use-vault-meta'
+import { useVaultBalance } from '@/hooks/use-vault-balance'
 
 type VaultAction<TArgs extends unknown[] = unknown[], TResult = unknown> = (
   ...args: TArgs
@@ -18,249 +20,35 @@ interface UseDefindexOptions {
   withdrawFromVaultAction?: VaultAction
 }
 
-import type { VaultMonitorAssetRow } from '@/lib/defindex/vault-monitor'
-
-export type MercatoVaultMeta = {
-  vaultAddress: string
-  network: string
-  name: string
-  symbol: string
-  apy: number
-  feesBps: { vaultFee: number; defindexFee: number }
-  assets?: Array<{ address: string; name?: string; symbol?: string; strategies?: unknown[] }>
-  totals?: {
-    tvlDisplay: number
-    idleDisplay: number
-    investedDisplay: number
-    idlePercent: number
-  }
-  assetRows?: VaultMonitorAssetRow[]
-  explorerContractUrl?: string
-}
-
-type BalanceApiOk = {
-  underlyingTotal: number
-  underlyingTotalRaw?: number
-  dfTokens: number
-  vaultAddress: string
-  network: string
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { error?: unknown }
-    if (typeof data?.error === 'string' && data.error) return data.error
-  } catch {
-    /* ignore */
-  }
-  return `Request failed (${response.status})`
-}
-
-/** Skip hammering the API when the browser has no public vault id (same as MercatoVaultActions). */
-function hasClientVaultConfigured(): boolean {
-  if (typeof process === 'undefined') return false
-  return Boolean(
-    process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
-      process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim()
-  )
-}
-
-const vaultMetaRequest = createDedupedFetcher(
-  async (): Promise<MercatoVaultMeta> => {
-    const response = await fetch('/api/defindex/vault', { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as MercatoVaultMeta
-  },
-  () => 'vault-meta',
-  60_000,
-)
-
-const vaultBalanceRequest = createDedupedFetcher(
-  async (address: string): Promise<BalanceApiOk> => {
-    const url = new URL('/api/defindex/balance', window.location.origin)
-    url.searchParams.set('caller', address)
-    const response = await fetch(url.toString(), { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as BalanceApiOk
-  },
-  (address) => `vault-balance:${address}`,
-  8_000,
-)
-
-type SacBalancePayload = {
-  displayBalance?: number
-  rawBalance?: string
-}
-
-const sacBalanceRequest = createDedupedFetcher(
-  async (address: string, assetContract: string): Promise<SacBalancePayload> => {
-    const url = new URL('/api/stellar/sac-balance', window.location.origin)
-    url.searchParams.set('account', address)
-    url.searchParams.set('assetContract', assetContract)
-    const response = await fetch(url.toString(), { credentials: 'include' })
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response))
-    }
-    return (await response.json()) as SacBalancePayload
-  },
-  (address, assetContract) => `sac-balance:${address}:${assetContract}`,
-  20_000,
-)
-
-function invalidateVaultDataCache(address: string, assetContract?: string) {
-  vaultMetaRequest.invalidate()
-  vaultBalanceRequest.invalidate(address)
-  if (assetContract) {
-    sacBalanceRequest.invalidate(address, assetContract)
-  }
-}
-
-function isRateLimitMessage(message: string): boolean {
-  return /rate limit/i.test(message)
-}
+export type { MercatoVaultMeta } from '@/hooks/use-vault-meta'
 
 export const useDefindex = (options?: UseDefindexOptions) => {
   const { walletInfo, refreshBalance, canSignTransactions } = useWallet()
-  const [walletBalance, setWalletBalance] = useState(0)
-  const [walletRawBalance, setWalletRawBalance] = useState(0)
-  const [vaultBalance, setVaultBalance] = useState(0)
-  const [vaultRawBalance, setVaultRawBalance] = useState(0)
-  const [dfTokens, setDfTokens] = useState(0)
-  const [vaultMeta, setVaultMeta] = useState<MercatoVaultMeta | null>(null)
-  const [isLoadingBalances, setIsLoadingBalances] = useState(false)
-  const [balanceError, setBalanceError] = useState<string | null>(null)
-  const [vaultInfoError, setVaultInfoError] = useState<string | null>(null)
-  const vaultMetaRef = useRef<MercatoVaultMeta | null>(null)
-  vaultMetaRef.current = vaultMeta
-  const walletBalanceRef = useRef(0)
-  walletBalanceRef.current = walletBalance
-  const walletRawBalanceRef = useRef(0)
-  walletRawBalanceRef.current = walletRawBalance
-  const vaultBalanceRef = useRef(0)
-  vaultBalanceRef.current = vaultBalance
-  const vaultRawBalanceRef = useRef(0)
-  vaultRawBalanceRef.current = vaultRawBalance
-
-  const fetchVaultMeta = useCallback(async (): Promise<MercatoVaultMeta | null> => {
-    if (!hasClientVaultConfigured()) {
-      setVaultInfoError(null)
-      setVaultMeta(null)
-      return null
-    }
-    try {
-      const data = await vaultMetaRequest.fetch()
-      setVaultInfoError(null)
-      setVaultMeta(data)
-      return data
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load vault metadata.'
-      if (!isRateLimitMessage(message) || !vaultMetaRef.current) {
-        setVaultInfoError(message)
-      }
-      return vaultMetaRef.current
-    }
-  }, [])
-
-  const getVaultAssetBalance = useCallback(
-    async (address: string, assetContract: string | undefined): Promise<number> => {
-      if (!address || !assetContract) {
-        setWalletBalance(0)
-        setWalletRawBalance(0)
-        return 0
-      }
-
-      try {
-        const payload = await sacBalanceRequest.fetch(address, assetContract)
-        const normalized = normalizeUSDC(payload.displayBalance ?? 0)
-        const raw =
-          typeof payload.rawBalance === 'string' && payload.rawBalance
-            ? Number(payload.rawBalance)
-            : 0
-        setWalletBalance(normalized)
-        setWalletRawBalance(Number.isFinite(raw) ? raw : 0)
-        return normalized
-      } catch {
-        if (walletRawBalanceRef.current > 0) {
-          return walletBalanceRef.current
-        }
-        setWalletBalance(0)
-        setWalletRawBalance(0)
-        return 0
-      }
-    },
-    [],
-  )
-
-  const getVaultBalance = useCallback(async (address: string): Promise<number> => {
-    if (!address) {
-      setVaultBalance(0)
-      setVaultRawBalance(0)
-      setDfTokens(0)
-      return 0
-    }
-
-    if (!hasClientVaultConfigured()) {
-      setBalanceError(null)
-      setVaultBalance(0)
-      setVaultRawBalance(0)
-      setDfTokens(0)
-      return 0
-    }
-
-    try {
-      setBalanceError(null)
-      const payload = await vaultBalanceRequest.fetch(address)
-      const normalized = normalizeUSDC(payload.underlyingTotal ?? 0)
-      const rawTotal =
-        typeof payload.underlyingTotalRaw === 'number' && Number.isFinite(payload.underlyingTotalRaw)
-          ? payload.underlyingTotalRaw
-          : 0
-      setVaultBalance(normalized)
-      setVaultRawBalance(rawTotal)
-      setDfTokens(
-        typeof payload.dfTokens === 'number' && Number.isFinite(payload.dfTokens)
-          ? payload.dfTokens
-          : 0
-      )
-      return normalized
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Failed to load Mercato vault balance'
-      if (!isRateLimitMessage(message)) {
-        setBalanceError(message)
-        setVaultBalance(0)
-        setVaultRawBalance(0)
-        setDfTokens(0)
-        return 0
-      }
-      return vaultBalanceRef.current
-    }
-  }, [])
-
-  const loadUserBalances = useCallback(
-    async (address: string, assetContract?: string) => {
-      setIsLoadingBalances(true)
-      try {
-        const [vaultAmt, walletAmt] = await Promise.all([
-          getVaultBalance(address),
-          getVaultAssetBalance(address, assetContract),
-        ])
-        return {
-          vaultBalance: normalizeUSDC(vaultAmt),
-          walletBalance: normalizeUSDC(walletAmt),
-        }
-      } finally {
-        setIsLoadingBalances(false)
-      }
-    },
-    [getVaultAssetBalance, getVaultBalance],
-  )
+  const {
+    vaultMeta,
+    vaultInfoError,
+    vaultMetaRef,
+    fetchVaultMetaRef,
+    setVaultMeta,
+    setVaultInfoError,
+  } = useVaultMeta()
+  const {
+    walletBalance,
+    walletRawBalance,
+    vaultBalance,
+    vaultRawBalance,
+    dfTokens,
+    isLoadingBalances,
+    balanceError,
+    setWalletBalance,
+    setWalletRawBalance,
+    setVaultBalance,
+    setVaultRawBalance,
+    setDfTokens,
+    setBalanceError,
+    getVaultBalance,
+    loadUserBalancesRef,
+  } = useVaultBalance()
 
   const signAndSubmit = useCallback(
     async (
@@ -382,12 +170,6 @@ export const useDefindex = (options?: UseDefindexOptions) => {
   const refreshBalanceRef = useRef(refreshBalance)
   refreshBalanceRef.current = refreshBalance
 
-  const fetchVaultMetaRef = useRef(fetchVaultMeta)
-  fetchVaultMetaRef.current = fetchVaultMeta
-
-  const loadUserBalancesRef = useRef(loadUserBalances)
-  loadUserBalancesRef.current = loadUserBalances
-
   const refreshBalances = useCallback(async () => {
     const address = walletInfo?.address
     if (!address) {
@@ -409,12 +191,6 @@ export const useDefindex = (options?: UseDefindexOptions) => {
     invalidateVaultDataCache(address, meta?.assets?.[0]?.address)
     return loadUserBalancesRef.current(address, meta?.assets?.[0]?.address)
   }, [walletInfo?.address])
-
-  /** Load vault metadata on mount (no wallet required). */
-  useEffect(() => {
-    if (!hasClientVaultConfigured()) return
-    void fetchVaultMetaRef.current()
-  }, [])
 
   /** Load user balance when the Stellar account changes. */
   useEffect(() => {
