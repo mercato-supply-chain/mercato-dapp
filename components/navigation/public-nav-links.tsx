@@ -49,12 +49,19 @@ export function PublicNavLinks({ variant, onNavigate }: PublicNavLinksProps) {
         : 'text-muted-foreground hover:text-foreground',
     )
 
+  const handleSectionClick = (sectionId: string) => {
+    if (onHome && window.location.hash === `#${sectionId}`) {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    onNavigate?.()
+  }
+
   const sectionItems = PUBLIC_NAV_LINKS.map(({ sectionId, labelKey }) => (
     <Link
       key={sectionId}
       href={landingSectionHref(sectionId, onHome)}
       className={linkClass(sectionId)}
-      onClick={onNavigate}
+      onClick={() => handleSectionClick(sectionId)}
     >
       {t(labelKey)}
     </Link>

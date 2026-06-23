@@ -2,7 +2,6 @@
 
 import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
 import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
-import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import type { LandingPlatformStats } from '@/lib/landing/platform-stats'
 import { useI18n } from '@/lib/i18n/provider'
 import { BadgeCheck, Eye, ShieldCheck } from 'lucide-react'
@@ -85,10 +84,6 @@ export function LandingHero({ stats }: LandingHeroProps) {
         className="hero-ref-bases-steps landing-section-anchor relative z-10 w-full bg-background pb-8 pt-0 md:pb-10 dark:bg-[hsl(0_0%_4%)]"
       >
         <HeroHowItWorksSteps />
-      </div>
-
-      <div className="relative z-10 border-t border-border/50 bg-background dark:border-white/[0.06] dark:bg-[hsl(0_0%_3%)]">
-        <LandingPartnersStrip variant="hero" />
       </div>
     </section>
   )

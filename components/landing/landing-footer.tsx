@@ -15,6 +15,12 @@ export function LandingFooter() {
   const pathname = usePathname()
   const onHome = pathname === '/'
 
+  const handleHashClick = (href: string) => {
+    if (onHome && href.startsWith('#') && window.location.hash === href) {
+      document.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   const footerLinks = {
     [t('landing.footer.exploreTitle')]: PUBLIC_NAV_LINKS.map(({ sectionId, labelKey }) => ({
       label: t(labelKey),
@@ -60,6 +66,7 @@ export function LandingFooter() {
                     <Link
                       href={link.href}
                       className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand-mid dark:hover:text-brand-light"
+                      onClick={() => handleHashClick(link.href)}
                     >
                       {link.label}
                       <ArrowUpRight
