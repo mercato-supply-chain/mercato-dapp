@@ -5,6 +5,7 @@ import { LandingRoles } from '@/components/landing/landing-roles'
 import { LandingRateComparison } from '@/components/landing/landing-rate-comparison'
 import { LandingLiveDeals } from '@/components/landing/landing-live-deals'
 import { LandingFaq } from '@/components/landing/landing-faq'
+import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
@@ -66,6 +67,8 @@ export default async function HomePage() {
       </section>
 
       <LandingFaq />
+
+      <LandingPartnersStrip />
 
       <LandingFooter />
     </div>
