@@ -18,8 +18,10 @@ export function useCreateDealInit() {
       try {
         const res = await fetch('/api/catalog')
         if (res.ok) {
-          const data = await res.json()
-          products = data as SupplierProductRow[]
+          const data: unknown = await res.json()
+          if (Array.isArray(data)) {
+            products = data as SupplierProductRow[]
+          }
         }
       } catch {
         // fallback: load via client (requires RLS policy supplier_products_select_all)
