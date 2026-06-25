@@ -138,6 +138,7 @@ export function useCreateDealSubmit() {
   ): Promise<{ ok: true } | { ok: false; error: string }> => {
     setIsSubmitting(true)
     setError(null)
+    let insertedDealId: string | undefined
 
     try {
       if (!params.userId) return { ok: false, error: 'User not authenticated' }
@@ -194,6 +195,7 @@ export function useCreateDealSubmit() {
         .single()
 
       if (dealError) throw dealError
+      insertedDealId = deal.id
 
       const milestones = params.milestones.map((m) => {
         const pct = Number(m.percentage)
@@ -241,6 +243,9 @@ export function useCreateDealSubmit() {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
       console.error('Error creating deal:', err)
       setError(message)
+      if (insertedDealId) {
+        await supabase.from('deals').delete().eq('id', insertedDealId)
+      }
       return { ok: false, error: message }
     } finally {
       setIsSubmitting(false)
