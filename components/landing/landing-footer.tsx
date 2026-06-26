@@ -9,6 +9,7 @@ import {
   PUBLIC_NAV_LINKS,
 } from '@/lib/navigation/landing-nav'
 import { ArrowUpRight } from 'lucide-react'
+import { scrollToId } from '@/components/landing/landing-hash-scroll'
 
 export function LandingFooter() {
   const { t } = useI18n()
@@ -17,7 +18,7 @@ export function LandingFooter() {
 
   const handleHashClick = (href: string) => {
     if (onHome && href.startsWith('#') && window.location.hash === href) {
-      document.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollToId(href.slice(1))
     }
   }
 

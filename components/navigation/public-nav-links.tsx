@@ -11,6 +11,7 @@ import {
   PUBLIC_PAGE_LINKS,
   type LandingSectionId,
 } from '@/lib/navigation/landing-nav'
+import { scrollToId } from '@/components/landing/landing-hash-scroll'
 
 interface PublicNavLinksProps {
   variant: 'desktop' | 'mobile'
@@ -51,7 +52,7 @@ export function PublicNavLinks({ variant, onNavigate }: PublicNavLinksProps) {
 
   const handleSectionClick = (sectionId: string) => {
     if (onHome && window.location.hash === `#${sectionId}`) {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollToId(sectionId)
     }
     onNavigate?.()
   }

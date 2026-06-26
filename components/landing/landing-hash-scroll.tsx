@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 
 const NAV_HEIGHT = 64
 
-function scrollToId(id: string) {
+export function scrollToId(id: string) {
   const el = document.getElementById(id)
   if (!el) return
 
