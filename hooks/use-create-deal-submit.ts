@@ -227,14 +227,20 @@ export function useCreateDealSubmit() {
         provider: params.provider,
       })
 
-      await supabase
+      if (!contractId) {
+        throw new Error('Escrow contract ID was not confirmed')
+      }
+
+      const { error: updateError } = await supabase
         .from('deals')
         .update({
           escrow_id: deal.id,
-          escrow_contract_address: contractId ?? null,
+          escrow_contract_address: contractId,
           escrow_status: 'initialized',
         })
         .eq('id', deal.id)
+
+      if (updateError) throw updateError
 
       return { ok: true }
     } catch (err) {
