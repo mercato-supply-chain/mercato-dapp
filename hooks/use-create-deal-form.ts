@@ -44,12 +44,17 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     ? supplierProducts.find((p) => p.id === formData.productId)
     : null
 
+  const parsedQuantity = Number(formData.quantity)
+  const isQuantityValid = Number.isFinite(parsedQuantity) && parsedQuantity > 0
+
   const totalAmount =
-    selectedProduct && formData.quantity
-      ? Number(formData.quantity) * Number(selectedProduct.price_per_unit)
+    selectedProduct && isQuantityValid
+      ? parsedQuantity * Number(selectedProduct.price_per_unit)
       : 0
 
-  const termDays = Number(formData.term || 60)
+  const parsedTerm = Number(formData.term)
+  const isTermValid = Number.isInteger(parsedTerm) && parsedTerm > 0
+  const termDays = isTermValid ? parsedTerm : 60
 
   const parsedBonus = parseFloat(
     String(formData.yieldBonusApr ?? '0').replace(',', '.')
@@ -72,10 +77,11 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
 
   const canProceedStep1 =
     Boolean(formData.category || availableCategories.length === 0) &&
-    Boolean(formData.supplierId && formData.productId && formData.quantity)
+    Boolean(formData.supplierId && formData.productId) &&
+    isQuantityValid
 
   const canProceedStep2 =
-    Boolean(formData.supplierName && formData.term) && isFundingWindowValid
+    Boolean(formData.supplierName) && isTermValid && isFundingWindowValid
 
   const milestonesOk = isMilestonesValid(formData.milestones)
   const canSubmit = canProceedStep1 && canProceedStep2 && milestonesOk

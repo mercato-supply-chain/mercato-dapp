@@ -39,6 +39,14 @@ interface CreateDealParams {
   provider: string | null
 }
 
+function isPositiveFinite(value: number): boolean {
+  return Number.isFinite(value) && value > 0
+}
+
+function isPositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0
+}
+
 export function useCreateDealSubmit() {
   const supabase = useMemo(() => createClient(), [])
   const { deployEscrow } = useInitializeEscrow()
@@ -145,6 +153,26 @@ export function useCreateDealSubmit() {
       if (!params.signerAddress) throw new Error('Wallet not connected')
       if (!MERCATO_PLATFORM_ADDRESS) throw new Error('Platform address not configured')
       if (!USDC_TRUSTLINE.address) throw new Error('USDC trustline not configured')
+
+      if (!isPositiveFinite(params.productQuantity))
+        throw new Error('Product quantity must be a positive finite number')
+      if (!isPositiveFinite(params.productUnitPrice))
+        throw new Error('Product unit price must be a positive finite number')
+      if (!isPositiveFinite(params.totalAmount))
+        throw new Error('Total amount must be a positive finite number')
+      if (!isPositiveInteger(params.termDays))
+        throw new Error('Term days must be a positive integer')
+      if (!isPositiveInteger(params.fundingWindowDays))
+        throw new Error('Funding window days must be a positive integer')
+      if (params.milestones.length === 0)
+        throw new Error('At least one milestone is required')
+      for (const m of params.milestones) {
+        if (!isPositiveFinite(Number(m.percentage)))
+          throw new Error(`Milestone percentage "${m.percentage}" must be a positive finite number`)
+      }
+      const milestoneSum = params.milestones.reduce((sum, m) => sum + Number(m.percentage), 0)
+      if (Math.abs(milestoneSum - 100) > 0.0001)
+        throw new Error(`Milestone percentages must sum to 100 (got ${milestoneSum.toFixed(4)})`)
 
       const { data: company } = await supabase
         .from('supplier_companies')
