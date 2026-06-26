@@ -13,7 +13,12 @@ export function useCreateDealInit() {
 
   useEffect(() => {
     const init = async () => {
-      const authResult = supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+      setUserId(user.id)
       let products: SupplierProductRow[] = []
       try {
         const res = await fetch('/api/catalog')
@@ -49,12 +54,6 @@ export function useCreateDealInit() {
         })) as unknown as SupplierProductRow[]
       }
       setSupplierProducts(products)
-      const { data: { user } } = await authResult
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-      setUserId(user.id)
     }
     init()
   }, [router, supabase])
