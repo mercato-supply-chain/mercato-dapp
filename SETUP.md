@@ -5,7 +5,7 @@ Use this file as the single setup checklist for local testing.
 ## 1. Install dependencies
 
 ```bash
-pnpm install
+bun install
 ```
 
 ## 2. Create `.env.local`
@@ -97,7 +97,7 @@ If the schema already exists in a real project, use `npx supabase migration list
 ## 4. Start the app
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 Open `http://localhost:3000`.

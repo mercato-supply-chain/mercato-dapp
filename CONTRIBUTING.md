@@ -29,17 +29,17 @@ Issues in Drips are labeled by complexity. Each label sets the **base Points** f
 Prerequisites and setup match the main [README](README.md). Short version:
 
 ```bash
-pnpm install
+bun install
 cp env.sample .env.local
 # Fill in Supabase, Trustless Work, and Stellar-related variables (see README).
-pnpm dev
+bun dev
 ```
 
 Before opening a PR:
 
 ```bash
-pnpm lint
-pnpm build
+bun lint
+bun build
 ```
 
 Fix any **lint** and **build** errors unless the issue explicitly says otherwise (for example a tracked follow-up).
@@ -68,7 +68,7 @@ If you need to fixup during review, **squash or reorganize** commits before merg
 ### Pull request checklist
 
 - [ ] Addresses the issue scope; no unrelated refactors.
-- [ ] `pnpm lint` and `pnpm build` pass locally.
+- [ ] `bun lint` and `bun build` pass locally.
 - [ ] No secrets or `.env` files committed — use `env.sample` for documenting new variables only.
 - [ ] PR description states **what** changed and **why**, and links the issue (`Closes #…` / `Fixes #…` where appropriate).
 

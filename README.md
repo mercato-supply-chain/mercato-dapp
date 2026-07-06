@@ -122,8 +122,7 @@ For a single step-by-step setup checklist, use [SETUP.md](SETUP.md). The summary
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
-- [pnpm](https://pnpm.io/) (or npm / yarn)
+- [Bun](https://bun.sh/) 1.1+ (recommended) or [Node.js](https://nodejs.org/) 20+
 - [Supabase](https://supabase.com) project
 - [Trustless Work](https://docs.trustlesswork.com/) API key and Stellar addresses (platform + trustline) for escrow
 - Optional: Etherfuse, Alfred Pay, and/or BlindPay credentials if you want fiat on/off-ramp — see `env.sample` and [Architecture §9](doc/architecture.md#9-environment-variables)
@@ -133,7 +132,7 @@ For a single step-by-step setup checklist, use [SETUP.md](SETUP.md). The summary
 ```bash
 git clone <your-repo-url>
 cd mercato
-pnpm install
+bun install
 ```
 
 ### 2. Environment variables
@@ -175,7 +174,7 @@ Create future schema changes with `supabase migration new <name>` and commit the
 ### 3. Run the app
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Use **auth**: `/auth/login`, `/auth/sign-up`. Connect a Stellar wallet (e.g. Freighter on testnet) to create deals or interact with escrow.
@@ -183,8 +182,8 @@ Open [http://localhost:3000](http://localhost:3000). Use **auth**: `/auth/login`
 ### 4. Build for production
 
 ```bash
-pnpm build
-pnpm start
+bun build
+bun start
 ```
 
 ---

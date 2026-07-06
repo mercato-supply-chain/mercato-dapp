@@ -1,0 +1,7 @@
+[install]
+# Prefer exact versions from bun.lock in CI; local dev can still add packages freely.
+frozenLockfile = false
+
+[install.cache]
+# Reuse the global Bun install cache for faster reinstalls.
+disable = false
