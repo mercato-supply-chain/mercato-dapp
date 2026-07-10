@@ -9,8 +9,7 @@ import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DealFundingPanel } from '@/components/deals/deal-funding-panel'
-import { DealDeliveryPanel } from '@/components/deals/deal-delivery-panel'
-import { DealMilestoneActions } from '@/components/deals/deal-milestone-actions'
+import { DealRepaymentPanel } from '@/components/deals/deal-repayment-panel'
 import { DealDetailSidebar } from '@/components/deals/deal-detail-sidebar'
 import { DealDetailSkeleton } from '@/components/deals/deal-detail-skeleton'
 import { DealDetailTabs } from '@/components/deals/deal-detail-tabs'
@@ -20,6 +19,7 @@ import { ArrowLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
+import { investorFundingTotal } from '@/lib/deals/fees'
 
 function useDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
   const statusConfig = {
@@ -58,25 +58,15 @@ export default function DealDetailPage() {
   const ctx = useDealDetail(dealId)
   const { deal, setDeal, isLoading, userId, userType, isSupplier, isPyme, isAdmin,
     indexerEscrow, pymeReputation, supplierReputation, partyReputationsLoading,
-    fetchDeal, supabase, signAndSend, walletInfo, isConnected, handleConnect,
-    fundEscrow, changeMilestoneStatus, approveMilestone } = ctx
-
-  const [proofDialogOpen, setProofDialogOpen] = useState(false)
-  const [proofMilestoneIndex, setProofMilestoneIndex] = useState<number | null>(null)
-  const [proofMilestoneId, setProofMilestoneId] = useState<string | null>(null)
+    fetchDeal, supabase, walletInfo, isConnected, handleConnect } = ctx
 
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
+    if (searchParams.get('action') !== 'repayment') return
     if (!deal.pymeId || deal.pymeId !== userId) return
-    if (searchParams.get('action') !== 'delivery') return
-    const dm = deal.milestones.find((m) => (m.name || '').toLowerCase().includes('delivery'))
-    if (!dm || dm.status !== 'pending') return
-    const idx = deal.milestones.findIndex((m) => m.id === dm.id)
     hasHandledAction.current = true
-    setProofMilestoneIndex(idx >= 0 ? idx : 1)
-    setProofMilestoneId(dm.id)
-    setProofDialogOpen(true)
-    window.history.replaceState({}, '', window.location.pathname + window.location.hash)
+    document.getElementById('repayment-panel')?.scrollIntoView({ behavior: 'smooth' })
+    window.history.replaceState({}, '', window.location.pathname)
   }, [deal, isLoading, userId, searchParams])
 
   if (isLoading) return <DealDetailSkeleton />
@@ -99,17 +89,24 @@ export default function DealDetailPage() {
   const status = useDealStatus(deal, t)
   const isFundingOpen = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
   const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
-  const canFund = userType === 'investor' && Boolean(deal.escrowAddress) && isFundingOpen
+  const canFund = userType === 'investor' && Boolean(deal.supplierAddress) && isFundingOpen
   const showInvestorPitch = deal.status === 'awaiting_funding' && isFundingOpen && !isPyme && !isSupplier
+  const fundingTotal = deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
 
-  const openProofDialog = (index: number, milestoneId: string) => {
-    setProofMilestoneIndex(index)
-    setProofMilestoneId(milestoneId)
-    setProofDialogOpen(true)
+  const fundingProps = {
+    deal,
+    supabase,
+    fetchDeal,
+    isConnected,
+    walletAddress: walletInfo?.address,
+    onDealUpdate: setDeal,
+    isFundingOpen,
+    isPyme,
+    userType,
+    onConnect: handleConnect,
+    canFund,
+    userId,
   }
-
-  const shared = { deal, supabase, fetchDeal, signAndSend, isConnected, walletAddress: walletInfo?.address, onDealUpdate: setDeal }
-  const fundingProps = { ...shared, isFundingOpen, isPyme, userType, onConnect: handleConnect, canFund, fundEscrow, userId }
 
   const fundPanel = <DealFundingPanel {...fundingProps} showMobileBar={false} />
 
@@ -164,9 +161,9 @@ export default function DealDetailPage() {
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: t('common.amount'),   value: formatCurrency(deal.priceUSDC), sub: t('deals.usdc') },
+                { label: t('dealDetail.youPayTotal'), value: formatCurrency(fundingTotal), sub: t('deals.usdc') },
                 { label: t('deals.apr'),       value: deal.yieldAPR ? `${deal.yieldAPR.toFixed(1)}%` : '—', sub: t('common.yield'), hi: Boolean(deal.yieldAPR) },
                 { label: t('common.term'),     value: String(deal.term),              sub: t('common.days') },
-                { label: t('common.quantity'), value: deal.quantity.toLocaleString(), sub: t('dealDetail.units') },
               ].map(({ label, value, sub, hi }) => (
                 <div key={label} className={`rounded-xl border px-4 py-3 text-center ${hi ? 'border-success/30 bg-success/5' : 'border-border bg-muted/30'}`}>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -178,14 +175,19 @@ export default function DealDetailPage() {
           </div>
         )}
 
-        <DealDeliveryPanel {...shared} open={proofDialogOpen} milestoneIndex={proofMilestoneIndex}
-          milestoneId={proofMilestoneId} isPyme={isPyme} isAdmin={isAdmin}
-          onOpenChange={setProofDialogOpen} onConnect={handleConnect} approveMilestone={approveMilestone} />
+        <div id="repayment-panel" className="mb-8">
+          <DealRepaymentPanel
+            deal={deal}
+            isPyme={isPyme}
+            isAdmin={isAdmin}
+            supabase={supabase}
+            fetchDeal={fetchDeal}
+            onDealUpdate={setDeal}
+          />
+        </div>
 
         <div className={`grid gap-8 ${showInvestorPitch ? '' : 'lg:grid-cols-3'}`}>
           <div className={`space-y-6 ${showInvestorPitch ? '' : 'lg:col-span-2'}`}>
-            <DealMilestoneActions {...shared} isSupplier={isSupplier} isPyme={isPyme} isAdmin={isAdmin}
-              changeMilestoneStatus={changeMilestoneStatus} onOpenProofDialog={openProofDialog} />
             {showInvestorPitch
               ? <DealInvestorDetails deal={deal} indexerEscrow={indexerEscrow} />
               : <DealDetailTabs deal={deal} indexerEscrow={indexerEscrow} />}
@@ -195,6 +197,9 @@ export default function DealDetailPage() {
           )}
         </div>
       </div>
+      {showInvestorPitch && canFund ? (
+        <DealFundingPanel {...fundingProps} showMobileBar />
+      ) : null}
     </div>
   )
 }

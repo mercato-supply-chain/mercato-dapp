@@ -6,11 +6,10 @@ import { ArrowRight } from 'lucide-react'
 import { StepProgress } from './step-progress'
 import { DealBasicsStep } from './deal-basics-step'
 import { SupplierStep } from './supplier-step'
-import { MilestonesStep } from './milestones-step'
 import { DealSummaryCard } from './deal-summary-card'
 import { HowItWorksCard } from './how-it-works-card'
 import { useI18n } from '@/lib/i18n/provider'
-import type { FormStep, MilestoneDraft, CreateDealFormData, SupplierProductRow } from '../types'
+import type { FormStep, CreateDealFormData, SupplierProductRow } from '../types'
 
 interface CreateDealFormBodyProps {
   formData: CreateDealFormData
@@ -20,6 +19,9 @@ interface CreateDealFormBodyProps {
   productsForSupplier: { id: string; name: string; category: string; price_per_unit: number; description?: string | null; image_url?: string | null; unit?: string; stock_quantity?: number; reserved_quantity?: number }[]
   selectedProduct: SupplierProductRow | null | undefined
   totalAmount: number
+  fundingTotal: number
+  feeAmount: number
+  platformFeePercent: number
   baseAPR: number
   effectiveAPR: number
   estimatedYield: number
@@ -27,7 +29,6 @@ interface CreateDealFormBodyProps {
   maxYieldBonusApr: number
   canProceedStep1: boolean
   canProceedStep2: boolean
-  milestonesOk: boolean
   canSubmit: boolean
   supplierLogoUrl?: string | null
   productImageUrl?: string | null
@@ -39,7 +40,6 @@ interface CreateDealFormBodyProps {
   goNext: () => void
   updateFormData: (field: keyof CreateDealFormData, value: string) => void
   handleSupplierSelect: (supplierId: string) => void
-  onMilestonesChange: (milestones: MilestoneDraft[]) => void
 }
 
 export function CreateDealFormBody({
@@ -50,6 +50,9 @@ export function CreateDealFormBody({
   productsForSupplier,
   selectedProduct,
   totalAmount,
+  fundingTotal,
+  feeAmount,
+  platformFeePercent,
   baseAPR,
   effectiveAPR,
   estimatedYield,
@@ -57,7 +60,6 @@ export function CreateDealFormBody({
   maxYieldBonusApr,
   canProceedStep1,
   canProceedStep2,
-  milestonesOk,
   canSubmit,
   supplierLogoUrl,
   productImageUrl,
@@ -69,7 +71,6 @@ export function CreateDealFormBody({
   goNext,
   updateFormData,
   handleSupplierSelect,
-  onMilestonesChange,
 }: CreateDealFormBodyProps) {
   const { t } = useI18n()
 
@@ -89,7 +90,7 @@ export function CreateDealFormBody({
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <StepProgress currentStep={currentStep} />
+          <StepProgress currentStep={currentStep} totalSteps={2} />
 
           {currentStep === 1 && (
             <DealBasicsStep
@@ -116,13 +117,6 @@ export function CreateDealFormBody({
               onSupplierSelect={handleSupplierSelect}
             />
           )}
-          {currentStep === 3 && (
-            <MilestonesStep
-              milestones={formData.milestones ?? []}
-              totalAmount={totalAmount}
-              onMilestonesChange={onMilestonesChange}
-            />
-          )}
 
           <div className="mt-6 flex items-center justify-between">
             <Button
@@ -134,13 +128,11 @@ export function CreateDealFormBody({
               {t('common.back')}
             </Button>
 
-            {currentStep < 3 ? (
+            {currentStep < 2 ? (
               <Button
                 type="button"
                 onClick={goNext}
-                disabled={
-                  currentStep === 1 ? !canProceedStep1 : !canProceedStep2
-                }
+                disabled={!canProceedStep1}
               >
                 {t('common.continue')}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
@@ -150,15 +142,10 @@ export function CreateDealFormBody({
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                title={
-                  !milestonesOk
-                    ? t('createDeal.invalidMilestones')
-                    : undefined
-                }
               >
                 {isSubmitting
-                  ? t('createDeal.creatingDeploying')
-                  : t('createDeal.createDeploy')}
+                  ? t('createDeal.creating')
+                  : t('createDeal.create')}
               </Button>
             ) : (
               <Button type="button" onClick={handleConnect}>
@@ -175,6 +162,9 @@ export function CreateDealFormBody({
             productImageUrl={productImageUrl}
             supplierLogoUrl={supplierLogoUrl}
             totalAmount={totalAmount}
+            fundingTotal={fundingTotal}
+            feeAmount={feeAmount}
+            platformFeePercent={platformFeePercent}
             baseAPR={totalAmount > 0 ? baseAPR : undefined}
             effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
             yieldBonusApr={yieldBonusApr}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useApproveMilestone, useReleaseFunds, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
-import type { ApproveMilestonePayload, MultiReleaseReleaseFundsPayload } from '@trustless-work/escrow'
+import type { ApproveMilestonePayload, SingleReleaseReleaseFundsPayload } from '@trustless-work/escrow'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
@@ -128,7 +128,7 @@ export function PendingApprovals({ items, escrowsByContractId: escrowsFromParent
         milestoneIndex: String(item.milestoneIndex),
         approver: walletInfo.address,
       }
-      const approveResponse = await approveMilestone(approvePayload, 'multi-release')
+      const approveResponse = await approveMilestone(approvePayload, 'single-release')
       if (approveResponse.status !== 'SUCCESS' || !approveResponse.unsignedTransaction) {
         throw new Error(t('adminPending.approveFailCreate'))
       }
@@ -163,19 +163,13 @@ export function PendingApprovals({ items, escrowsByContractId: escrowsFromParent
       toast.error(t('adminPending.noEscrow'))
       return
     }
-    const escrow = escrowsByContractId.get(item.escrowContractAddress)
-    if (!canReleaseMilestoneInOrder(escrow, item.milestoneIndex)) {
-      toast.error(t('adminPending.releaseBlockedOrder'))
-      return
-    }
     setReleasingId(item.milestoneId)
     try {
-      const releasePayload: MultiReleaseReleaseFundsPayload = {
+      const releasePayload: SingleReleaseReleaseFundsPayload = {
         contractId: item.escrowContractAddress,
         releaseSigner: walletInfo.address,
-        milestoneIndex: String(item.milestoneIndex),
       }
-      const releaseResponse = await releaseFunds(releasePayload, 'multi-release')
+      const releaseResponse = await releaseFunds(releasePayload, 'single-release')
       if (releaseResponse.status !== 'SUCCESS' || !releaseResponse.unsignedTransaction) {
         throw new Error(t('adminPending.releaseFailCreate'))
       }
@@ -191,13 +185,14 @@ export function PendingApprovals({ items, escrowsByContractId: escrowsFromParent
         )
       }
       const { error } = await supabase
-        .from('milestones')
+        .from('deals')
         .update({
+          repayment_status: 'released',
+          escrow_status: 'completed',
           status: 'completed',
           completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         })
-        .eq('id', item.milestoneId)
+        .eq('id', item.dealId)
       if (error) throw error
       toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
       window.location.reload()
@@ -317,8 +312,7 @@ export function PendingApprovals({ items, escrowsByContractId: escrowsFromParent
                     type="button"
                     size="sm"
                     onClick={() => handleReleaseOnly(item)}
-                    disabled={releasingId === item.milestoneId || alreadyReleased || !canReleaseInOrder}
-                    title={!canReleaseInOrder ? t('adminPending.releasePreviousTooltip') : undefined}
+                    disabled={releasingId === item.milestoneId || alreadyReleased}
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
                     {releasingId === item.milestoneId

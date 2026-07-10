@@ -11,6 +11,13 @@ export type DealStatus =
 
 export type FundingStatus = 'open' | 'funded' | 'expired' | 'extended'
 
+/** Repayment escrow lifecycle (Trustless Work single-release). */
+export type RepaymentStatus =
+  | 'none'
+  | 'escrow_initialized'
+  | 'funded'
+  | 'released'
+
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
 
 export interface Milestone {
@@ -28,7 +35,12 @@ export interface Deal {
   id: string
   productName: string
   quantity: number
+  /** Supplier invoice / principal (what supplier receives; yield base). */
   priceUSDC: number
+  /** Total investor pays at funding: principal + 1% platform fee. */
+  investorFundingTotal: number
+  /** Platform fee percent (e.g. 1). */
+  platformFeePercent: number
   supplier: string
   supplierId?: string
   /** Owner (user) id of the supplier company; used to check "am I the supplier" */
@@ -40,7 +52,11 @@ export interface Deal {
   fundedAt?: string
   completedAt?: string
   milestones: Milestone[]
+  /** Repayment escrow contract address (not supplier payment). */
   escrowAddress?: string
+  fundingTxHash?: string
+  repaymentStatus: RepaymentStatus
+  repaymentDueAt?: string
   pymeName: string
   pymeId?: string
   pymeStakeAmount?: number

@@ -91,15 +91,19 @@ export function DealOnChainPanel({
               {t('dealDetail.balanceLine', { bal: indexerEscrow.balance.toLocaleString() })}
             </p>
           )}
-          {indexerEscrow.milestones?.map((m, i) => (
-            <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="mt-0.5">
-              {t('dealDetail.indexerMilestoneLine', {
-                i,
-                status: m.status ?? '—',
-                amt: m.amount != null ? ` (${m.amount})` : '',
-              })}
-            </p>
-          ))}
+          {indexerEscrow.milestones?.map((m, i) => {
+            const amount =
+              'amount' in m && m.amount != null ? ` (${m.amount})` : ''
+            return (
+              <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="mt-0.5">
+                {t('dealDetail.indexerMilestoneLine', {
+                  i,
+                  status: m.status ?? '—',
+                  amt: amount,
+                })}
+              </p>
+            )
+          })}
         </div>
       )}
     </div>

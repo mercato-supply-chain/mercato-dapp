@@ -151,7 +151,9 @@ cp env.sample .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for server-only operations |
 | `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY` | Trustless Work API key |
 | `NEXT_PUBLIC_TRUSTLESS_NETWORK` | `testnet` or `mainnet` |
-| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Stellar address for the platform (escrow roles) |
+| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Stellar address for the platform (fee recipient + repayment escrow roles) |
+| `NEXT_PUBLIC_USDC_ISSUER` | Classic USDC issuer for direct investor→supplier payments (optional; defaults by network) |
+| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for repayment escrow |
 | `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for escrow |
 | `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | Pollar public/publishable key |
 | `POLLAR_SECRET_KEY` | Pollar server-side secret key |

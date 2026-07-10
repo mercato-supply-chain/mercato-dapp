@@ -3,9 +3,21 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 import type { Deal } from '@/lib/types'
+import { investorFundingTotal, PLATFORM_FEE_PERCENT } from '@/lib/deals/fees'
+
+function withFundingFields<T extends { priceUSDC: number; repaymentStatus?: Deal['repaymentStatus'] }>(
+  deal: T,
+): T & { investorFundingTotal: number; platformFeePercent: number; repaymentStatus: Deal['repaymentStatus'] } {
+  return {
+    ...deal,
+    investorFundingTotal: investorFundingTotal(deal.priceUSDC),
+    platformFeePercent: PLATFORM_FEE_PERCENT,
+    repaymentStatus: deal.repaymentStatus ?? 'none',
+  }
+}
 
 export const mockDeals: Deal[] = [
-  {
+  withFundingFields({
     id: '1',
     productName: 'Industrial LED Lighting Equipment',
     quantity: 500,
@@ -27,8 +39,8 @@ export const mockDeals: Deal[] = [
     description: 'High-efficiency LED lighting for commercial warehouses',
     category: 'Electronics',
     yieldAPR: 12.5,
-  },
-  {
+  }),
+  withFundingFields({
     id: '2',
     productName: 'Organic Coffee Beans (Premium)',
     quantity: 1000,
@@ -47,12 +59,13 @@ export const mockDeals: Deal[] = [
     ],
     pymeName: 'Coffee House Network',
     escrowAddress: 'GCSW4X...',
+    repaymentStatus: 'escrow_initialized' as const,
     investorAddress: 'GBLN2Y...',
     description: 'Premium organic coffee beans, direct from Colombian farms',
     category: 'Food & Beverage',
     yieldAPR: 10.8,
-  },
-  {
+  }),
+  withFundingFields({
     id: '3',
     productName: 'Medical Supplies - Surgical Gloves',
     quantity: 2000,
@@ -66,16 +79,13 @@ export const mockDeals: Deal[] = [
     fundingExpiresAt: '2026-12-31T00:00:00.000Z',
     extensionCount: 0,
     createdAt: '2024-01-18',
-    milestones: [
-      { id: 'm1', name: 'Shipment Confirmation', percentage: 50, status: 'pending' },
-      { id: 'm2', name: 'Delivery Confirmation', percentage: 50, status: 'pending' },
-    ],
+    milestones: [],
     pymeName: 'HealthCare Distributors',
     description: 'FDA-approved surgical gloves for medical facilities',
     category: 'Healthcare',
     yieldAPR: 15.2,
-  },
-  {
+  }),
+  withFundingFields({
     id: '4',
     productName: 'Textile Fabrics (Cotton Blend)',
     quantity: 800,
@@ -88,18 +98,16 @@ export const mockDeals: Deal[] = [
     extensionCount: 0,
     createdAt: '2023-12-20',
     fundedAt: '2023-12-22',
-    milestones: [
-      { id: 'm1', name: 'Shipment Confirmation', percentage: 50, status: 'completed', completedAt: '2024-01-05' },
-      { id: 'm2', name: 'Delivery Confirmation', percentage: 50, status: 'pending' },
-    ],
+    milestones: [],
     pymeName: 'Fashion Forward SA',
     escrowAddress: 'GCBP5Z...',
+    repaymentStatus: 'escrow_initialized' as const,
     investorAddress: 'GA7M1X...',
     description: 'Premium cotton blend fabrics for apparel manufacturing',
     category: 'Textiles',
     yieldAPR: 11.5,
-  },
-  {
+  }),
+  withFundingFields({
     id: '5',
     productName: 'Construction Materials - Cement',
     quantity: 300,
@@ -113,16 +121,13 @@ export const mockDeals: Deal[] = [
     fundingExpiresAt: '2026-12-31T00:00:00.000Z',
     extensionCount: 0,
     createdAt: '2024-01-20',
-    milestones: [
-      { id: 'm1', name: 'Shipment Confirmation', percentage: 50, status: 'pending' },
-      { id: 'm2', name: 'Delivery Confirmation', percentage: 50, status: 'pending' },
-    ],
+    milestones: [],
     pymeName: 'Infrastructure Builders Inc',
     description: 'High-grade cement for commercial construction projects',
     category: 'Construction',
     yieldAPR: 13.8,
-  },
-  {
+  }),
+  withFundingFields({
     id: '6',
     productName: 'Automotive Parts - Brake Systems',
     quantity: 400,
@@ -136,15 +141,13 @@ export const mockDeals: Deal[] = [
     createdAt: '2023-11-15',
     fundedAt: '2023-11-17',
     completedAt: '2024-01-10',
-    milestones: [
-      { id: 'm1', name: 'Shipment Confirmation', percentage: 50, status: 'completed', completedAt: '2023-11-25' },
-      { id: 'm2', name: 'Delivery Confirmation', percentage: 50, status: 'completed', completedAt: '2024-01-10' },
-    ],
+    milestones: [],
     pymeName: 'Auto Parts Wholesale',
     escrowAddress: 'GDZR3M...',
+    repaymentStatus: 'released' as const,
     investorAddress: 'GBXK9L...',
     description: 'OEM-quality brake systems for vehicle maintenance',
     category: 'Automotive',
     yieldAPR: 12.0,
-  },
+  }),
 ]

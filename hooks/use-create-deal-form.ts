@@ -2,10 +2,7 @@
 
 import { useState } from 'react'
 import type { CreateDealFormData, SupplierProductRow, FormStep } from '@/app/create-deal/types'
-import {
-  DEFAULT_FORM_DATA,
-  isMilestonesValid,
-} from '@/app/create-deal/types'
+import { DEFAULT_FORM_DATA } from '@/app/create-deal/types'
 import {
   calculateYieldAPR,
   calculateYieldAmount,
@@ -13,6 +10,11 @@ import {
   effectiveInvestorApr,
   MAX_YIELD_BONUS_APR,
 } from '@/lib/yield'
+import {
+  investorFundingTotal,
+  platformFeeAmount,
+  PLATFORM_FEE_PERCENT,
+} from '@/lib/deals/fees'
 
 export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
   const [formData, setFormData] = useState<CreateDealFormData>(DEFAULT_FORM_DATA)
@@ -52,6 +54,9 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
       ? parsedQuantity * Number(selectedProduct.price_per_unit)
       : 0
 
+  const fundingTotal = investorFundingTotal(totalAmount)
+  const feeAmount = platformFeeAmount(totalAmount)
+
   const parsedTerm = Number(formData.term)
   const isTermValid = Number.isInteger(parsedTerm) && parsedTerm > 0
   const termDays = isTermValid ? parsedTerm : 60
@@ -83,8 +88,7 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
   const canProceedStep2 =
     Boolean(formData.supplierName) && isTermValid && isFundingWindowValid
 
-  const milestonesOk = isMilestonesValid(formData.milestones)
-  const canSubmit = canProceedStep1 && canProceedStep2 && milestonesOk
+  const canSubmit = canProceedStep1 && canProceedStep2
 
   const supplierLogoUrl = filteredSuppliers.find((s) => s.id === formData.supplierId)?.logo_url ?? selectedProduct?.supplier?.logo_url
 
@@ -125,6 +129,9 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     productsForSupplier,
     selectedProduct,
     totalAmount,
+    fundingTotal,
+    feeAmount,
+    platformFeePercent: PLATFORM_FEE_PERCENT,
     termDays,
     yieldBonusApr,
     baseAPR,
@@ -134,7 +141,6 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     isFundingWindowValid,
     canProceedStep1,
     canProceedStep2,
-    milestonesOk,
     canSubmit,
     supplierLogoUrl,
     currentStep,
@@ -142,6 +148,6 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     updateFormData,
     handleSupplierSelect,
     goBack: () => setCurrentStep((prev) => Math.max(1, prev - 1) as FormStep),
-    goNext: () => setCurrentStep((prev) => Math.min(3, prev + 1) as FormStep),
+    goNext: () => setCurrentStep((prev) => Math.min(2, prev + 1) as FormStep),
   }
 }

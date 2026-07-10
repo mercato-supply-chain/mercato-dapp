@@ -12,6 +12,9 @@ interface DealSummaryCardProps {
   productImageUrl?: string | null
   supplierLogoUrl?: string | null
   totalAmount: number
+  fundingTotal: number
+  feeAmount: number
+  platformFeePercent: number
   baseAPR?: number
   effectiveAPR?: number
   yieldBonusApr: number
@@ -23,6 +26,9 @@ export function DealSummaryCard({
   productImageUrl,
   supplierLogoUrl,
   totalAmount,
+  fundingTotal,
+  feeAmount,
+  platformFeePercent,
   baseAPR,
   effectiveAPR,
   yieldBonusApr,
@@ -43,12 +49,26 @@ export function DealSummaryCard({
           </div>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Total Amount</p>
+          <p className="text-sm text-muted-foreground">Supplier receives</p>
           <p className="text-2xl font-bold tabular-nums">
             {totalAmount > 0 ? formatCurrency(totalAmount) : formatCurrency(0)}
           </p>
-          <p className="text-xs text-muted-foreground">USDC</p>
+          <p className="text-xs text-muted-foreground">USDC (invoice)</p>
         </div>
+        {totalAmount > 0 ? (
+          <div className="space-y-1 rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">
+                Platform fee ({platformFeePercent}%)
+              </span>
+              <span className="tabular-nums">{formatCurrency(feeAmount)}</span>
+            </div>
+            <div className="flex justify-between gap-2 font-medium">
+              <span>Investor pays</span>
+              <span className="tabular-nums">{formatCurrency(fundingTotal)}</span>
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-start gap-3">
           <SupplierLogo
             logoUrl={supplierLogoUrl}

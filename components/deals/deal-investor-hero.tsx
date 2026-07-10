@@ -5,6 +5,7 @@ import { ArrowRight, Clock, Lock, Wallet } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
+import { investorFundingTotal } from '@/lib/deals/fees'
 import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import type { Reputation } from '@/lib/types'
@@ -50,6 +51,8 @@ export function DealInvestorHero({
 }: DealInvestorHeroProps) {
   const { t } = useI18n()
   const apr = deal.yieldAPR ?? 0
+  const fundingTotal =
+    deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
   const { total } = computeInvestorReturns(deal.priceUSDC, apr, deal.term)
 
   return (
@@ -88,7 +91,7 @@ export function DealInvestorHero({
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
-            {formatCurrency(deal.priceUSDC)}
+            {formatCurrency(fundingTotal)}
             <span className="mx-2 text-muted-foreground font-normal">→</span>
             {formatCurrency(Math.round(total))}
           </p>
@@ -100,16 +103,16 @@ export function DealInvestorHero({
           </p>
           <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {t('dealDetail.investorTrustLine')}
+            {t('dealDetail.investorTrustLineDirect')}
           </p>
         </div>
 
         <div className="w-full shrink-0 space-y-2 lg:max-w-xs">
           {canFund ? (
             <div className="w-full [&_button]:w-full">{fundDialog}</div>
-          ) : userType === 'investor' && !deal.escrowAddress ? (
+          ) : userType === 'investor' && !deal.supplierAddress ? (
             <p className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
-              {t('dealDetail.escrowDeploying')}
+              {t('dealDetail.supplierAddressMissing')}
             </p>
           ) : userType ? (
             <p className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">

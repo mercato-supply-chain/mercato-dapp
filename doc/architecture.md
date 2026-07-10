@@ -82,31 +82,26 @@ sequenceDiagram
   participant Supplier
 
   rect rgb(240, 248, 255)
-  Note over PyME,Supplier: 1 - PyME creates deal and deploys escrow
-  PyME->>App: Create deal (product, supplier, milestones, terms)
-  App->>Trustless: Initialize multi-release escrow
-  Trustless->>Stellar: Deploy escrow contract
-  PyME->>Stellar: Sign with wallet (Freighter / Albedo)
-  Stellar-->>App: Escrow address
+  Note over PyME,Supplier: 1 - PyME creates deal (no escrow)
+  PyME->>App: Create deal (product, supplier, terms)
+  App-->>PyME: Deal published seeking funding
   end
 
   rect rgb(245, 255, 245)
-  Note over PyME,Supplier: 2 - Investor funds the deal
+  Note over PyME,Supplier: 2 - Investor funds supplier directly
   Investor->>App: Browse marketplace and select deal
-  Investor->>Stellar: Fund escrow in USDC via wallet
+  Investor->>Stellar: Pay supplier invoice + 1% platform fee
   end
 
   rect rgb(255, 248, 240)
-  Note over PyME,Supplier: 3 - Supplier delivers and milestones are released
-  Supplier->>App: Submit delivery proof
-  PyME->>App: Approve milestone
-  App->>Trustless: Request release
-  Trustless->>Stellar: Release payment to supplier
+  Note over PyME,Supplier: 3 - Supplier ships (paid up front)
+  Supplier->>App: Fulfill order / ship goods
   end
 
   rect rgb(248, 245, 255)
-  Note over PyME,Supplier: 4 - PyME repays investors
-  PyME->>Stellar: Repay principal + yield after term
+  Note over PyME,Supplier: 4 - PyME repays via Trustless Work escrow
+  PyME->>Trustless: Deploy + fund repayment escrow
+  Trustless->>Stellar: Release principal + interest to investor; 1% to platform
   end
 ```
 
@@ -114,10 +109,10 @@ sequenceDiagram
 
 | Role | Main actions |
 |------|-------------|
-| **PyME (Buyer)** | Create deal, configure milestones, choose supplier from catalog, approve milestone releases, repay investors. Connects Stellar wallet for escrow deployment. |
-| **Investor** | Browse marketplace, fund deals in USDC. Funds are locked in escrow until milestones are met and term completes. |
-| **Supplier** | Manage company profile and product catalog, accept orders, submit delivery proof. Receives milestone payments to Stellar address. |
-| **Admin** | View all platform deals, approve milestone releases on-chain, resolve disputes. Sees aggregate stats and pending approvals. |
+| **PyME (Buyer)** | Create deal, choose supplier from catalog, deploy/fund repayment escrow, repay investors. |
+| **Investor** | Browse marketplace, fund deals in USDC (direct to supplier + 1% platform fee). Receives principal + yield from repayment escrow. |
+| **Supplier** | Manage company profile and product catalog, fulfill orders. Receives full invoice payment up front (fee-free). |
+| **Admin** | View platform deals, approve/release repayment escrows, resolve disputes. |
 
 ### 2.3 Application Routes
 

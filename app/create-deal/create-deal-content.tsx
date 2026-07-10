@@ -6,8 +6,6 @@ import { useCreateDealInit } from '@/hooks/use-create-deal-init'
 import { useCreateDealForm } from '@/hooks/use-create-deal-form'
 import { toast } from 'sonner'
 import { Navigation } from '@/components/navigation'
-import { isMilestonesValid } from './types'
-import type { MilestoneDraft } from './types'
 import { CreateDealFormBody } from './components/create-deal-form-body'
 import { useI18n } from '@/lib/i18n/provider'
 import { useRouter } from 'next/navigation'
@@ -15,7 +13,7 @@ import { useRouter } from 'next/navigation'
 export default function CreateDealContent() {
   const { t } = useI18n()
   const router = useRouter()
-  const { walletInfo, isConnected, handleConnect, provider } = useWallet()
+  const { walletInfo, isConnected, handleConnect } = useWallet()
   const { submit, isSubmitting } = useCreateDealSubmit()
   const { userId, supplierProducts } = useCreateDealInit()
   const form = useCreateDealForm(supplierProducts)
@@ -27,10 +25,6 @@ export default function CreateDealContent() {
     }
     if (!form.selectedProduct) {
       toast.error(t('createDeal.selectProduct'))
-      return
-    }
-    if (!isMilestonesValid(form.formData.milestones)) {
-      toast.error(t('createDeal.invalidMilestones'))
       return
     }
     if (!form.isFundingWindowValid) {
@@ -54,8 +48,6 @@ export default function CreateDealContent() {
       supplierName: form.formData.supplierName,
       supplierContact: form.formData.supplierContact || null,
       fundingWindowDays: form.fundingWindowDays,
-      milestones: form.formData.milestones,
-      provider,
     })
 
     if (result.ok) {
@@ -64,10 +56,6 @@ export default function CreateDealContent() {
     } else {
       toast.error(t('createDeal.errorPrefix', { message: result.error }))
     }
-  }
-
-  const handleMilestonesChange = (milestones: MilestoneDraft[]) => {
-    form.setFormData((prev) => ({ ...prev, milestones }))
   }
 
   return (
@@ -88,6 +76,9 @@ export default function CreateDealContent() {
           productsForSupplier={form.productsForSupplier}
           selectedProduct={form.selectedProduct}
           totalAmount={form.totalAmount}
+          fundingTotal={form.fundingTotal}
+          feeAmount={form.feeAmount}
+          platformFeePercent={form.platformFeePercent}
           baseAPR={form.baseAPR}
           effectiveAPR={form.effectiveAPR}
           estimatedYield={form.estimatedYield}
@@ -95,7 +86,6 @@ export default function CreateDealContent() {
           maxYieldBonusApr={form.maxYieldBonusApr}
           canProceedStep1={form.canProceedStep1}
           canProceedStep2={form.canProceedStep2}
-          milestonesOk={form.milestonesOk}
           canSubmit={form.canSubmit}
           supplierLogoUrl={form.supplierLogoUrl}
           productImageUrl={form.selectedProduct?.image_url}
@@ -107,7 +97,6 @@ export default function CreateDealContent() {
           goNext={form.goNext}
           updateFormData={form.updateFormData}
           handleSupplierSelect={form.handleSupplierSelect}
-          onMilestonesChange={handleMilestonesChange}
         />
       </main>
     </div>

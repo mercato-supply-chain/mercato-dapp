@@ -1,13 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getServerDictionary, tr } from '@/lib/i18n/server'
 import type { AdminQueueData, AdminQueueFilters, PendingApprovalItem, ReleaseFallbackItem } from './types'
+import { repaymentEscrowAmount } from '@/lib/deals/fees'
+import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 
 type DealRow = {
   id: string
   title?: string
   product_name?: string | null
   amount: number
+  interest_rate?: number | null
+  term_days?: number | null
   escrow_contract_address: string | null
+  repayment_status?: string | null
   created_at?: string | null
   pyme_id?: string
   supplier_id?: string
@@ -26,10 +31,11 @@ export async function getAdminQueueData(
   let query = supabase
     .from('deals')
     .select(
-      `id, title, product_name, amount, escrow_contract_address, created_at, pyme_id, supplier_id,
+      `id, title, product_name, amount, interest_rate, term_days, escrow_contract_address, repayment_status, created_at, pyme_id, supplier_id,
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
       supplier:supplier_companies(company_name, full_name, contact_name, logo_url)`,
     )
+    .eq('repayment_status', 'funded')
     .not('escrow_contract_address', 'is', null)
 
   if (companyFilter) {
@@ -45,92 +51,48 @@ export async function getAdminQueueData(
   const emptyState = dealsList.length === 0
 
   let items: PendingApprovalItem[] = []
-  let releaseFallbackItems: ReleaseFallbackItem[] = []
+  const releaseFallbackItems: ReleaseFallbackItem[] = []
   let uniquePymes: { id: string; name: string }[] = []
   let uniqueSuppliers: { id: string; name: string }[] = []
 
   if (!emptyState) {
-    const dealIds = dealsList.map((d) => d.id)
-
-    const { data: allMilestones } = await supabase
-      .from('milestones')
-      .select(
-        'id, deal_id, title, status, percentage, amount, proof_notes, proof_document_url, created_at, completed_at',
-      )
-      .in('deal_id', dealIds)
-      .order('created_at', { ascending: true })
-
-    const dealsById = new Map(dealsList.map((d) => [d.id, d]))
-
     const sortByDealDate = (a: { dealId: string }, b: { dealId: string }) => {
-      const dateA = dealsById.get(a.dealId)?.created_at ?? ''
-      const dateB = dealsById.get(b.dealId)?.created_at ?? ''
+      const dateA = dealsList.find((d) => d.id === a.dealId)?.created_at ?? ''
+      const dateB = dealsList.find((d) => d.id === b.dealId)?.created_at ?? ''
       const cmp = dateA < dateB ? -1 : dateA > dateB ? 1 : 0
       return sortOrder === 'newest' ? -cmp : cmp
     }
 
-    const milestonesByDeal = new Map<string, { id: string; title: string }[]>()
-    for (const ms of allMilestones ?? []) {
-      const list = milestonesByDeal.get(ms.deal_id) ?? []
-      list.push({ id: ms.id, title: ms.title ?? '' })
-      milestonesByDeal.set(ms.deal_id, list)
-    }
-    for (const list of milestonesByDeal.values()) {
-      list.sort((a, b) => (a.title > b.title ? -1 : a.title < b.title ? 1 : 0))
-    }
-
-    items = (allMilestones ?? [])
-      .filter((ms) => ms.status === 'in_progress')
-      .map((row) => {
-        const deal = dealsById.get(row.deal_id)
-        const ordered = milestonesByDeal.get(row.deal_id) ?? []
-        const milestoneIndex = ordered.findIndex((x) => x.id === row.id)
-        return {
-          dealId: row.deal_id,
-          dealTitle: deal?.title ?? tr(m, 'adminPage.fallbackDeal'),
-          dealProductName: deal?.product_name ?? null,
-          dealAmount: Number(deal?.amount ?? 0),
-          escrowContractAddress: deal?.escrow_contract_address ?? '',
-          milestoneId: row.id,
-          milestoneTitle: row.title,
-          milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : 0,
-          milestonePercentage: Number(row.percentage ?? 0),
-          milestoneAmount: Number(row.amount ?? 0),
-          proofNotes: row.proof_notes ?? null,
-          proofDocumentUrl: row.proof_document_url ?? null,
-          pymeName:
-            deal?.pyme?.company_name || deal?.pyme?.full_name || deal?.pyme?.contact_name || '—',
-          supplierName:
-            deal?.supplier?.company_name ||
-            deal?.supplier?.full_name ||
-            deal?.supplier?.contact_name ||
-            '—',
-          supplierLogoUrl: deal?.supplier?.logo_url ?? null,
-        }
-      })
+    items = dealsList.map((deal) => {
+      const principal = Number(deal.amount ?? 0)
+      const apr = Number(deal.interest_rate ?? 0)
+      const termDays = Number(deal.term_days ?? 0)
+      const { profit } = computeInvestorReturns(principal, apr, termDays)
+      const escrowAmount = repaymentEscrowAmount(principal, profit)
+      return {
+        dealId: deal.id,
+        dealTitle: deal.title ?? tr(m, 'adminPage.fallbackDeal'),
+        dealProductName: deal.product_name ?? null,
+        dealAmount: escrowAmount,
+        escrowContractAddress: deal.escrow_contract_address ?? '',
+        milestoneId: `${deal.id}:repayment`,
+        milestoneTitle: 'Investor repayment',
+        milestoneIndex: 0,
+        milestonePercentage: 100,
+        milestoneAmount: escrowAmount,
+        proofNotes: null,
+        proofDocumentUrl: null,
+        pymeName:
+          deal.pyme?.company_name || deal.pyme?.full_name || deal.pyme?.contact_name || '—',
+        supplierName:
+          deal.supplier?.company_name ||
+          deal.supplier?.full_name ||
+          deal.supplier?.contact_name ||
+          '—',
+        supplierLogoUrl: deal.supplier?.logo_url ?? null,
+      }
+    })
     items.sort(sortByDealDate)
-
-    releaseFallbackItems = (allMilestones ?? [])
-      .filter((ms) => ms.status === 'completed')
-      .map((row) => {
-        const deal = dealsById.get(row.deal_id)
-        const ordered = milestonesByDeal.get(row.deal_id) ?? []
-        const milestoneIndex = ordered.findIndex((x) => x.id === row.id)
-        return {
-          dealId: row.deal_id,
-          dealTitle: deal?.title ?? tr(m, 'adminPage.fallbackDeal'),
-          dealProductName: deal?.product_name ?? null,
-          escrowContractAddress: deal?.escrow_contract_address ?? '',
-          milestoneId: row.id,
-          milestoneTitle: row.title,
-          milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : 0,
-          milestoneAmount: Number(row.amount ?? 0),
-          milestonePercentage: Number(row.percentage ?? 0),
-          completedAt: row.completed_at ?? null,
-          supplierLogoUrl: deal?.supplier?.logo_url ?? null,
-        }
-      })
-    releaseFallbackItems.sort(sortByDealDate)
 
     uniquePymes = Array.from(
       new Map(
