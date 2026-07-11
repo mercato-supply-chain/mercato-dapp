@@ -3,13 +3,7 @@
 import { useState } from 'react'
 import type { CreateDealFormData, SupplierProductRow, FormStep } from '@/app/create-deal/types'
 import { DEFAULT_FORM_DATA } from '@/app/create-deal/types'
-import {
-  calculateYieldAPR,
-  calculateYieldAmount,
-  clampYieldBonusApr,
-  effectiveInvestorApr,
-  MAX_YIELD_BONUS_APR,
-} from '@/lib/yield'
+import { calculateYieldAPR, calculateYieldAmount } from '@/lib/yield'
 import {
   investorFundingTotal,
   platformFeeAmount,
@@ -61,19 +55,11 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
   const isTermValid = Number.isInteger(parsedTerm) && parsedTerm > 0
   const termDays = isTermValid ? parsedTerm : 60
 
-  const parsedBonus = parseFloat(
-    String(formData.yieldBonusApr ?? '0').replace(',', '.')
-  )
-  const yieldBonusApr = clampYieldBonusApr(
-    Number.isFinite(parsedBonus) ? parsedBonus : 0
-  )
-  const baseAPR =
+  const yieldAPR =
     totalAmount > 0 ? calculateYieldAPR(termDays, totalAmount) : 0
-  const effectiveAPR =
-    totalAmount > 0 ? effectiveInvestorApr(baseAPR, yieldBonusApr) : 0
-  const estimatedYield =
+  const estimatedEarnings =
     totalAmount > 0
-      ? calculateYieldAmount(totalAmount, termDays, effectiveAPR)
+      ? calculateYieldAmount(totalAmount, termDays, yieldAPR)
       : 0
 
   const fundingWindowDays = Number(formData.fundingWindowDays)
@@ -133,10 +119,8 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     feeAmount,
     platformFeePercent: PLATFORM_FEE_PERCENT,
     termDays,
-    yieldBonusApr,
-    baseAPR,
-    effectiveAPR,
-    estimatedYield,
+    yieldAPR,
+    estimatedEarnings,
     fundingWindowDays,
     isFundingWindowValid,
     canProceedStep1,
@@ -144,7 +128,6 @@ export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
     canSubmit,
     supplierLogoUrl,
     currentStep,
-    maxYieldBonusApr: MAX_YIELD_BONUS_APR,
     updateFormData,
     handleSupplierSelect,
     goBack: () => setCurrentStep((prev) => Math.max(1, prev - 1) as FormStep),

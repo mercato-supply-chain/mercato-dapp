@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import { investorFundingTotal } from '@/lib/deals/fees'
-import { formatCurrency } from '@/lib/format'
+import { formatUSDC } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import type { Reputation } from '@/lib/types'
 import { DealPartyTrust } from '@/components/deals/deal-party-trust'
@@ -50,10 +50,10 @@ export function DealInvestorHero({
   onConnectWallet,
 }: DealInvestorHeroProps) {
   const { t } = useI18n()
-  const apr = deal.yieldAPR ?? 0
+  const rate = deal.yieldAPR ?? 0
   const fundingTotal =
     deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
-  const { total } = computeInvestorReturns(deal.priceUSDC, apr, deal.term)
+  const { total } = computeInvestorReturns(deal.priceUSDC, rate, deal.term)
 
   return (
     <section className="mb-8 rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
@@ -91,13 +91,13 @@ export function DealInvestorHero({
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
-            {formatCurrency(fundingTotal)}
+            {formatUSDC(fundingTotal)}
             <span className="mx-2 text-muted-foreground font-normal">→</span>
-            {formatCurrency(Math.round(total))}
+            {formatUSDC(total)}
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {t('dealDetail.investorHeroMeta', {
-              apr: apr.toFixed(1),
+              apr: rate.toFixed(2),
               days: deal.term,
             })}
           </p>

@@ -14,7 +14,7 @@ import {
   Lock,
 } from 'lucide-react'
 import type { Deal, Reputation } from '@/lib/types'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatUSDC } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 
@@ -68,31 +68,25 @@ export function DealDetailSidebar({ deal, isFundingOpen, pymeReputation }: DealD
           <CardContent className="space-y-3">
             <div className="flex items-end justify-between">
               <p className="text-sm text-muted-foreground">{t('dealDetail.principal')}</p>
-              <p className="font-semibold tabular-nums">{formatCurrency(deal.priceUSDC)}</p>
+              <p className="font-semibold tabular-nums">{formatUSDC(deal.priceUSDC)}</p>
             </div>
             <div className="flex items-end justify-between">
               <p className="text-sm text-muted-foreground">
                 {t('dealDetail.profitLine', {
                   days: deal.term,
-                  apr: deal.yieldAPR.toFixed(1),
+                  apr: deal.yieldAPR.toFixed(2),
                 })}
               </p>
               <p className="font-semibold tabular-nums text-success">
                 +
-                {formatCurrency(
-                  Math.round(deal.priceUSDC * (deal.yieldAPR / 100) * (deal.term / 365)),
-                )}
+                {formatUSDC(deal.priceUSDC * (deal.yieldAPR / 100))}
               </p>
             </div>
             <Separator />
             <div className="flex items-end justify-between">
               <p className="text-sm font-medium">{t('dealDetail.totalRepayment')}</p>
               <p className="text-lg font-bold tabular-nums">
-                {formatCurrency(
-                  Math.round(
-                    deal.priceUSDC * (1 + (deal.yieldAPR / 100) * (deal.term / 365)),
-                  ),
-                )}
+                {formatUSDC(deal.priceUSDC * (1 + deal.yieldAPR / 100))}
               </p>
             </div>
             {(deal.yieldBonusApr ?? 0) > 0 && (

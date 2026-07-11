@@ -22,11 +22,8 @@ interface CreateDealFormBodyProps {
   fundingTotal: number
   feeAmount: number
   platformFeePercent: number
-  baseAPR: number
-  effectiveAPR: number
-  estimatedYield: number
-  yieldBonusApr: number
-  maxYieldBonusApr: number
+  yieldAPR: number
+  estimatedEarnings: number
   canProceedStep1: boolean
   canProceedStep2: boolean
   canSubmit: boolean
@@ -53,11 +50,8 @@ export function CreateDealFormBody({
   fundingTotal,
   feeAmount,
   platformFeePercent,
-  baseAPR,
-  effectiveAPR,
-  estimatedYield,
-  yieldBonusApr,
-  maxYieldBonusApr,
+  yieldAPR,
+  estimatedEarnings,
   canProceedStep1,
   canProceedStep2,
   canSubmit,
@@ -108,11 +102,8 @@ export function CreateDealFormBody({
               formData={formData}
               filteredSuppliers={filteredSuppliers}
               totalAmount={totalAmount}
-              estimatedYield={estimatedYield}
-              baseAPR={totalAmount > 0 ? baseAPR : undefined}
-              effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
-              yieldBonusApr={yieldBonusApr}
-              maxYieldBonusApr={maxYieldBonusApr}
+              estimatedEarnings={estimatedEarnings}
+              yieldAPR={totalAmount > 0 ? yieldAPR : undefined}
               onUpdate={updateFormData}
               onSupplierSelect={handleSupplierSelect}
             />
@@ -165,9 +156,8 @@ export function CreateDealFormBody({
             fundingTotal={fundingTotal}
             feeAmount={feeAmount}
             platformFeePercent={platformFeePercent}
-            baseAPR={totalAmount > 0 ? baseAPR : undefined}
-            effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
-            yieldBonusApr={yieldBonusApr}
+            yieldAPR={totalAmount > 0 ? yieldAPR : undefined}
+            estimatedEarnings={totalAmount > 0 ? estimatedEarnings : undefined}
           />
           <HowItWorksCard />
         </div>

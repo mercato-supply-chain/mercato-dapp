@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Menu, PanelLeft, PanelLeftClose } from 'lucide-react'
 import { Navigation } from '@/components/navigation'
-import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar'
+import {
+  DashboardSidebar,
+  SIDEBAR_COLLAPSED_KEY,
+} from '@/components/dashboard/dashboard-sidebar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { getRoleTheme } from '@/lib/dashboard/role-theme'
@@ -17,8 +20,22 @@ type DashboardShellProps = {
 
 export function DashboardShell({ userType, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const { t } = useI18n()
   const theme = getRoleTheme(userType)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
+    if (stored === 'true') setCollapsed(true)
+  }, [])
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next))
+      return next
+    })
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -27,20 +44,44 @@ export function DashboardShell({ userType, children }: DashboardShellProps) {
       <div className="flex flex-1">
         <aside
           className={cn(
-            'hidden w-64 shrink-0 border-r border-border/60 bg-muted/20 lg:block',
+            'hidden shrink-0 border-r border-border/60 bg-muted/20 transition-[width] duration-200 ease-in-out lg:block',
             'lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto',
+            collapsed ? 'w-16' : 'w-64',
           )}
         >
-          <div className="p-4">
-            <p
+          <div className={cn('flex flex-col', collapsed ? 'p-2' : 'p-4')}>
+            <div
               className={cn(
-                'mb-4 rounded-xl px-3 py-2 text-xs font-semibold',
-                theme.badge,
+                'mb-4 flex items-center',
+                collapsed ? 'justify-center' : 'justify-between gap-2',
               )}
             >
-              {t(`dashboard.roles.${userType}` as 'dashboard.roles.pyme')}
-            </p>
-            <DashboardSidebar userType={userType} />
+              {!collapsed ? (
+                <p
+                  className={cn(
+                    'min-w-0 flex-1 rounded-xl px-3 py-2 text-xs font-semibold',
+                    theme.badge,
+                  )}
+                >
+                  {t(`dashboard.roles.${userType}` as 'dashboard.roles.pyme')}
+                </p>
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground"
+                onClick={toggleCollapsed}
+                aria-label={collapsed ? t('dashboardNav.expandSidebar') : t('dashboardNav.collapseSidebar')}
+              >
+                {collapsed ? (
+                  <PanelLeft className="h-4 w-4" aria-hidden />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" aria-hidden />
+                )}
+              </Button>
+            </div>
+            <DashboardSidebar userType={userType} collapsed={collapsed} />
           </div>
         </aside>
 

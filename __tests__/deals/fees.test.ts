@@ -13,12 +13,14 @@ import {
 describe('deal fees', () => {
   test('platform fee is 1% of principal', () => {
     expect(platformFeeAmount(10_000)).toBe(100)
+    expect(platformFeeAmount(84)).toBe(0.84)
     expect(PLATFORM_FEE_PERCENT).toBe(1)
   })
 
   test('investor funding total includes platform fee', () => {
     expect(investorFundingTotal(10_000)).toBe(10_100)
     expect(investorFundingTotal(45_000)).toBe(45_450)
+    expect(investorFundingTotal(84)).toBe(84.84)
   })
 
   test('repayment escrow grosses up for platform + TW protocol fees', () => {

@@ -1,3 +1,4 @@
+import { normalizeUSDC } from '@/lib/format'
 import type {
   AllocationSlice,
   EnrichedInvestorDeal,
@@ -7,17 +8,19 @@ import type {
   PortfolioBucket,
 } from './types'
 
-export function expectedYield(amount: number, apr: number, termDays: number): number {
-  if (termDays <= 0 || apr <= 0) return 0
-  return amount * (apr / 100) * (termDays / 365)
+export function expectedYield(amount: number, rate: number, termDays: number): number {
+  if (termDays <= 0 || rate <= 0) return 0
+  // Flat rate for the deal term (not annualized)
+  return normalizeUSDC(amount * (rate / 100))
 }
 
-export function accruedYield(amount: number, apr: number, fundedAt: string | null, termDays: number): number {
-  if (!fundedAt || termDays <= 0 || apr <= 0) return 0
+export function accruedYield(amount: number, rate: number, fundedAt: string | null, termDays: number): number {
+  if (!fundedAt || termDays <= 0 || rate <= 0) return 0
   const start = new Date(fundedAt).getTime()
   const elapsedMs = Math.max(0, Date.now() - start)
   const daysElapsed = Math.min(termDays, elapsedMs / 86_400_000)
-  return amount * (apr / 100) * (daysElapsed / 365)
+  // Accrue flat term yield proportionally over the deal term
+  return normalizeUSDC(amount * (rate / 100) * (daysElapsed / termDays))
 }
 
 export function termProgress(fundedAt: string | null, termDays: number | null): EnrichedInvestorDeal['termProgress'] {

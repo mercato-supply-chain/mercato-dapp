@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Building2 } from 'lucide-react'
-import { formatCurrency, formatPercent } from '@/lib/format'
+import { formatPercent, formatUSDC } from '@/lib/format'
 import { Input } from '@/components/ui/input'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
 import type { CreateDealFormData } from '../types'
@@ -33,15 +33,11 @@ interface SupplierStepProps {
     | 'term'
     | 'fundingWindowDays'
     | 'category'
-    | 'yieldBonusApr'
   >
   filteredSuppliers: SupplierOption[]
   totalAmount: number
-  estimatedYield: number
-  baseAPR?: number
-  effectiveAPR?: number
-  yieldBonusApr: number
-  maxYieldBonusApr: number
+  estimatedEarnings: number
+  yieldAPR?: number
   onUpdate: (field: keyof CreateDealFormData, value: string) => void
   onSupplierSelect: (supplierId: string) => void
 }
@@ -50,19 +46,12 @@ export function SupplierStep({
   formData,
   filteredSuppliers,
   totalAmount,
-  estimatedYield,
-  baseAPR,
-  effectiveAPR,
-  yieldBonusApr,
-  maxYieldBonusApr,
+  estimatedEarnings,
+  yieldAPR,
   onUpdate,
   onSupplierSelect,
 }: SupplierStepProps) {
   const { t } = useI18n()
-  const rawBonusInput =
-    parseFloat(String(formData.yieldBonusApr).replace(',', '.')) || 0
-  const showBonusCapHint =
-    Number.isFinite(rawBonusInput) && rawBonusInput > maxYieldBonusApr
 
   const PRESET_FUNDING_WINDOWS = ['3', '7', '14']
   const isCustomFundingWindow =
@@ -218,69 +207,33 @@ export function SupplierStep({
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="yield-bonus-apr">
-            {t('createDeal.additionalYield')}
-          </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="yield-bonus-apr"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              max={maxYieldBonusApr}
-              step={0.25}
-              value={formData.yieldBonusApr}
-              onChange={(e) => onUpdate('yieldBonusApr', e.target.value)}
-              className="max-w-[140px] tabular-nums"
-            />
-            <span className="text-sm text-muted-foreground">% APR</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t('createDeal.yieldHint', { max: maxYieldBonusApr })}
-          </p>
-          {showBonusCapHint && (
-            <p className="text-xs text-amber-600 dark:text-amber-500">
-              {t('createDeal.bonusCapped', { max: maxYieldBonusApr })}
-            </p>
-          )}
-        </div>
-
         {totalAmount > 0 && (
           <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{t('createDeal.dealAmount')}</span>
               <span className="font-semibold tabular-nums">
-                {formatCurrency(totalAmount)}
+                {formatUSDC(totalAmount)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                {t('createDeal.estimatedYield')}
+                {t('createDeal.estimatedEarnings')}
               </span>
               <span className="font-semibold text-success tabular-nums">
-                {formatCurrency(estimatedYield)} (
-                {formatPercent((estimatedYield / totalAmount) * 100)})
+                {formatUSDC(estimatedEarnings)} (
+                {formatPercent((estimatedEarnings / totalAmount) * 100, {
+                  minFractionDigits: 2,
+                  maxFractionDigits: 2,
+                })})
               </span>
             </div>
-            {baseAPR != null && effectiveAPR != null && (
+            {yieldAPR != null && (
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>
-                  {t('createDeal.baseAprLine', {
-                    apr: baseAPR.toFixed(1),
+                  {t('createDeal.aprLine', {
+                    apr: yieldAPR.toFixed(2),
                     days: formData.term,
                   })}
-                  {yieldBonusApr > 0 && (
-                    <span className="text-foreground">
-                      {' '}
-                      <span className="font-medium text-success">
-                        {t('createDeal.pymeBonus', {
-                          bonus: yieldBonusApr.toFixed(2),
-                          apr: effectiveAPR.toFixed(2),
-                        })}
-                      </span>
-                    </span>
-                  )}
                 </p>
               </div>
             )}
@@ -289,7 +242,7 @@ export function SupplierStep({
                 {t('createDeal.repayEstimate')}
               </span>
               <span className="font-semibold tabular-nums">
-                {formatCurrency(totalAmount + estimatedYield)}
+                {formatUSDC(totalAmount + estimatedEarnings)}
               </span>
             </div>
           </div>

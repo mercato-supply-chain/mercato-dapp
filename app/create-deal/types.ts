@@ -48,8 +48,6 @@ export interface CreateDealFormData {
   quantity: string
   term: string
   fundingWindowDays: string
-  /** Extra APR percentage points on top of the base rate (optional, 0–10) */
-  yieldBonusApr: string
 }
 
 export const DEFAULT_FORM_DATA: CreateDealFormData = {
@@ -62,7 +60,6 @@ export const DEFAULT_FORM_DATA: CreateDealFormData = {
   quantity: '',
   term: '60',
   fundingWindowDays: '7',
-  yieldBonusApr: '0',
 }
 
 export function formatCategoryLabel(cat: string): string {

@@ -42,8 +42,8 @@ export default function CreateDealContent() {
       productUnitPrice: Number(form.selectedProduct.price_per_unit),
       totalAmount: form.totalAmount,
       termDays: Number(form.formData.term),
-      effectiveAPR: form.effectiveAPR,
-      yieldBonusApr: form.yieldBonusApr,
+      effectiveAPR: form.yieldAPR,
+      yieldBonusApr: 0,
       category: form.formData.category || form.selectedProduct.category || 'other',
       supplierName: form.formData.supplierName,
       supplierContact: form.formData.supplierContact || null,
@@ -79,11 +79,8 @@ export default function CreateDealContent() {
           fundingTotal={form.fundingTotal}
           feeAmount={form.feeAmount}
           platformFeePercent={form.platformFeePercent}
-          baseAPR={form.baseAPR}
-          effectiveAPR={form.effectiveAPR}
-          estimatedYield={form.estimatedYield}
-          yieldBonusApr={form.yieldBonusApr}
-          maxYieldBonusApr={form.maxYieldBonusApr}
+          yieldAPR={form.yieldAPR}
+          estimatedEarnings={form.estimatedEarnings}
           canProceedStep1={form.canProceedStep1}
           canProceedStep2={form.canProceedStep2}
           canSubmit={form.canSubmit}
