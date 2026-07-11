@@ -11,12 +11,27 @@ export type DealStatus =
 
 export type FundingStatus = 'open' | 'funded' | 'expired' | 'extended'
 
-/** Repayment escrow lifecycle (Trustless Work single-release). */
+/**
+ * Repayment escrow lifecycle (Trustless Work multi-release).
+ * Legacy `funded` is retained for rows created under the single-release flow.
+ */
 export type RepaymentStatus =
   | 'none'
+  | 'order_confirmed'
   | 'escrow_initialized'
-  | 'funded'
+  | 'funding'
+  | 'ready_to_release'
+  | 'partially_released'
   | 'released'
+  | 'funded'
+
+/** Cached multi-release repayment milestone (mirrors TW indexer). */
+export interface RepaymentMilestoneCache {
+  index: number
+  description: string
+  amount: number
+  released: boolean
+}
 
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
 
@@ -57,6 +72,10 @@ export interface Deal {
   fundingTxHash?: string
   repaymentStatus: RepaymentStatus
   repaymentDueAt?: string
+  /** Full grossed repayment target (principal + interest / 0.987). */
+  repaymentTotalAmount?: number
+  /** Cached TW multi-release repayment milestones. */
+  repaymentMilestones?: RepaymentMilestoneCache[]
   pymeName: string
   pymeId?: string
   pymeStakeAmount?: number

@@ -54,3 +54,36 @@ export function investorPayoutAmount(
   const safeInterest = Number.isFinite(interest) && interest > 0 ? interest : 0
   return roundUsdc(principal + safeInterest)
 }
+
+/** Default first repayment milestone as a percent of the grossed total. */
+export const DEFAULT_FIRST_MILESTONE_PERCENT = 50
+
+/**
+ * Amount for a repayment milestone given the full grossed total and a percent slice.
+ * Example: 50% of $10,638.30 → $5,319.15
+ */
+export function repaymentMilestoneAmount(
+  totalGrossed: number,
+  percent: number,
+): number {
+  if (!Number.isFinite(totalGrossed) || totalGrossed <= 0) return 0
+  if (!Number.isFinite(percent) || percent <= 0) return 0
+  const clamped = Math.min(100, percent)
+  return roundUsdc(totalGrossed * (clamped / 100))
+}
+
+/**
+ * Remaining grossed amount after scheduled/released milestone amounts.
+ * Floors at 0 to avoid negative dust from rounding.
+ */
+export function repaymentRemainingAmount(
+  totalGrossed: number,
+  scheduledAmounts: number[],
+): number {
+  if (!Number.isFinite(totalGrossed) || totalGrossed <= 0) return 0
+  const scheduled = scheduledAmounts.reduce((sum, n) => {
+    if (!Number.isFinite(n) || n <= 0) return sum
+    return sum + n
+  }, 0)
+  return roundUsdc(Math.max(0, totalGrossed - scheduled))
+}

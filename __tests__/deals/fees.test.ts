@@ -6,6 +6,8 @@ import {
   investorPayoutAmount,
   platformFeeAmount,
   repaymentEscrowAmount,
+  repaymentMilestoneAmount,
+  repaymentRemainingAmount,
 } from '@/lib/deals/fees'
 
 describe('deal fees', () => {
@@ -38,5 +40,20 @@ describe('deal fees', () => {
     expect(platformFeeAmount(0)).toBe(0)
     expect(investorFundingTotal(-1)).toBe(0)
     expect(repaymentEscrowAmount(0, 100)).toBe(0)
+  })
+
+  test('repayment milestone amount is a percent of grossed total', () => {
+    const total = repaymentEscrowAmount(10_000, 500)
+    expect(repaymentMilestoneAmount(total, 50)).toBe(5_319.15)
+    expect(repaymentMilestoneAmount(total, 100)).toBe(total)
+    expect(repaymentMilestoneAmount(0, 50)).toBe(0)
+  })
+
+  test('repayment remaining amount subtracts scheduled slices', () => {
+    const total = repaymentEscrowAmount(10_000, 500)
+    const first = repaymentMilestoneAmount(total, 50)
+    expect(repaymentRemainingAmount(total, [first])).toBe(5_319.15)
+    expect(repaymentRemainingAmount(total, [first, 5_319.15])).toBe(0)
+    expect(repaymentRemainingAmount(total, [])).toBe(total)
   })
 })

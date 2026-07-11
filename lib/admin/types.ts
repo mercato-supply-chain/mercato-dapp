@@ -1,4 +1,21 @@
-/** Milestone awaiting approval + release (in_progress) */
+/** Deal awaiting admin to create multi-release repayment escrow */
+export type CreateEscrowItem = {
+  dealId: string
+  dealTitle: string
+  dealProductName: string | null
+  principal: number
+  aprPercent: number
+  termDays: number
+  totalGrossed: number
+  defaultFirstMilestoneAmount: number
+  investorAddress: string | null
+  pymeName: string
+  supplierName: string
+  supplierLogoUrl: string | null
+  createdAt?: string
+}
+
+/** Milestone awaiting approval + release */
 export type PendingApprovalItem = {
   dealId: string
   dealTitle: string
@@ -15,6 +32,10 @@ export type PendingApprovalItem = {
   pymeName: string
   supplierName: string
   supplierLogoUrl: string | null
+  repaymentStatus?: string | null
+  investorAddress?: string | null
+  remainingToSchedule?: number
+  createdAt?: string
 }
 
 /** Completed milestone: admin can trigger release only */
@@ -39,6 +60,7 @@ export type AdminQueueFilters = {
 
 export type AdminQueueData = {
   items: PendingApprovalItem[]
+  createEscrowItems: CreateEscrowItem[]
   releaseFallbackItems: ReleaseFallbackItem[]
   uniquePymes: { id: string; name: string }[]
   uniqueSuppliers: { id: string; name: string }[]

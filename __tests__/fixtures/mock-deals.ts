@@ -60,6 +60,15 @@ export const mockDeals: Deal[] = [
     pymeName: 'Coffee House Network',
     escrowAddress: 'GCSW4X...',
     repaymentStatus: 'escrow_initialized' as const,
+    repaymentTotalAmount: 29_786.22,
+    repaymentMilestones: [
+      {
+        index: 0,
+        description: 'Repayment milestone 1 (50%)',
+        amount: 14_893.11,
+        released: false,
+      },
+    ],
     investorAddress: 'GBLN2Y...',
     description: 'Premium organic coffee beans, direct from Colombian farms',
     category: 'Food & Beverage',

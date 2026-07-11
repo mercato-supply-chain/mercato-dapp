@@ -99,9 +99,12 @@ sequenceDiagram
   end
 
   rect rgb(248, 245, 255)
-  Note over PyME,Supplier: 4 - PyME repays via Trustless Work escrow
-  PyME->>Trustless: Deploy + fund repayment escrow
-  Trustless->>Stellar: Release principal + interest to investor; 1% to platform
+  Note over PyME,Supplier: 4 - Admin multi-release repayment escrow
+  PyME->>App: Confirm order arrived
+  App->>Trustless: Admin deploys first milestone (e.g. 50%)
+  PyME->>Trustless: Micro-fund until milestone covered
+  Trustless->>Stellar: Admin releases milestone to investor
+  App->>Trustless: Admin adds next milestone via updateEscrow
   end
 ```
 
@@ -109,10 +112,10 @@ sequenceDiagram
 
 | Role | Main actions |
 |------|-------------|
-| **PyME (Buyer)** | Create deal, choose supplier from catalog, deploy/fund repayment escrow, repay investors. |
-| **Investor** | Browse marketplace, fund deals in USDC (direct to supplier + 1% platform fee). Receives principal + yield from repayment escrow. |
+| **PyME (Buyer)** | Create deal, choose supplier from catalog, confirm order arrival, micro-fund repayment escrow. |
+| **Investor** | Browse marketplace, fund deals in USDC (direct to supplier + 1% platform fee). Receives principal + yield from repayment milestones. |
 | **Supplier** | Manage company profile and product catalog, fulfill orders. Receives full invoice payment up front (fee-free). |
-| **Admin** | View platform deals, approve/release repayment escrows, resolve disputes. |
+| **Admin** | Create multi-release repayment escrows, approve/release milestones, add subsequent milestones, resolve disputes. |
 
 ### 2.3 Application Routes
 

@@ -86,6 +86,9 @@ export function DealOnChainPanel({
       {indexerEscrow && (
         <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">{t('dealDetail.fromIndexer')}</p>
+          {indexerEscrow.type ? (
+            <p className="mt-1 capitalize">{indexerEscrow.type.replace('-', ' ')}</p>
+          ) : null}
           {indexerEscrow.balance != null && (
             <p className="mt-1">
               {t('dealDetail.balanceLine', { bal: indexerEscrow.balance.toLocaleString() })}
@@ -94,11 +97,15 @@ export function DealOnChainPanel({
           {indexerEscrow.milestones?.map((m, i) => {
             const amount =
               'amount' in m && m.amount != null ? ` (${m.amount})` : ''
+            const released =
+              'flags' in m && m.flags && typeof m.flags === 'object' && 'released' in m.flags
+                ? Boolean((m.flags as { released?: boolean }).released)
+                : false
             return (
               <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="mt-0.5">
                 {t('dealDetail.indexerMilestoneLine', {
                   i,
-                  status: m.status ?? '—',
+                  status: released ? 'released' : (m.status ?? '—'),
                   amt: amount,
                 })}
               </p>

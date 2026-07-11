@@ -6,7 +6,7 @@ const steps = [
   'Create your deal with product details and repayment terms',
   'Investors fund the supplier directly (plus a 1% platform fee)',
   'Supplier ships — fee-free, paid in full up front',
-  'You repay principal + yield into escrow; platform takes 1% on repayment',
+  'Confirm order arrival; micro-fund the multi-release repayment escrow as you go',
 ] as const
 
 export function HowItWorksCard() {

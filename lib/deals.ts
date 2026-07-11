@@ -1,4 +1,11 @@
-import type { Deal, DealStatus, FundingStatus, Milestone, RepaymentStatus } from './types'
+import type {
+  Deal,
+  DealStatus,
+  FundingStatus,
+  Milestone,
+  RepaymentMilestoneCache,
+  RepaymentStatus,
+} from './types'
 import { investorFundingTotal, PLATFORM_FEE_PERCENT } from './deals/fees'
 import { calculateYieldAPR } from './yield'
 
@@ -27,6 +34,8 @@ export interface DealRow {
   funding_tx_hash?: string | null
   repayment_status?: string | null
   repayment_due_at?: string | null
+  repayment_total_amount?: number | null
+  repayment_milestones?: RepaymentMilestoneCache[] | null
   funding_expires_at?: string | null
   funding_window_days?: number | null
   extension_count?: number | null
@@ -64,9 +73,13 @@ export interface DealRow {
 
 const REPAYMENT_STATUSES = new Set<RepaymentStatus>([
   'none',
+  'order_confirmed',
   'escrow_initialized',
-  'funded',
+  'funding',
+  'ready_to_release',
+  'partially_released',
   'released',
+  'funded',
 ])
 
 function mapRepaymentStatus(value: string | null | undefined): RepaymentStatus {
@@ -74,6 +87,26 @@ function mapRepaymentStatus(value: string | null | undefined): RepaymentStatus {
     return value as RepaymentStatus
   }
   return 'none'
+}
+
+function mapRepaymentMilestones(
+  value: RepaymentMilestoneCache[] | null | undefined,
+): RepaymentMilestoneCache[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (m): m is RepaymentMilestoneCache =>
+        m != null &&
+        typeof m === 'object' &&
+        Number.isFinite(Number(m.index)) &&
+        Number.isFinite(Number(m.amount)),
+    )
+    .map((m) => ({
+      index: Number(m.index),
+      description: typeof m.description === 'string' ? m.description : '',
+      amount: Number(m.amount),
+      released: Boolean(m.released),
+    }))
 }
 
 export interface MilestoneRow {
@@ -212,6 +245,12 @@ export function mapDealFromDb(row: DealRow): Deal {
     repaymentDueAt: row.repayment_due_at
       ? new Date(row.repayment_due_at).toISOString()
       : undefined,
+    repaymentTotalAmount:
+      row.repayment_total_amount != null &&
+      Number.isFinite(Number(row.repayment_total_amount))
+        ? Number(row.repayment_total_amount)
+        : undefined,
+    repaymentMilestones: mapRepaymentMilestones(row.repayment_milestones),
     pymeName,
     pymeId: row.pyme_id ?? undefined,
     pymeStakeAmount:
