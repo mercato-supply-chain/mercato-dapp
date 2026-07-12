@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CreateDealFormData, SupplierProductRow, FormStep } from '@/app/create-deal/types'
 import { DEFAULT_FORM_DATA } from '@/app/create-deal/types'
 import { calculateYieldAPR, calculateYieldAmount } from '@/lib/yield'
@@ -10,9 +10,19 @@ import {
   PLATFORM_FEE_PERCENT,
 } from '@/lib/deals/fees'
 
-export function useCreateDealForm(supplierProducts: SupplierProductRow[]) {
+export function useCreateDealForm(
+  supplierProducts: SupplierProductRow[],
+  initialFormData?: CreateDealFormData | null,
+) {
   const [formData, setFormData] = useState<CreateDealFormData>(DEFAULT_FORM_DATA)
   const [currentStep, setCurrentStep] = useState<FormStep>(1)
+  const hydratedInitial = useRef(false)
+
+  useEffect(() => {
+    if (!initialFormData || hydratedInitial.current) return
+    setFormData(initialFormData)
+    hydratedInitial.current = true
+  }, [initialFormData])
 
   const availableCategories = Array.from(
     new Set(supplierProducts.map((p) => p.category).filter(Boolean))

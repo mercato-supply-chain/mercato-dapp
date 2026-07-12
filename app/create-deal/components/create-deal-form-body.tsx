@@ -37,6 +37,17 @@ interface CreateDealFormBodyProps {
   goNext: () => void
   updateFormData: (field: keyof CreateDealFormData, value: string) => void
   handleSupplierSelect: (supplierId: string) => void
+  /** Override create-flow copy (edit deal page). */
+  copy?: {
+    badge: string
+    title: string
+    description: string
+    submit: string
+    submitting: string
+  }
+  /** When false, skip the connect-wallet gate on the final step. */
+  requireWallet?: boolean
+  showHowItWorks?: boolean
 }
 
 export function CreateDealFormBody({
@@ -65,20 +76,28 @@ export function CreateDealFormBody({
   goNext,
   updateFormData,
   handleSupplierSelect,
+  copy,
+  requireWallet = true,
+  showHowItWorks = true,
 }: CreateDealFormBodyProps) {
   const { t } = useI18n()
+  const badge = copy?.badge ?? t('createDeal.badge')
+  const title = copy?.title ?? t('createDeal.title')
+  const description = copy?.description ?? t('createDeal.description')
+  const submitLabel = copy?.submit ?? t('createDeal.create')
+  const submittingLabel = copy?.submitting ?? t('createDeal.creating')
 
   return (
     <>
       <div className="mb-8">
         <Badge className="mb-3" variant="secondary">
-          {t('createDeal.badge')}
+          {badge}
         </Badge>
         <h1 className="mb-2 text-4xl font-bold tracking-tight">
-          {t('createDeal.title')}
+          {title}
         </h1>
         <p className="text-lg text-muted-foreground">
-          {t('createDeal.description')}
+          {description}
         </p>
       </div>
 
@@ -128,15 +147,13 @@ export function CreateDealFormBody({
                 {t('common.continue')}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
               </Button>
-            ) : isConnected ? (
+            ) : !requireWallet || isConnected ? (
               <Button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
               >
-                {isSubmitting
-                  ? t('createDeal.creating')
-                  : t('createDeal.create')}
+                {isSubmitting ? submittingLabel : submitLabel}
               </Button>
             ) : (
               <Button type="button" onClick={handleConnect}>
@@ -159,7 +176,7 @@ export function CreateDealFormBody({
             yieldAPR={totalAmount > 0 ? yieldAPR : undefined}
             estimatedEarnings={totalAmount > 0 ? estimatedEarnings : undefined}
           />
-          <HowItWorksCard />
+          {showHowItWorks ? <HowItWorksCard /> : null}
         </div>
       </div>
     </>

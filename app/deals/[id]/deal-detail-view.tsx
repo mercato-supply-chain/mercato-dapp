@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getFundingTimeRemainingMs } from '@/lib/deals'
+import { canEditDeal } from '@/lib/deals/edit'
 import { useDealDetail } from '@/hooks/use-deal-detail'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
@@ -16,7 +17,7 @@ import { DealDetailSkeleton } from '@/components/deals/deal-detail-skeleton'
 import { DealDetailTabs } from '@/components/deals/deal-detail-tabs'
 import { DealInvestorHero } from '@/components/deals/deal-investor-hero'
 import { DealInvestorDetails } from '@/components/deals/deal-investor-details'
-import { ArrowLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Pencil, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
@@ -99,8 +100,9 @@ export default function DealDetailPage() {
   const isFundingOpen = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
   const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
   const canFund = userType === 'investor' && Boolean(deal.supplierAddress) && isFundingOpen
-  const showInvestorPitch = deal.status === 'awaiting_funding' && isFundingOpen && !isPyme && !isSupplier
+  const showInvestorPitch = deal.status === 'awaiting_funding' && isFundingOpen && !isPyme && !isSupplier && !isAdmin
   const fundingTotal = deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
+  const showEditDeal = canEditDeal(deal, { userId, isPyme, isAdmin })
 
   const fundingProps = {
     deal,
@@ -118,6 +120,14 @@ export default function DealDetailPage() {
   }
 
   const fundPanel = <DealFundingPanel {...fundingProps} showMobileBar={false} />
+  const editDealButton = showEditDeal ? (
+    <Button asChild variant="outline" size="sm" className="gap-1.5">
+      <Link href={`/deals/${deal.id}/edit`}>
+        <Pencil className="h-3.5 w-3.5" aria-hidden />
+        {t('dealDetail.editDealCta')}
+      </Link>
+    </Button>
+  ) : null
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -158,7 +168,10 @@ export default function DealDetailPage() {
                   {deal.description || t('dealDetail.descriptionFallback', { name: deal.pymeName })}
                 </p>
               </div>
-              <DealFundingPanel {...fundingProps} showMobileBar={showInvestorPitch} />
+              <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                {editDealButton}
+                <DealFundingPanel {...fundingProps} showMobileBar={showInvestorPitch} />
+              </div>
             </div>
             {deal.status === 'awaiting_funding' && deal.fundingExpiresAt && (
               <p className="mt-3 text-sm text-muted-foreground">

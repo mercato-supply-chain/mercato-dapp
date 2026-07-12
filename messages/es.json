@@ -298,6 +298,20 @@
     "create": "Crear orden",
     "creating": "Creando orden..."
   },
+  "editDeal": {
+    "badge": "Editar orden",
+    "title": "Editar orden",
+    "description": "Actualiza los términos antes de que un inversionista financie. Los cambios se bloquean una vez financiada la orden.",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "success": "Orden actualizada correctamente.",
+    "errorPrefix": "Error al actualizar la orden: {message}",
+    "invalidFundingWindow": "Define una ventana de financiamiento válida en días antes de guardar.",
+    "notAllowedTitle": "Edición no disponible",
+    "notAllowedBody": "No tienes permiso para editar esta orden.",
+    "lockedAfterFunding": "Esta orden ya fue financiada. Los términos no se pueden cambiar para preservar el acuerdo.",
+    "backToDeal": "Volver a la orden"
+  },
   "dashboardNav": {
     "sidebarLabel": "Navegación del panel",
     "openMenu": "Abrir menú del panel",
@@ -942,6 +956,7 @@
     "escrowDeploying": "Desplegando escrow — actualiza en breve para financiar.",
     "fundingExpired": "La ventana de financiamiento expiró.",
     "extendFundingCta": "Extender ventana de financiamiento",
+    "editDealCta": "Editar orden",
     "extendTitle": "Extender ventana de financiamiento",
     "extendDescription": "Elige cuántos días extender esta orden. Solo se permite mientras no esté financiada.",
     "additionalDays": "Días adicionales",

@@ -298,6 +298,20 @@
     "create": "Create Deal",
     "creating": "Creating Deal..."
   },
+  "editDeal": {
+    "badge": "Edit deal",
+    "title": "Edit Deal",
+    "description": "Update deal terms before an investor funds. Changes are locked once funding is complete.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "success": "Deal updated successfully.",
+    "errorPrefix": "Error updating deal: {message}",
+    "invalidFundingWindow": "Set a valid funding window in days before saving.",
+    "notAllowedTitle": "Editing not available",
+    "notAllowedBody": "You do not have permission to edit this deal.",
+    "lockedAfterFunding": "This deal has already been funded. Terms cannot be changed to preserve the agreement.",
+    "backToDeal": "Back to deal"
+  },
   "dashboardNav": {
     "sidebarLabel": "Dashboard navigation",
     "openMenu": "Open dashboard menu",
@@ -942,6 +956,7 @@
     "escrowDeploying": "Escrow deploying — refresh shortly to fund.",
     "fundingExpired": "Funding window expired.",
     "extendFundingCta": "Extend funding window",
+    "editDealCta": "Edit deal",
     "extendTitle": "Extend funding window",
     "extendDescription": "Choose how many days to extend this deal. Extension is only allowed while the deal is unfunded.",
     "additionalDays": "Additional days",

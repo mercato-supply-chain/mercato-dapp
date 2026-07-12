@@ -5,17 +5,22 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { SupplierProductRow } from '@/app/create-deal/types'
 
-export function useCreateDealInit() {
+export function useCreateDealInit(options?: { redirectIfUnauthenticated?: boolean }) {
+  const redirectIfUnauthenticated = options?.redirectIfUnauthenticated !== false
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [userId, setUserId] = useState<string | null>(null)
   const [supplierProducts, setSupplierProducts] = useState<SupplierProductRow[]>([])
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push('/auth/login')
+        if (redirectIfUnauthenticated) {
+          router.push('/auth/login')
+        }
+        setIsReady(true)
         return
       }
       setUserId(user.id)
@@ -56,9 +61,10 @@ export function useCreateDealInit() {
         })) as unknown as SupplierProductRow[]
       }
       setSupplierProducts(products)
+      setIsReady(true)
     }
     init()
-  }, [router, supabase])
+  }, [redirectIfUnauthenticated, router, supabase])
 
-  return { userId, supplierProducts }
+  return { userId, supplierProducts, isReady }
 }
