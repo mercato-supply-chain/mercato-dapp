@@ -107,8 +107,7 @@ export function useSupplierProducts(
     }
   }, [selectedCompanyId, supabase, t])
 
-  const handleAddProduct = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddProduct = useCallback(async () => {
     if (!user || !selectedCompanyId) return
     const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint } =
       parseProductForm()
@@ -173,8 +172,7 @@ export function useSupplierProducts(
     }
   }, [user, selectedCompanyId, parseProductForm, formProduct, supabase, t])
 
-  const handleUpdateProduct = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleUpdateProduct = useCallback(async () => {
     if (!editingProduct || !user || !selectedCompanyId) return
     const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint } =
       parseProductForm()

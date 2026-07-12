@@ -50,8 +50,8 @@ type SupplierProfileDialogsProps = {
   formProduct: ProductFormState
   onFormProductChange: (patch: Partial<ProductFormState>) => void
   formSaving: boolean
-  onAddProduct: (e: React.FormEvent) => void
-  onUpdateProduct: (e: React.FormEvent) => void
+  onAddProduct: () => void
+  onUpdateProduct: () => void
   onConfirmDelete: () => void
 }
 
@@ -147,27 +147,16 @@ export function SupplierProfileDialogs({
             <DialogTitle>{t('supplierProfile.dialogAddProductTitle')}</DialogTitle>
             <DialogDescription>{t('supplierProfile.dialogAddProductDescription')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={onAddProduct}>
-            <SupplierProductForm
-              formProduct={formProduct}
-              onChange={onFormProductChange}
-            />
-            <DialogFooter className="mt-6 gap-2 sm:gap-0">
-              <Button type="button" variant="ghost" onClick={() => onAddDialogOpenChange(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" disabled={formSaving}>
-                {formSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                    {t('supplierProfile.adding')}
-                  </>
-                ) : (
-                  t('supplierProfile.addProduct')
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+          <SupplierProductForm
+            formProduct={formProduct}
+            onChange={onFormProductChange}
+            formSaving={formSaving}
+            onSubmit={onAddProduct}
+            onCancel={() => onAddDialogOpenChange(false)}
+            submitLabel={t('supplierProfile.addProduct')}
+            submittingLabel={t('supplierProfile.adding')}
+            resetKey={addDialogOpen}
+          />
         </DialogContent>
       </Dialog>
 
@@ -182,27 +171,16 @@ export function SupplierProfileDialogs({
             <DialogTitle>{t('supplierProfile.dialogEditProductTitle')}</DialogTitle>
             <DialogDescription>{t('supplierProfile.dialogEditProductDescription')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={onUpdateProduct}>
-            <SupplierProductForm
-              formProduct={formProduct}
-              onChange={onFormProductChange}
-            />
-            <DialogFooter className="mt-6 gap-2 sm:gap-0">
-              <Button type="button" variant="ghost" onClick={() => onEditingProductChange(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" disabled={formSaving}>
-                {formSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                    {t('supplierProfile.savingDetails')}
-                  </>
-                ) : (
-                  t('supplierProfile.saveChanges')
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+          <SupplierProductForm
+            formProduct={formProduct}
+            onChange={onFormProductChange}
+            formSaving={formSaving}
+            onSubmit={onUpdateProduct}
+            onCancel={() => onEditingProductChange(null)}
+            submitLabel={t('supplierProfile.saveChanges')}
+            submittingLabel={t('supplierProfile.savingDetails')}
+            resetKey={editingProduct?.id ?? 'closed'}
+          />
         </DialogContent>
       </Dialog>
 
