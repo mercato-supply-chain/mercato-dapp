@@ -346,9 +346,6 @@ export function useRepaymentEscrow() {
           throw new Error('Repayment escrow contract ID was not confirmed')
         }
 
-        const dueAt = new Date()
-        dueAt.setDate(dueAt.getDate() + Math.max(1, params.termDays))
-
         const initialMilestones: RepaymentMilestoneCache[] = [
           {
             index: 0,
@@ -358,17 +355,31 @@ export function useRepaymentEscrow() {
           },
         ]
 
+        // Keep repayment_due_at from delivery confirmation; only backfill if missing
+        const { data: existingDeal } = await supabase
+          .from('deals')
+          .select('repayment_due_at')
+          .eq('id', params.dealId)
+          .single()
+
+        const updates: Record<string, unknown> = {
+          escrow_id: engagementId,
+          escrow_contract_address: contractId,
+          escrow_status: 'initialized',
+          repayment_status: 'escrow_initialized',
+          repayment_total_amount: totalGrossed,
+          repayment_milestones: initialMilestones,
+        }
+
+        if (!existingDeal?.repayment_due_at) {
+          const dueAt = new Date()
+          dueAt.setDate(dueAt.getDate() + Math.max(1, params.termDays))
+          updates.repayment_due_at = dueAt.toISOString()
+        }
+
         const { error } = await supabase
           .from('deals')
-          .update({
-            escrow_id: engagementId,
-            escrow_contract_address: contractId,
-            escrow_status: 'initialized',
-            repayment_status: 'escrow_initialized',
-            repayment_due_at: dueAt.toISOString(),
-            repayment_total_amount: totalGrossed,
-            repayment_milestones: initialMilestones,
-          })
+          .update(updates)
           .eq('id', params.dealId)
 
         if (error) throw error

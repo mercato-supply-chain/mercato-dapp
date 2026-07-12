@@ -70,6 +70,12 @@ export interface Deal {
   /** Repayment escrow contract address (not supplier payment). */
   escrowAddress?: string
   fundingTxHash?: string
+  /** Carrier tracking ID from supplier shipment confirmation. */
+  trackingId?: string
+  /** When supplier confirmed shipment. */
+  shippedAt?: string
+  /** When SMB confirmed goods received; repayment clock starts here. */
+  deliveredAt?: string
   repaymentStatus: RepaymentStatus
   repaymentDueAt?: string
   /** Full grossed repayment target (principal + interest / 0.987). */

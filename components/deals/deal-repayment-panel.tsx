@@ -2,34 +2,31 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Deal } from '@/lib/types'
-import type { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import {
-  PLATFORM_FEE_PERCENT,
   repaymentEscrowAmount,
-  investorPayoutAmount,
+  repaymentBreakdown,
   repaymentRemainingAmount,
 } from '@/lib/deals/fees'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
+import { stellarExpertContractUrl } from '@/lib/stellar/explorer'
 import { Badge } from '@/components/ui/badge'
-
-type Supabase = ReturnType<typeof createClient>
 
 interface DealRepaymentPanelProps {
   deal: Deal
   isPyme: boolean
   isAdmin: boolean
-  supabase: Supabase
   fetchDeal: () => Promise<Deal | null>
   onDealUpdate: (deal: Deal) => void
 }
@@ -46,7 +43,6 @@ export function DealRepaymentPanel({
   deal,
   isPyme,
   isAdmin,
-  supabase,
   fetchDeal,
   onDealUpdate,
 }: DealRepaymentPanelProps) {
@@ -64,7 +60,7 @@ export function DealRepaymentPanel({
 
   const apr = deal.yieldAPR ?? 0
   const { profit } = computeInvestorReturns(deal.priceUSDC, apr, deal.term)
-  const investorPayout = investorPayoutAmount(deal.priceUSDC, profit)
+  const breakdown = repaymentBreakdown(deal.priceUSDC, profit)
   const escrowAmount =
     deal.repaymentTotalAmount && deal.repaymentTotalAmount > 0
       ? deal.repaymentTotalAmount
@@ -97,26 +93,6 @@ export function DealRepaymentPanel({
   const refresh = async () => {
     const updated = await fetchDeal()
     if (updated) onDealUpdate(updated)
-  }
-
-  const handleConfirmOrder = async () => {
-    setBusy(true)
-    try {
-      const { error } = await supabase
-        .from('deals')
-        .update({ repayment_status: 'order_confirmed' })
-        .eq('id', deal.id)
-      if (error) throw error
-      await refresh()
-      toast.success(t('dealDetail.repaymentOrderConfirmed'))
-    } catch (err) {
-      console.error(err)
-      toast.error(
-        err instanceof Error ? err.message : t('dealDetail.repaymentOrderConfirmFail'),
-      )
-    } finally {
-      setBusy(false)
-    }
   }
 
   const handleFund = async () => {
@@ -202,6 +178,7 @@ export function DealRepaymentPanel({
   }
 
   const working = busy || isWorking
+  const duePending = !deal.repaymentDueAt && !deal.deliveredAt
 
   return (
     <Card>
@@ -210,23 +187,54 @@ export function DealRepaymentPanel({
         <CardDescription>{t('dealDetail.repaymentDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t('dealDetail.repaymentBreakdownTitle')}
+          </p>
+          <ul className="space-y-1.5">
+            <li className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{t('dealDetail.principal')}</span>
+              <span className="tabular-nums font-medium">
+                {formatCurrency(breakdown.principal)} USDC
+              </span>
+            </li>
+            <li className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{t('dealDetail.repaymentInterest')}</span>
+              <span className="tabular-nums font-medium">
+                {formatCurrency(breakdown.interest)} USDC
+              </span>
+            </li>
+            <li className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5">
+              <span className="font-medium">{t('dealDetail.repaymentEscrowTotalShort')}</span>
+              <span className="tabular-nums font-semibold">
+                {formatCurrency(escrowAmount)} USDC
+              </span>
+            </li>
+            <li className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{t('dealDetail.investorPayout')}</span>
+              <span className="tabular-nums font-medium text-success">
+                {formatCurrency(breakdown.investorPayout)} USDC
+              </span>
+            </li>
+          </ul>
+        </div>
+
         <div className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <p className="text-muted-foreground">{t('dealDetail.investorPayout')}</p>
-            <p className="font-semibold tabular-nums">{formatCurrency(investorPayout)} USDC</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">
-              {t('dealDetail.repaymentEscrowTotal', { percent: PLATFORM_FEE_PERCENT })}
-            </p>
-            <p className="font-semibold tabular-nums">{formatCurrency(escrowAmount)} USDC</p>
-          </div>
           {deal.repaymentDueAt ? (
             <div>
               <p className="text-muted-foreground">{t('dealDetail.repaymentDue')}</p>
               <p className="font-medium">{formatDate(deal.repaymentDueAt)}</p>
             </div>
-          ) : null}
+          ) : (
+            <div>
+              <p className="text-muted-foreground">{t('dealDetail.repaymentDue')}</p>
+              <p className="font-medium text-muted-foreground">
+                {duePending
+                  ? t('dealDetail.repaymentDuePendingDelivery')
+                  : t('dealDetail.repaymentDuePending')}
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-muted-foreground">{t('dealDetail.repaymentStatusLabel')}</p>
             <p className="font-medium capitalize">{status.replaceAll('_', ' ')}</p>
@@ -271,22 +279,10 @@ export function DealRepaymentPanel({
           </ul>
         ) : null}
 
-        {status === 'none' && isPyme ? (
-          <div className="space-y-2">
-            <Button
-              type="button"
-              onClick={handleConfirmOrder}
-              disabled={working}
-              className="w-full"
-            >
-              {working
-                ? t('dealDetail.repaymentConfirmingOrder')
-                : t('dealDetail.repaymentConfirmOrderCta')}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              {t('dealDetail.repaymentConfirmOrderHint')}
-            </p>
-          </div>
+        {status === 'none' ? (
+          <p className="text-sm text-muted-foreground">
+            {t('dealDetail.repaymentAwaitingDelivery')}
+          </p>
         ) : null}
 
         {status === 'order_confirmed' && isPyme ? (
@@ -395,9 +391,20 @@ export function DealRepaymentPanel({
         ) : null}
 
         {deal.escrowAddress ? (
-          <p className="break-all font-mono text-xs text-muted-foreground">
-            {deal.escrowAddress}
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {t('dealDetail.escrowContract')}
+            </p>
+            <a
+              href={stellarExpertContractUrl(deal.escrowAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex max-w-full items-center gap-1.5 break-all font-mono text-xs text-primary hover:underline"
+            >
+              {deal.escrowAddress}
+              <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
+            </a>
+          </div>
         ) : null}
       </CardContent>
     </Card>

@@ -129,8 +129,6 @@ export function DealFundingPanel({
       }
 
       const fundedAt = new Date()
-      const repaymentDueAt = new Date(fundedAt)
-      repaymentDueAt.setDate(repaymentDueAt.getDate() + Math.max(1, deal.term))
 
       const { error: updateError } = await supabase
         .from('deals')
@@ -139,7 +137,7 @@ export function DealFundingPanel({
           status: 'funded',
           funded_at: fundedAt.toISOString(),
           funding_tx_hash: fundingTxHash ?? null,
-          repayment_due_at: repaymentDueAt.toISOString(),
+          // Repayment due is set only after SMB confirms delivery
         })
         .eq('id', deal.id)
       if (updateError) throw updateError

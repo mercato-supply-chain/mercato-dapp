@@ -32,6 +32,9 @@ export interface DealRow {
   escrow_contract_address?: string | null
   escrow_status?: string | null
   funding_tx_hash?: string | null
+  tracking_id?: string | null
+  shipped_at?: string | null
+  delivered_at?: string | null
   repayment_status?: string | null
   repayment_due_at?: string | null
   repayment_total_amount?: number | null
@@ -241,6 +244,13 @@ export function mapDealFromDb(row: DealRow): Deal {
     milestones,
     escrowAddress: row.escrow_contract_address ?? row.escrow_address ?? undefined,
     fundingTxHash: row.funding_tx_hash ?? undefined,
+    trackingId: row.tracking_id?.trim() || undefined,
+    shippedAt: row.shipped_at
+      ? new Date(row.shipped_at).toISOString()
+      : undefined,
+    deliveredAt: row.delivered_at
+      ? new Date(row.delivered_at).toISOString()
+      : undefined,
     repaymentStatus: mapRepaymentStatus(row.repayment_status),
     repaymentDueAt: row.repayment_due_at
       ? new Date(row.repayment_due_at).toISOString()

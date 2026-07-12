@@ -7,10 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Package, Upload, ArrowRight } from 'lucide-react'
 import { getServerDictionary } from '@/lib/i18n/server'
 
-function tr(template: string, vars: Record<string, string | number>) {
-  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), template)
-}
-
 export default async function DeliveriesPage() {
   const m = await getServerDictionary()
   const supabase = await createClient()
@@ -41,18 +37,17 @@ export default async function DeliveriesPage() {
       title,
       product_name,
       status,
-      escrow_contract_address,
-      milestones(id, title, status, percentage)
+      tracking_id,
+      shipped_at,
+      delivered_at
     `)
         .in('supplier_id', companyIds)
         .in('status', ['funded', 'in_progress'])
+        .is('shipped_at', null)
         .order('created_at', { ascending: false })
     : { data: null }
 
-  const dealsWithPendingMilestones = (deals ?? []).filter((d) => {
-    const milestones = (d as { milestones?: { status: string }[] }).milestones ?? []
-    return milestones.some((m) => m.status === 'pending' || m.status === 'in_progress')
-  })
+  const pendingShipments = deals ?? []
 
   const dealStatusLabel = (status: string) => {
     const labels = m.dealStatus as Record<string, string>
@@ -66,7 +61,7 @@ export default async function DeliveriesPage() {
           <p className="text-muted-foreground">{m.deliveries.description}</p>
         </div>
 
-        {dealsWithPendingMilestones.length === 0 ? (
+        {pendingShipments.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -86,18 +81,13 @@ export default async function DeliveriesPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {dealsWithPendingMilestones.map((deal) => {
+            {pendingShipments.map((deal) => {
               const d = deal as {
                 id: string
                 title: string
                 product_name: string
                 status: string
-                escrow_contract_address?: string | null
-                milestones: { id: string; title: string; status: string; percentage: number }[]
               }
-              const pendingCount = d.milestones?.filter(
-                (m) => m.status === 'pending' || m.status === 'in_progress'
-              ).length ?? 0
               const title = d.product_name || d.title
               return (
                 <Card key={d.id}>
@@ -106,9 +96,7 @@ export default async function DeliveriesPage() {
                       <div>
                         <CardTitle className="text-lg">{title}</CardTitle>
                         <CardDescription className="mt-1">
-                          {pendingCount === 1
-                            ? tr(m.deliveries.milestonesPending, { count: pendingCount })
-                            : tr(m.deliveries.milestonesPendingPlural, { count: pendingCount })}
+                          {m.deliveries.shipPendingHint}
                         </CardDescription>
                       </div>
                       <Badge variant={d.status === 'funded' ? 'default' : 'secondary'}>
@@ -118,7 +106,7 @@ export default async function DeliveriesPage() {
                   </CardHeader>
                   <CardContent>
                     <Button asChild size="sm">
-                      <Link href={`/deals/${d.id}`}>
+                      <Link href={`/deals/${d.id}?action=ship`}>
                         <Upload className="mr-2 h-4 w-4" aria-hidden />
                         {m.deliveries.openDealUpload}
                         <ArrowRight className="ml-2 h-4 w-4" aria-hidden />

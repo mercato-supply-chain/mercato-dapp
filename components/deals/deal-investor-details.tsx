@@ -77,6 +77,7 @@ export function DealInvestorDetails({ deal, indexerEscrow }: DealInvestorDetails
           <div className="border-t border-border/60 px-4 pb-4 pt-3">
             <DealOnChainPanel
               escrowAddress={deal.escrowAddress}
+              fundingTxHash={deal.fundingTxHash}
               investorAddress={deal.investorAddress}
               supplierAddress={deal.supplierAddress}
               indexerEscrow={indexerEscrow}

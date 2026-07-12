@@ -5,6 +5,7 @@ import {
   investorFundingTotal,
   investorPayoutAmount,
   platformFeeAmount,
+  repaymentBreakdown,
   repaymentEscrowAmount,
   repaymentMilestoneAmount,
   repaymentRemainingAmount,
@@ -57,5 +58,15 @@ describe('deal fees', () => {
     expect(repaymentRemainingAmount(total, [first])).toBe(5_319.15)
     expect(repaymentRemainingAmount(total, [first, 5_319.15])).toBe(0)
     expect(repaymentRemainingAmount(total, [])).toBe(total)
+  })
+
+  test('repayment breakdown exposes principal, interest, and fees', () => {
+    const b = repaymentBreakdown(10_000, 500)
+    expect(b.principal).toBe(10_000)
+    expect(b.interest).toBe(500)
+    expect(b.investorPayout).toBe(10_500)
+    expect(b.total).toBe(10_638.3)
+    expect(b.platformFee).toBe(106.38)
+    expect(b.protocolFee).toBe(31.91)
   })
 })

@@ -9,6 +9,7 @@ import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DealFundingPanel } from '@/components/deals/deal-funding-panel'
+import { DealDeliveryFlow } from '@/components/deals/deal-delivery-flow'
 import { DealRepaymentPanel } from '@/components/deals/deal-repayment-panel'
 import { DealDetailSidebar } from '@/components/deals/deal-detail-sidebar'
 import { DealDetailSkeleton } from '@/components/deals/deal-detail-skeleton'
@@ -62,11 +63,19 @@ export default function DealDetailPage() {
 
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
-    if (searchParams.get('action') !== 'repayment') return
-    if (!deal.pymeId || deal.pymeId !== userId) return
-    hasHandledAction.current = true
-    document.getElementById('repayment-panel')?.scrollIntoView({ behavior: 'smooth' })
-    window.history.replaceState({}, '', window.location.pathname)
+    const action = searchParams.get('action')
+    if (action === 'repayment') {
+      if (!deal.pymeId || deal.pymeId !== userId) return
+      hasHandledAction.current = true
+      document.getElementById('repayment-panel')?.scrollIntoView({ behavior: 'smooth' })
+      window.history.replaceState({}, '', window.location.pathname)
+      return
+    }
+    if (action === 'ship' || action === 'delivery' || action === 'accept') {
+      hasHandledAction.current = true
+      document.getElementById('delivery-panel')?.scrollIntoView({ behavior: 'smooth' })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [deal, isLoading, userId, searchParams])
 
   if (isLoading) return <DealDetailSkeleton />
@@ -175,12 +184,23 @@ export default function DealDetailPage() {
           </div>
         )}
 
+        <div id="delivery-panel" className="mb-8">
+          <DealDeliveryFlow
+            deal={deal}
+            isSupplier={isSupplier}
+            isPyme={isPyme}
+            isAdmin={isAdmin}
+            supabase={supabase}
+            fetchDeal={fetchDeal}
+            onDealUpdate={setDeal}
+          />
+        </div>
+
         <div id="repayment-panel" className="mb-8">
           <DealRepaymentPanel
             deal={deal}
             isPyme={isPyme}
             isAdmin={isAdmin}
-            supabase={supabase}
             fetchDeal={fetchDeal}
             onDealUpdate={setDeal}
           />

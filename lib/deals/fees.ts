@@ -55,6 +55,23 @@ export function investorPayoutAmount(
   return roundUsdc(principal + safeInterest)
 }
 
+/** Line-item breakdown for the repayment escrow UI. */
+export function repaymentBreakdown(principal: number, interest: number) {
+  const safeInterest = Number.isFinite(interest) && interest > 0 ? interest : 0
+  const investorPayout = investorPayoutAmount(principal, safeInterest)
+  const total = repaymentEscrowAmount(principal, safeInterest)
+  const platformFee = roundUsdc(total * (PLATFORM_FEE_PERCENT / 100))
+  const protocolFee = roundUsdc(total * (TW_PROTOCOL_FEE_PERCENT / 100))
+  return {
+    principal: roundUsdc(Math.max(0, principal)),
+    interest: roundUsdc(safeInterest),
+    investorPayout,
+    platformFee,
+    protocolFee,
+    total,
+  }
+}
+
 /** Default first repayment milestone as a percent of the grossed total. */
 export const DEFAULT_FIRST_MILESTONE_PERCENT = 50
 
