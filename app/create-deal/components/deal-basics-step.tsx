@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Package } from 'lucide-react'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatUSDC } from '@/lib/format'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
 import { ProductImage } from '@/components/media/product-image'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
@@ -247,7 +247,7 @@ export function DealBasicsStep({
           <div className="rounded-lg border border-accent bg-accent/5 p-4">
             <p className="text-sm text-muted-foreground">{t('createDeal.totalDealAmount')}</p>
             <p className="text-3xl font-bold text-accent tabular-nums">
-              {formatCurrency(totalAmount)} USDC
+              {formatUSDC(totalAmount)} USDC
             </p>
           </div>
         )}

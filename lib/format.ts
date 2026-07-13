@@ -6,15 +6,23 @@
 export const formatCurrency = (
   value: number,
   currency = 'USD',
-  locale?: string
+  locale?: string,
+  options?: { minFractionDigits?: number; maxFractionDigits?: number }
 ): string => {
   return new Intl.NumberFormat(locale ?? 'en-US', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: options?.minFractionDigits ?? 0,
+    maximumFractionDigits: options?.maxFractionDigits ?? 0,
   }).format(value)
 }
+
+/** USDC amounts with cents — use for yields, fees, and repay estimates. */
+export const formatUSDC = (value: number, locale?: string): string =>
+  formatCurrency(value, 'USD', locale, {
+    minFractionDigits: 2,
+    maxFractionDigits: 2,
+  })
 
 export const formatDecimal = (
   value: number,

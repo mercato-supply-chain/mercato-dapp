@@ -11,6 +11,28 @@ export type DealStatus =
 
 export type FundingStatus = 'open' | 'funded' | 'expired' | 'extended'
 
+/**
+ * Repayment escrow lifecycle (Trustless Work multi-release).
+ * Legacy `funded` is retained for rows created under the single-release flow.
+ */
+export type RepaymentStatus =
+  | 'none'
+  | 'order_confirmed'
+  | 'escrow_initialized'
+  | 'funding'
+  | 'ready_to_release'
+  | 'partially_released'
+  | 'released'
+  | 'funded'
+
+/** Cached multi-release repayment milestone (mirrors TW indexer). */
+export interface RepaymentMilestoneCache {
+  index: number
+  description: string
+  amount: number
+  released: boolean
+}
+
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
 
 export interface Milestone {
@@ -28,7 +50,12 @@ export interface Deal {
   id: string
   productName: string
   quantity: number
+  /** Supplier invoice / principal (what supplier receives; yield base). */
   priceUSDC: number
+  /** Total investor pays at funding: principal + 1% platform fee. */
+  investorFundingTotal: number
+  /** Platform fee percent (e.g. 1). */
+  platformFeePercent: number
   supplier: string
   supplierId?: string
   /** Owner (user) id of the supplier company; used to check "am I the supplier" */
@@ -40,7 +67,21 @@ export interface Deal {
   fundedAt?: string
   completedAt?: string
   milestones: Milestone[]
+  /** Repayment escrow contract address (not supplier payment). */
   escrowAddress?: string
+  fundingTxHash?: string
+  /** Carrier tracking ID from supplier shipment confirmation. */
+  trackingId?: string
+  /** When supplier confirmed shipment. */
+  shippedAt?: string
+  /** When SMB confirmed goods received; repayment clock starts here. */
+  deliveredAt?: string
+  repaymentStatus: RepaymentStatus
+  repaymentDueAt?: string
+  /** Full grossed repayment target (principal + interest / 0.987). */
+  repaymentTotalAmount?: number
+  /** Cached TW multi-release repayment milestones. */
+  repaymentMilestones?: RepaymentMilestoneCache[]
   pymeName: string
   pymeId?: string
   pymeStakeAmount?: number

@@ -64,7 +64,7 @@ flowchart TB
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through blockchain-secured escrow. Auth and deal data live in **Supabase**; escrow and payments are **non-custodial** on **Stellar** via **Trustless Work**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay) and **MoneyGram** Stellar on/off-ramps (see [MoneyGram developer docs — Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)). **Blend** ([Blend Capital](https://www.blend.capital/), [Blend v2 docs](https://docs.blend.capital/)) supplies **Soroban** decentralized lending pools as the Stellar-native liquidity / lending layer alongside deal escrow. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban** tokenized **yield vaults** that allocate across **multiple DeFi strategies** (with rebalancing, auto-compounding, configurable fees, and emergency/rescue patterns) as the Stellar-native **yield optimization** layer—complementary to Blend pools and Trustless Work escrow. An **Admin** role oversees milestone approvals and platform operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**; **investor funding** pays the supplier directly (plus a 1% platform fee); **repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay) and **MoneyGram** Stellar on/off-ramps (see [MoneyGram developer docs — Ramps Instant Access](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)). **Blend** ([Blend Capital](https://www.blend.capital/), [Blend v2 docs](https://docs.blend.capital/)) supplies **Soroban** decentralized lending pools as the Stellar-native liquidity / lending layer alongside repayment escrow. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban** tokenized **yield vaults** that allocate across **multiple DeFi strategies** (with rebalancing, auto-compounding, configurable fees, and emergency/rescue patterns) as the Stellar-native **yield optimization** layer—complementary to Blend pools and Trustless Work escrow. An **Admin** role creates repayment escrows, releases milestones, and oversees platform operations.
 
 ---
 
@@ -82,31 +82,29 @@ sequenceDiagram
   participant Supplier
 
   rect rgb(240, 248, 255)
-  Note over PyME,Supplier: 1 - PyME creates deal and deploys escrow
-  PyME->>App: Create deal (product, supplier, milestones, terms)
-  App->>Trustless: Initialize multi-release escrow
-  Trustless->>Stellar: Deploy escrow contract
-  PyME->>Stellar: Sign with wallet (Freighter / Albedo)
-  Stellar-->>App: Escrow address
+  Note over PyME,Supplier: 1 - PyME creates deal (no escrow)
+  PyME->>App: Create deal (product, supplier, terms)
+  App-->>PyME: Deal published seeking funding
   end
 
   rect rgb(245, 255, 245)
-  Note over PyME,Supplier: 2 - Investor funds the deal
+  Note over PyME,Supplier: 2 - Investor funds supplier directly
   Investor->>App: Browse marketplace and select deal
-  Investor->>Stellar: Fund escrow in USDC via wallet
+  Investor->>Stellar: Pay supplier invoice + 1% platform fee
   end
 
   rect rgb(255, 248, 240)
-  Note over PyME,Supplier: 3 - Supplier delivers and milestones are released
-  Supplier->>App: Submit delivery proof
-  PyME->>App: Approve milestone
-  App->>Trustless: Request release
-  Trustless->>Stellar: Release payment to supplier
+  Note over PyME,Supplier: 3 - Supplier ships (paid up front)
+  Supplier->>App: Fulfill order / ship goods
   end
 
   rect rgb(248, 245, 255)
-  Note over PyME,Supplier: 4 - PyME repays investors
-  PyME->>Stellar: Repay principal + yield after term
+  Note over PyME,Supplier: 4 - Admin multi-release repayment escrow
+  PyME->>App: Confirm order arrived
+  App->>Trustless: Admin deploys first milestone (e.g. 50%)
+  PyME->>Trustless: Micro-fund until milestone covered
+  Trustless->>Stellar: Admin releases milestone to investor
+  App->>Trustless: Admin adds next milestone via updateEscrow
   end
 ```
 
@@ -114,10 +112,10 @@ sequenceDiagram
 
 | Role | Main actions |
 |------|-------------|
-| **PyME (Buyer)** | Create deal, configure milestones, choose supplier from catalog, approve milestone releases, repay investors. Connects Stellar wallet for escrow deployment. |
-| **Investor** | Browse marketplace, fund deals in USDC. Funds are locked in escrow until milestones are met and term completes. |
-| **Supplier** | Manage company profile and product catalog, accept orders, submit delivery proof. Receives milestone payments to Stellar address. |
-| **Admin** | View all platform deals, approve milestone releases on-chain, resolve disputes. Sees aggregate stats and pending approvals. |
+| **PyME (Buyer)** | Create deal, choose supplier from catalog, confirm order arrival, micro-fund repayment escrow. |
+| **Investor** | Browse marketplace, fund deals in USDC (direct to supplier + 1% platform fee). Receives principal + yield from repayment milestones. |
+| **Supplier** | Manage company profile and product catalog, fulfill orders. Receives full invoice payment up front (fee-free). |
+| **Admin** | Create multi-release repayment escrows, approve/release milestones, add subsequent milestones, resolve disputes. |
 
 ### 2.3 Application Routes
 
@@ -176,19 +174,20 @@ flowchart LR
 | `/` | Public | Landing page (hero, stakeholders, trust, CTA) |
 | `/how-it-works` | Public | Step-by-step flow explanation |
 | `/marketplace` | Public | Browse and filter deals |
-| `/create-deal` | Auth | Multi-step deal creation with escrow deployment |
+| `/create-deal` | Auth | Multi-step deal creation (DB only; no escrow at create) |
 | `/auth/login` | Public | Supabase email login |
 | `/auth/sign-up` | Public | Registration with role selection |
 | `/auth/sign-up-success` | Public | Post-signup confirmation |
 | `/dashboard` | Auth | Role-based overview (stats, quick actions, recent deals) |
-| `/dashboard/admin` | Admin | Milestone approvals, platform stats |
+| `/dashboard/admin` | Admin | Create repayment escrows, approve/release milestones, vault |
+| `/dashboard/admin/approvals` | Admin | Order-confirmed deals + funded repayment milestone queue |
 | `/dashboard/deals` | Auth | Supplier's deal list |
 | `/dashboard/deliveries` | Auth | Supplier delivery management |
 | `/dashboard/investments` | Auth | Investor portfolio view |
 | `/dashboard/ramp` | Auth | Add funds / cash out (fiat ↔ USDC) |
 | `/dashboard/ramp/blindpay-setup` | Auth | BlindPay onboarding wizard (ToS, KYC, wallet) |
 | `/dashboard/supplier-profile` | Auth | Manage supplier companies and products |
-| `/deals/[id]` | Public | Deal detail with milestones and escrow state |
+| `/deals/[id]` | Public | Deal detail with funding + repayment escrow state |
 | `/investors/[id]` | Public | Investor public profile |
 | `/pymes` | Public | PyME directory |
 | `/pymes/[id]` | Public | PyME public profile |
@@ -333,7 +332,11 @@ mercato/
 │   ├── anchor-factory.ts         # Instantiates ramp providers from env vars
 │   ├── ramp-api.ts               # Auth + anchor resolution for API routes
 │   ├── stellar-submit.ts         # Submit signed XDR to Stellar
-│   ├── deals.ts                  # Deal helper functions
+│   ├── deals.ts                  # Deal helper functions + DB mapping
+│   ├── deals/
+│   │   └── fees.ts               # Platform + TW fee math, repayment gross-up
+│   ├── stellar/
+│   │   └── build-usdc-split-payment.ts  # Investor → supplier + platform
 │   ├── constants.ts              # Countries, sectors, provider IDs, statuses
 │   ├── categories.ts             # Product categories
 │   ├── format.ts                 # Currency / number formatting
@@ -349,8 +352,6 @@ mercato/
 │   │   ├── blindpay/             # BlindPay client (global)
 │   │   ├── testanchor/           # Reference client for testanchor.stellar.org
 │   │   └── sep/                  # SEP protocol modules (1, 6, 10, 12, 24, 31, 38)
-│   ├── hooks/
-│   │   └── useEscrowIntegration.ts  # Trustless Work escrow hooks
 │   ├── supabase/
 │   │   ├── client.ts             # Browser Supabase client
 │   │   ├── server.ts             # Server-side Supabase client
@@ -364,6 +365,8 @@ mercato/
 │
 ├── hooks/
 │   ├── use-wallet.ts             # Stellar wallet connect / disconnect
+│   ├── use-repayment-escrow.ts   # Multi-release repayment deploy / fund / release / update
+│   ├── use-deal-detail.ts        # Deal detail + TW indexer
 │   ├── use-mobile.tsx            # Responsive breakpoint hook
 │   └── use-toast.ts              # Toast notification hook
 │
@@ -377,9 +380,11 @@ mercato/
 
 ---
 
-## 5. Stellar and Trustless Work (Escrow)
+## 5. Stellar, Direct Funding, and Trustless Work (Repayment Escrow)
 
-Escrow is **non-custodial**: funds sit in a Stellar smart contract; the platform never holds them. **Trustless Work** provides the contract logic and API; the PyME signs deployment with their Stellar wallet.
+**Funding is not escrowed.** Investors pay the supplier (principal) and Mercato (1% platform fee) with a classic Stellar USDC payment built in `lib/stellar/build-usdc-split-payment.ts`.
+
+**Repayment is escrowed and non-custodial.** After the PyME confirms order arrival, an **admin** deploys a Trustless Work **multi-release** repayment escrow. The PyME micro-funds; the platform wallet approves and releases each milestone to the investor. Further milestones are added with `updateEscrow` so investors can receive early payouts (e.g. first 50%) without waiting for the full grossed amount.
 
 ### 5.1 Trustless Work Integration
 
@@ -387,7 +392,7 @@ Escrow is **non-custodial**: funds sit in a Stellar smart contract; the platform
 flowchart LR
   subgraph App["MERCATO App"]
     Config["TrustlessWorkProvider\n(config)"]
-    Hooks["useInitializeEscrow\nuseSendTransaction"]
+    Hook["useRepaymentEscrow\ndeploy / fund / release / update"]
     Wallet["signTransaction\n(wallet-kit)"]
   end
 
@@ -396,13 +401,13 @@ flowchart LR
   end
 
   subgraph Stellar["Stellar"]
-    Contract["Multi-release\nescrow contract"]
+    Contract["Multi-release\nrepayment escrow"]
     USDC["USDC trustline"]
   end
 
-  Config --> Hooks
-  Hooks --> API
-  Hooks --> Wallet
+  Config --> Hook
+  Hook --> API
+  Hook --> Wallet
   Wallet --> Stellar
   API --> Contract
   Contract --> USDC
@@ -412,33 +417,42 @@ flowchart LR
 
 | Env var | Purpose |
 |---------|---------|
-| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Platform Stellar address — used as `releaseSigner`, `disputeResolver`, and `platformAddress` in escrow roles |
-| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for escrow payments |
+| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Platform Stellar address — `approver`, `releaseSigner`, `disputeResolver`, `platformAddress`; also receives 1% at investor funding |
+| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for repayment escrow |
 | `NEXT_PUBLIC_TRUSTLESS_NETWORK` | `testnet` or `mainnet` |
 | `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY` | Trustless Work API key |
+| `NEXT_PUBLIC_USDC_ISSUER` | Classic USDC issuer for investor→supplier direct payments |
 
-### 5.3 Escrow Deploy Sequence
+### 5.3 Repayment Escrow Sequence
 
 ```mermaid
 sequenceDiagram
-  participant User
-  participant CreateDeal
-  participant useEscrow
-  participant TrustlessAPI
+  participant PyME
+  participant Admin
+  participant Hook as useRepaymentEscrow
+  participant TW as TrustlessAPI
   participant Wallet
-  participant Stellar
+  participant Investor
 
-  User->>CreateDeal: Submit deal (milestones, supplier, approver)
-  CreateDeal->>useEscrow: initializeAndDeployEscrow(params)
-  useEscrow->>TrustlessAPI: deployEscrow(payload)
-  TrustlessAPI-->>useEscrow: Unsigned XDR
-  useEscrow->>Wallet: signTransaction(XDR)
-  User->>Wallet: Approve in Freighter / Albedo
-  Wallet-->>useEscrow: Signed XDR
-  useEscrow->>Stellar: sendTransaction(signed)
-  Stellar-->>CreateDeal: Escrow address + tx hash
+  PyME->>PyME: Confirm order arrived
+  Admin->>Hook: deployRepaymentEscrow first milestone e.g. 50 percent
+  Hook->>TW: deployEscrow multi-release
+  TW-->>Hook: Unsigned XDR
+  Hook->>Wallet: Admin signs
+  loop Micro-fund
+    PyME->>Hook: fundRepaymentEscrow partial amount
+    Hook->>TW: fundEscrow multi-release
+  end
+  Admin->>Hook: approveAndReleaseMilestone
+  Hook->>TW: approve + release milestone
+  TW->>Investor: Milestone payout net of fees
+  Admin->>Hook: addRepaymentMilestone via updateEscrow
+  Note over PyME,Investor: Repeat fund / release until full grossed total paid
 ```
 
+**Fee math:** PyME funds a **grossed** amount so that after platform **1%** + Trustless Work **0.3%** on release, the investor nets principal + interest. See `lib/deals/fees.ts` (`repaymentEscrowAmount`, `repaymentMilestoneAmount`).
+
+**Repayment status lifecycle:** `none` → `order_confirmed` → `escrow_initialized` → `funding` → `ready_to_release` → `partially_released` → `released` (deal completed).
 ---
 
 ## 6. Ramp Providers (Fiat On/Off)
@@ -617,15 +631,15 @@ sequenceDiagram
 flowchart LR
   subgraph Supabase["Supabase (Postgres)"]
     Profiles["profiles\n(id, role, name, company, stellar_address)"]
-    Deals["deals\n(pyme_id, supplier_id, investor_id, amount, status)"]
-    Milestones["milestones\n(deal_id, status, amount, description)"]
+    Deals["deals\n(amount, funding_tx_hash, repayment_status,\nrepayment_total_amount, repayment_milestones,\nescrow_contract_address)"]
     Notifications["notifications\n(user_id, type, title, body, link_url, read_at)"]
     SupplierCompanies["supplier_companies\n(owner_id, name, country, sector)"]
     SupplierProducts["supplier_products\n(supplier_id, name, category, price)"]
   end
 
   subgraph Stellar["Stellar Network"]
-    EscrowState["Escrow contract state"]
+    DirectPay["Investor direct USDC\n(supplier + platform fee)"]
+    EscrowState["Repayment multi-release escrow"]
     Balances["USDC / asset balances"]
     TxHistory["Transaction history"]
   end
@@ -636,10 +650,10 @@ flowchart LR
 
 | Store | Owns | Source of truth for |
 |-------|------|-------------------|
-| **Supabase** | Users, profiles, roles, deal metadata, milestones, supplier directory, products | Who created what, role assignments, milestone approval state, supplier catalog |
-| **Stellar** | Escrow contracts, USDC balances, transaction history | Funds, on-chain escrow state, payment receipts |
+| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier directory, products | Who created what, funding tx hash, repayment lifecycle, supplier catalog |
+| **Stellar** | Direct funding payments, repayment escrow contracts, USDC balances | Funds movement, on-chain escrow milestones, payment receipts |
 
-The app reads both stores and reconciles: deal status in Supabase reflects the on-chain escrow state after milestone releases.
+The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update.
 
 ### 7.1 In-App Notifications
 
@@ -649,8 +663,6 @@ A `notifications` table stores lifecycle events. **DB triggers** create notifica
 |-------|-----------|
 | Deal created | All investors |
 | Deal funded | Supplier (company owner), PyME |
-| First milestone approved | Investor, PyME, Supplier |
-| Second milestone approved | Investor, PyME, Supplier |
 | PyME × Investor deal created | PyME, Investor (when repayment escrow exists) |
 | PyME × Investor deal complete | PyME, Investor (when repayment escrow exists) |
 
@@ -690,8 +702,9 @@ sequenceDiagram
 | `SUPABASE_SERVICE_ROLE_KEY` | Server | Supabase service role key |
 | `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY` | Public | Trustless Work API key |
 | `NEXT_PUBLIC_TRUSTLESS_NETWORK` | Public | `testnet` or `mainnet` |
-| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Public | Platform Stellar address (escrow roles) |
-| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | Public | USDC trustline contract address |
+| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Public | Platform Stellar address (fee recipient + repayment escrow roles) |
+| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | Public | USDC trustline contract address for repayment escrow |
+| `NEXT_PUBLIC_USDC_ISSUER` | Public | Classic USDC issuer for direct investor→supplier payments |
 | `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | Public | Pollar public/publishable key |
 | `POLLAR_SECRET_KEY` | Server | Pollar secret key |
 | `POLLAR_WEBHOOK_SECRET` | Server | Pollar webhook signing secret |
@@ -714,17 +727,17 @@ Ramp providers are **opt-in**: only those with all required env vars appear in `
 ```mermaid
 flowchart TB
   subgraph What["What MERCATO does"]
-    D1["PyMEs get working capital\nvia milestone-based escrow"]
-    D2["Investors fund deals in USDC\nfor short-term yield"]
-    D3["Suppliers receive on-chain\nmilestone payments"]
+    D1["PyMEs get working capital\nvia investor direct funding"]
+    D2["Investors fund supplier invoices\nin USDC for short-term yield"]
+    D3["Suppliers receive full payment\nup front fee-free"]
     D4["Users ramp fiat ↔ USDC\nvia chosen anchor provider"]
-    D5["Admins approve milestones\nand oversee the platform"]
+    D5["Admins create and release\nmulti-release repayment escrows"]
   end
 
   subgraph How["How it's built"]
     T1["Next.js 16 + React 19\nTailwind + shadcn/ui"]
     T2["Supabase\nAuth + Postgres"]
-    T3["Trustless Work\nStellar escrow contracts"]
+    T3["Trustless Work\nmulti-release repayment escrow"]
     T3b["Blend\nSoroban lending pools"]
     T3c["DeFindex\nSoroban yield vaults"]
     T4["Stellar Wallets Kit\nFreighter · Albedo"]

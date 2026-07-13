@@ -22,8 +22,13 @@ import { VaultToDealAllocator } from '@/components/vault-to-deal-allocator'
 import { useDefindex } from '@/hooks/useDefindex'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
+import {
+  investorFundingTotal,
+  platformFeeAmount,
+  PLATFORM_FEE_PERCENT,
+} from '@/lib/deals/fees'
 import { formatDate } from '@/lib/date-utils'
-import { formatCurrency } from '@/lib/format'
+import { formatPercent, formatUSDC } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/provider'
 
@@ -58,13 +63,17 @@ export function DealFundDialog({
   const { walletBalance, refreshBalances } = useDefindex()
   const [step, setStep] = React.useState(1)
 
-  const apr = deal.yieldAPR ?? 0
-  const { profit, total } = computeInvestorReturns(deal.priceUSDC, apr, deal.term)
+  const rate = deal.yieldAPR ?? 0
+  const principal = deal.priceUSDC
+  const fundingTotal =
+    deal.investorFundingTotal || investorFundingTotal(principal)
+  const feeAmount = platformFeeAmount(principal)
+  const { profit, total } = computeInvestorReturns(principal, rate, deal.term)
   const categoryLabel = deal.category
     ? getLocalizedCategoryLabel(deal.category, messages)
     : null
 
-  const hasEnoughFunds = walletBalance >= deal.priceUSDC
+  const hasEnoughFunds = walletBalance >= fundingTotal
   const progress = (step / TOTAL_STEPS) * 100
 
   React.useEffect(() => {
@@ -88,7 +97,7 @@ export function DealFundDialog({
   const defaultTrigger = (
     <Button size={triggerSize} className="gap-2 shadow-sm">
       <Wallet className="h-5 w-5" aria-hidden />
-      {t('deals.fundThisDeal')} · {formatCurrency(deal.priceUSDC)}
+      {t('deals.fundThisDeal')} · {formatUSDC(fundingTotal)}
     </Button>
   )
 
@@ -105,6 +114,43 @@ export function DealFundDialog({
       : step === 2
         ? t('dealDetail.fundWizardMethodDescription')
         : t('dealDetail.fundWizardConfirmDescription')
+
+  const moneyBreakdown = (
+    <>
+      <DealFactRow label={t('dealDetail.supplierReceives')}>
+        <span className="tabular-nums">{formatUSDC(principal)}</span>
+      </DealFactRow>
+      <DealFactRow
+        label={t('dealDetail.platformFeeLine', {
+          percent: PLATFORM_FEE_PERCENT,
+        })}
+      >
+        <span className="tabular-nums">{formatUSDC(feeAmount)}</span>
+      </DealFactRow>
+      <DealFactRow label={t('dealDetail.youPayTotal')}>
+        <span className="font-semibold tabular-nums">{formatUSDC(fundingTotal)}</span>
+      </DealFactRow>
+      <DealFactRow label={t('dealDetail.investorRate')}>
+        <span className="text-success tabular-nums">
+          {formatPercent(rate, { minFractionDigits: 2, maxFractionDigits: 2 })}
+        </span>
+      </DealFactRow>
+      <DealFactRow label={t('common.term')}>
+        <span className="tabular-nums">
+          {deal.term} {t('common.days')}
+        </span>
+      </DealFactRow>
+      <DealFactRow label={t('dealDetail.fundWizardEstimatedProfit')}>
+        <span className="text-success tabular-nums">
+          {formatUSDC(profit)} (
+          {formatPercent(rate, { minFractionDigits: 2, maxFractionDigits: 2 })})
+        </span>
+      </DealFactRow>
+      <DealFactRow label={t('dealDetail.fundWizardTotalReturn')}>
+        <span className="tabular-nums">{formatUSDC(total)}</span>
+      </DealFactRow>
+    </>
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,25 +192,7 @@ export function DealFundDialog({
               </div>
 
               <div className="rounded-lg border border-border p-1">
-                <DealFactRow label={t('dealDetail.dealAmount')}>
-                  <span className="tabular-nums">{formatCurrency(deal.priceUSDC)} USDC</span>
-                </DealFactRow>
-                <DealFactRow label={t('dealDetail.expectedReturn')}>
-                  <span className="text-success tabular-nums">{apr.toFixed(1)}% APR</span>
-                </DealFactRow>
-                <DealFactRow label={t('common.term')}>
-                  <span className="tabular-nums">
-                    {deal.term} {t('common.days')}
-                  </span>
-                </DealFactRow>
-                <DealFactRow label={t('dealDetail.fundWizardEstimatedProfit')}>
-                  <span className="text-success tabular-nums">
-                    {formatCurrency(Math.round(profit))}
-                  </span>
-                </DealFactRow>
-                <DealFactRow label={t('dealDetail.fundWizardTotalReturn')}>
-                  <span className="tabular-nums">{formatCurrency(Math.round(total))}</span>
-                </DealFactRow>
+                {moneyBreakdown}
                 <DealFactRow label={t('common.quantity')}>
                   <span className="tabular-nums">
                     {deal.quantity.toLocaleString()} {t('dealDetail.units')}
@@ -203,10 +231,12 @@ export function DealFundDialog({
                   <div className="rounded-lg border border-border bg-muted/30 p-4">
                     <p className="text-sm font-medium">{t('dealDetail.fundWizardWalletBalance')}</p>
                     <p className="mt-1 text-2xl font-bold tabular-nums">
-                      {formatCurrency(walletBalance)} USDC
+                      {formatUSDC(walletBalance)}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {t('dealDetail.fundWizardRequired', { amount: formatCurrency(deal.priceUSDC) })}
+                      {t('dealDetail.fundWizardRequired', {
+                        amount: formatUSDC(fundingTotal),
+                      })}
                     </p>
                   </div>
 
@@ -220,14 +250,14 @@ export function DealFundDialog({
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                       <p>
                         {t('dealDetail.fundWizardInsufficientFunds', {
-                          amount: formatCurrency(deal.priceUSDC),
+                          amount: formatUSDC(fundingTotal),
                         })}
                       </p>
                     </div>
                   )}
 
                   <VaultToDealAllocator
-                    dealAmount={deal.priceUSDC}
+                    dealAmount={fundingTotal}
                     isFundingOpen
                     disabled={isFunding}
                     onWithdrawComplete={() => void refreshBalances()}
@@ -242,17 +272,7 @@ export function DealFundDialog({
             <div className="space-y-4">
               <div className="rounded-lg border border-border p-1">
                 <DealFactRow label={t('dealDetail.fundWizardProduct')}>{deal.productName}</DealFactRow>
-                <DealFactRow label={t('dealDetail.dealAmount')}>
-                  <span className="tabular-nums">{formatCurrency(deal.priceUSDC)} USDC</span>
-                </DealFactRow>
-                <DealFactRow label={t('dealDetail.expectedReturn')}>
-                  <span className="text-success tabular-nums">{apr.toFixed(1)}% APR</span>
-                </DealFactRow>
-                <DealFactRow label={t('dealDetail.fundWizardEstimatedProfit')}>
-                  <span className="text-success tabular-nums">
-                    {formatCurrency(Math.round(profit))}
-                  </span>
-                </DealFactRow>
+                {moneyBreakdown}
               </div>
 
               <div className="space-y-2">
@@ -261,7 +281,7 @@ export function DealFundDialog({
               </div>
 
               <p className="text-xs leading-relaxed text-muted-foreground">
-                {t('dealDetail.fundWizardConfirmNotice')}
+                {t('dealDetail.fundWizardConfirmNoticeDirect')}
               </p>
             </div>
           )}

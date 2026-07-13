@@ -4,15 +4,15 @@
 
 ### What MERCATO is
 
-MERCATO is a **supply chain finance** application: it helps **small and medium businesses** (we use the Latin American term **PyME** — *pequeñas y medianas empresas*) buy inventory with **investor-funded escrow**, pays **suppliers** in **milestones** as work is proven, and settles in **USDC** on the [Stellar](https://stellar.org) network. The goal is short-term working capital with **clear rules and on-chain transparency**, not opaque balance-sheet lending.
+MERCATO is a **supply chain finance** application: it helps **small and medium businesses** (we use the Latin American term **PyME** — *pequeñas y medianas empresas*) buy inventory with **investor capital**, pays **suppliers in full up front**, and settles repayment to investors via **Trustless Work multi-release escrow** in **USDC** on the [Stellar](https://stellar.org) network. The goal is short-term working capital with **clear rules and on-chain transparency**, not opaque balance-sheet lending.
 
 ### Who benefits
 
 | Stakeholder | What they get |
 |--------------|----------------|
 | **PyME (buyer)** | Capital to cover supplier invoices for a defined term (for example 30–90 days), repaid after their sales cycle, with repayment terms agreed up front. |
-| **Investor** | A way to allocate capital to **specific, disclosed deals** instead of a black box; returns are **contractually tied** to the deal (for example mid-single-digit to low-teens APR in illustrative deal terms), and funds stay in escrow until milestones justify release. |
-| **Supplier** | **Partial payment up front** and the rest when delivery milestones are approved, so they are not stuck financing the buyer’s entire payment delay. |
+| **Investor** | A way to allocate capital to **specific, disclosed deals** instead of a black box; returns are **contractually tied** to the deal (for example mid-single-digit to low-teens APR in illustrative deal terms). Principal + yield are returned through staged repayment escrow releases. |
+| **Supplier** | **Full invoice payment up front** (fee-free) when an investor funds the deal, so they are not stuck financing the buyer’s payment delay. |
 
 ### Why Stellar (and this ecosystem)
 
@@ -20,27 +20,27 @@ MERCATO is built **on and around Stellar** by composing **many Stellar-focused p
 
 **Examples wired into MERCATO today** (each is summarized in [Stellar ecosystem](#stellar-ecosystem) below):
 
-- **[Trustless Work](https://docs.trustlesswork.com/)** — non-custodial **multi-release escrow** on Stellar (deal funding stays in contract rules, not the platform’s bank account).
+- **[Trustless Work](https://docs.trustlesswork.com/)** — non-custodial **multi-release escrow** on Stellar for **investor repayment** (staged milestones; not the platform’s bank account).
 - **[Stellar Wallets Kit](https://stellarwalletskit.dev/)** — one wallet layer for **connect + sign** (e.g. Freighter, Albedo) across escrow and ramp flows.
 - **[Blend](https://www.blend.capital/)** — **Soroban** lending pools as the Stellar-native **liquidity** layer alongside deal escrow ([docs](https://docs.blend.capital/)).
 - **[DeFindex](https://docs.defindex.io)** — **Soroban yield vaults**: tokenized vaults, **multi-strategy** allocation, rebalancing, auto-compounding, and emergency-style **rescue** patterns for optimizing yield alongside other Stellar DeFi ([documentation](https://docs.defindex.io)).
 - **Fiat ramps** — **[Etherfuse](https://etherfuse.com)**, **[Alfred Pay](https://alfredpay.io)**, **[BlindPay](https://blindpay.com)** (anchor-style server clients + UI), **[MoneyGram](https://developer.moneygram.com/moneygram-developer/docs/access-to-moneygram-ramps)** Stellar on/off-ramp APIs.
 - **SEP building blocks** — shared modules under `lib/anchors/sep/` for **SEP 1, 6, 10, 12, 24, 31, 38** alongside provider APIs (see [`doc/architecture.md`](doc/architecture.md)).
 
-Together, these choices keep **deal funds non-custodial** where escrow applies, while still giving users **real-world on- and off-ramps** and a **consistent wallet** experience on the same network.
+Together, these choices keep **repayment funds non-custodial** where escrow applies, while still giving users **real-world on- and off-ramps** and a **consistent wallet** experience on the same network.
 
 ---
 
 ## How it works (end-to-end)
 
-1. **Deal setup** — The PyME describes the purchase (product, supplier, price, term) and splits supplier pay into **milestones** (for example 50% on shipment, 50% on delivery proof). A **Stellar escrow** is created via Trustless Work; the PyME **signs with a wallet** so deployment is explicit and on-chain.
-2. **Funding** — Investors commit **USDC** into that escrow from the marketplace. Capital is **locked** until the contract allows a release.
-3. **Delivery and releases** — The supplier fulfills the order and provides proof. When milestones are **approved** (by the PyME and, where the product enables it, an **admin** for oversight or dispute handling), the contract **pays the supplier** to their Stellar address in stages.
-4. **Repayment** — When the term ends, the PyME **repays investors** (principal and agreed yield) according to the deal.
+1. **Deal setup** — The PyME describes the purchase (product, supplier, price, term, yield). The deal is published to the marketplace **without** deploying escrow yet.
+2. **Funding** — An investor pays the **supplier invoice in full** plus a **1% platform fee** in one classic Stellar USDC transaction (direct payment, not escrow).
+3. **Fulfillment** — The supplier ships; they already hold the invoice amount. The PyME later **confirms the order arrived**.
+4. **Repayment escrow** — An **admin** deploys a Trustless Work **multi-release** repayment escrow (first milestone default **50%** of the grossed repayment). The PyME **micro-funds** as cash arrives. Admin **approves and releases** each funded milestone to the investor, then **adds** further milestones via `updateEscrow` until principal + yield are fully paid (platform takes **1%** on each release; Trustless Work protocol fee **0.3%**).
 
 ### Roles and data (for technical reviewers)
 
-Three primary roles — **pyme**, **investor**, **supplier** — map to the flows above. **Authentication and business metadata** (profiles, deal records, marketplace listings) live in **[Supabase](https://supabase.com)** (Postgres + Auth). **Escrow balances, releases, and settlement** live on **Stellar** and are visible as on-chain activity tied to the escrow contract.
+Four roles — **pyme**, **investor**, **supplier**, **admin** — map to the flows above. **Authentication and business metadata** (profiles, deal records, marketplace listings, repayment status) live in **[Supabase](https://supabase.com)** (Postgres + Auth). **Repayment escrow balances, releases, and settlement** live on **Stellar** via Trustless Work and are visible as on-chain activity tied to the escrow contract.
 
 ---
 
@@ -64,7 +64,7 @@ MERCATO runs on the [Stellar](https://stellar.org) network. The items below matc
 
 | Product | Role in this application |
 |--------|---------------------------|
-| [Trustless Work](https://docs.trustlesswork.com/) | **Escrow** — Non-custodial multi-release contracts: initialize and deploy escrow via the Trustless Work API, sign with the user’s wallet, and drive milestone releases. The app uses `@trustless-work/escrow` and the configured USDC trustline for on-chain settlement. |
+| [Trustless Work](https://docs.trustlesswork.com/) | **Repayment escrow** — Non-custodial **multi-release** contracts for SMB→investor repayment: admin deploys the first milestone, PyME micro-funds, admin approves/releases and can add milestones via update escrow. The app uses `@trustless-work/escrow` and the configured USDC trustline. |
 | [Stellar Wallets Kit](https://stellarwalletskit.dev/) | **Wallets** — Single integration for connecting and signing (e.g. **Freighter**, **Albedo**) with `@creit.tech/stellar-wallets-kit`, including escrow deployment and ramp flows that require a signed Stellar transaction. |
 | [Blend](https://www.blend.capital/) | **Soroban lending** — [Blend Capital](https://www.blend.capital/)’s **Blend** protocol: decentralized lending pools on **Stellar Soroban**, created by users, DAOs, and institutions (see their site). Protocol reference: **[Blend v2 docs](https://docs.blend.capital/)**. MERCATO uses Blend as the Stellar-native **liquidity / lending** layer alongside Trustless Work escrow (see [`doc/architecture.md`](doc/architecture.md)). |
 | [DeFindex](https://docs.defindex.io) | **Soroban yield & vaults** — A **decentralized yield** layer on Soroban: **tokenized vaults** expose users to **one or more assets** and **multiple underlying strategies** (lending, liquidity, tokenized bonds, and other listed strategies). Vault managers can **rebalance** safely on-chain, earnings can be **auto-compounded**, and the protocol includes **fee** rails (users, vault managers, and DeFindex) plus **emergency / rescue** flows when a strategy misbehaves. MERCATO treats DeFindex as the **yield-optimization / vault** complement to **Blend** lending pools and Trustless Work **deal escrow**—see [DeFindex documentation](https://docs.defindex.io) for vault creation, SDK integration, deposits, withdrawals, and strategy plug-ins. |
@@ -94,24 +94,29 @@ app/
   page.tsx              # Landing (hero, stakeholders, trust, CTA)
   how-it-works/         # Flow explanation
   marketplace/          # Browse and filter deals
-  create-deal/          # PyME flow: deal basics → supplier & terms → milestones → deploy escrow
+  create-deal/          # PyME flow: deal basics → supplier & terms (DB only; no escrow at create)
   auth/login, sign-up/  # Supabase auth
   dashboard/            # User dashboard (role-based)
-  deals/[id]/           # Deal detail
+  dashboard/admin/      # Approvals: create repayment escrow, release milestones
+  deals/[id]/           # Deal detail (funding + repayment panels)
   suppliers/            # Supplier directory
   settings/             # Profile (e.g. Stellar address)
 components/
   navigation.tsx        # Header: nav links, connect wallet, user menu
   navigation/           # NavLinks, WalletNav, UserNav (composition)
+  deals/                # Funding, repayment, on-chain panels
   deal-card.tsx         # Marketplace deal card
 lib/
+  deals/                # Fee math (platform + TW protocol gross-up)
+  stellar/              # Classic USDC split payment (investor → supplier + platform)
   trustless/            # Trustless Work config, wallet kit, trustlines (USDC)
   supabase/             # Supabase client
   format.ts             # Currency / number formatting
-providers/
-  wallet-provider.tsx   # Global Stellar wallet state (connect/disconnect)
 hooks/
   use-wallet.ts         # Connect wallet, disconnect, truncated address
+  use-repayment-escrow.ts  # Multi-release repayment deploy / fund / release / update
+providers/
+  wallet-provider.tsx   # Global Stellar wallet state (connect/disconnect)
 ```
 
 ---
@@ -151,8 +156,9 @@ cp env.sample .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for server-only operations |
 | `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY` | Trustless Work API key |
 | `NEXT_PUBLIC_TRUSTLESS_NETWORK` | `testnet` or `mainnet` |
-| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Stellar address for the platform (escrow roles) |
-| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for escrow |
+| `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS` | Stellar address for the platform (1% fee recipient + repayment escrow roles) |
+| `NEXT_PUBLIC_USDC_ISSUER` | Classic USDC issuer for direct investor→supplier payments (optional; defaults by network) |
+| `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS` | USDC trustline contract address for repayment escrow |
 | `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | Pollar public/publishable key |
 | `POLLAR_SECRET_KEY` | Pollar server-side secret key |
 | `POLLAR_WEBHOOK_SECRET` | Pollar webhook signing secret, if webhooks are enabled |
@@ -177,7 +183,7 @@ Create future schema changes with `supabase migration new <name>` and commit the
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use **auth**: `/auth/login`, `/auth/sign-up`. Connect a Stellar wallet (e.g. Freighter on testnet) to create deals or interact with escrow.
+Open [http://localhost:3000](http://localhost:3000). Use **auth**: `/auth/login`, `/auth/sign-up`. Connect a Stellar wallet (e.g. Freighter on testnet) to fund deals, micro-fund repayment, or (as platform/admin) deploy and release repayment escrow.
 
 ### 4. Build for production
 
@@ -190,13 +196,14 @@ bun start
 
 ## Main Features
 
-- **Role-based flows**: PyME (create deal, approve milestones), Investor (browse/fund deals), Supplier (profile, delivery proof).
-- **Connect Stellar wallet** in the header (Freighter, Albedo); required to create a deal and sign escrow deployment.
-- **Create deal & deploy escrow**: Multi-step form (deal basics → supplier & terms → milestones); then deploy multi-release escrow via Trustless Work and sign with the connected wallet.
-- **Non-custodial escrow**: Funds in USDC; milestone-based release to supplier; platform as release signer and dispute resolver.
-- **Marketplace**: Browse deals (search, status, category); currently backed by mock data; can be wired to Supabase deals.
-- **Dashboard**: Role-specific links (e.g. Create Deal, My Investments, Active Deals, Delivery Proof).
-- **Settings**: Profile and Stellar address for PyMEs/suppliers so escrow can use the correct addresses.
+- **Role-based flows**: PyME (create deal, confirm order, micro-fund repayment), Investor (browse/fund deals), Supplier (profile, catalog), Admin (create/release repayment milestones).
+- **Connect Stellar wallet** in the header (Freighter, Albedo, Pollar); required to fund deals and interact with repayment escrow.
+- **Create deal (no escrow at create)**: Multi-step form (deal basics → supplier & terms); deal is stored in Supabase and listed seeking funding.
+- **Direct funding**: Investor pays supplier principal + 1% platform fee in one classic Stellar USDC transaction.
+- **Multi-release repayment escrow**: Admin deploys Trustless Work multi-release after PyME confirms order arrival; PyME micro-funds; admin releases milestones and can add more via update escrow so investors can be paid earlier.
+- **Marketplace**: Browse deals (search, status, category) backed by Supabase deals.
+- **Dashboard**: Role-specific links (Create Deal, My Investments, Active Deals, Admin Approvals).
+- **Settings**: Profile and Stellar address for PyMEs/suppliers/investors so payments and escrow roles use the correct addresses.
 
 ---
 

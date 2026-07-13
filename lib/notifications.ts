@@ -6,6 +6,9 @@ export type NotificationType =
   | 'milestone_2_approved'
   | 'pyme_investor_deal_created'
   | 'pyme_investor_deal_complete'
+  | 'repayment_escrow_needed'
+  | 'repayment_escrow_created'
+  | 'goods_shipped'
 
 export interface Notification {
   id: string

@@ -4,13 +4,20 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ShieldCheck } from 'lucide-react'
+import { CheckCircle2, Rocket, ShieldCheck } from 'lucide-react'
 import { PendingApprovals } from './pending-approvals'
-import type { PendingApprovalItem, ReleaseFallbackItem } from '@/lib/admin/types'
+import { CreateRepaymentEscrows } from './create-repayment-escrows'
+import { ReleaseFundsFallback } from './release-funds-fallback'
+import type {
+  CreateEscrowItem,
+  PendingApprovalItem,
+  ReleaseFallbackItem,
+} from '@/lib/admin/types'
 import { useI18n } from '@/lib/i18n/provider'
 
 interface AdminEscrowsProviderProps {
   items: PendingApprovalItem[]
+  createEscrowItems: CreateEscrowItem[]
   releaseFallbackItems: ReleaseFallbackItem[]
 }
 
@@ -18,7 +25,11 @@ interface AdminEscrowsProviderProps {
  * Fetches escrow data once for all contract IDs (from both sections)
  * and passes to children to avoid duplicate getEscrowByContractIds calls.
  */
-export function AdminEscrowsProvider({ items, releaseFallbackItems }: AdminEscrowsProviderProps) {
+export function AdminEscrowsProvider({
+  items,
+  createEscrowItems,
+  releaseFallbackItems,
+}: AdminEscrowsProviderProps) {
   const { t } = useI18n()
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const getEscrowRef = useRef(getEscrowByContractIds)
@@ -27,17 +38,19 @@ export function AdminEscrowsProvider({ items, releaseFallbackItems }: AdminEscro
   const contractIds = useMemo(
     () =>
       [
-        ...new Set([
-          ...items.map((i) => i.escrowContractAddress),
-          ...releaseFallbackItems.map((i) => i.escrowContractAddress),
-        ].filter(Boolean)),
+        ...new Set(
+          [
+            ...items.map((i) => i.escrowContractAddress),
+            ...releaseFallbackItems.map((i) => i.escrowContractAddress),
+          ].filter(Boolean),
+        ),
       ] as string[],
-    [items, releaseFallbackItems]
+    [items, releaseFallbackItems],
   )
 
   const contractIdsKey = useMemo(
     () => (contractIds.length ? contractIds.slice().sort().join(',') : ''),
-    [contractIds]
+    [contractIds],
   )
 
   const [escrowsByContractId, setEscrowsByContractId] = useState<
@@ -51,7 +64,8 @@ export function AdminEscrowsProvider({ items, releaseFallbackItems }: AdminEscro
     }
     let cancelled = false
     const ids = contractIdsKey.split(',').filter(Boolean)
-    getEscrowRef.current({ contractIds: ids })
+    getEscrowRef
+      .current({ contractIds: ids })
       .then((escrows) => {
         if (cancelled || !escrows) return
         const map = new Map<string, GetEscrowsFromIndexerResponse>()
@@ -66,20 +80,58 @@ export function AdminEscrowsProvider({ items, releaseFallbackItems }: AdminEscro
     }
   }, [contractIdsKey])
 
+  // Release-ready items already appear in the manage queue — only surface a
+  // compact release strip when Approvals has no manage items but Releases does.
+  const showInlineReleaseQueue =
+    releaseFallbackItems.length > 0 && items.length === 0
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5" aria-hidden />
-          {t('adminEscrows.pendingCardTitle')}
-        </CardTitle>
-        <CardDescription>
-          {t('adminEscrows.pendingCardDescription')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <PendingApprovals items={items} escrowsByContractId={escrowsByContractId} />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {createEscrowItems.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5" aria-hidden />
+              {t('adminCreateEscrow.cardTitle')}
+            </CardTitle>
+            <CardDescription>{t('adminCreateEscrow.cardDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CreateRepaymentEscrows items={createEscrowItems} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" aria-hidden />
+            {t('adminEscrows.pendingCardTitle')}
+          </CardTitle>
+          <CardDescription>{t('adminEscrows.pendingCardDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PendingApprovals items={items} escrowsByContractId={escrowsByContractId} />
+        </CardContent>
+      </Card>
+
+      {showInlineReleaseQueue ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" aria-hidden />
+              {t('adminEscrows.fallbackCardTitle')}
+            </CardTitle>
+            <CardDescription>{t('adminEscrows.fallbackCardDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReleaseFundsFallback
+              items={releaseFallbackItems}
+              escrowsByContractId={escrowsByContractId}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   )
 }

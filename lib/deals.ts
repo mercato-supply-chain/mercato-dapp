@@ -1,4 +1,12 @@
-import type { Deal, DealStatus, FundingStatus, Milestone } from './types'
+import type {
+  Deal,
+  DealStatus,
+  FundingStatus,
+  Milestone,
+  RepaymentMilestoneCache,
+  RepaymentStatus,
+} from './types'
+import { investorFundingTotal, PLATFORM_FEE_PERCENT } from './deals/fees'
 import { calculateYieldAPR } from './yield'
 
 /** DB deal row with optional relations from Supabase select */
@@ -19,8 +27,18 @@ export interface DealRow {
   yield_bonus_apr?: number | null
   term_days: number
   status: string
+  platform_fee?: number | null
   escrow_address?: string | null
   escrow_contract_address?: string | null
+  escrow_status?: string | null
+  funding_tx_hash?: string | null
+  tracking_id?: string | null
+  shipped_at?: string | null
+  delivered_at?: string | null
+  repayment_status?: string | null
+  repayment_due_at?: string | null
+  repayment_total_amount?: number | null
+  repayment_milestones?: RepaymentMilestoneCache[] | null
   funding_expires_at?: string | null
   funding_window_days?: number | null
   extension_count?: number | null
@@ -35,9 +53,15 @@ export interface DealRow {
     full_name?: string
     contact_name?: string
     stake_amount?: number | null
+    address?: string | null
   } | null
   /** From Supabase select with alias: investor:profiles!deals_investor_id_fkey(...) */
-  investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
+  investor?: {
+    company_name?: string
+    full_name?: string
+    contact_name?: string
+    address?: string | null
+  } | null
   /** From Supabase select: supplier_companies!deals_supplier_id_fkey(...) */
   supplier?: {
     company_name?: string
@@ -48,6 +72,44 @@ export interface DealRow {
   } | null
   /** Fallback if relation is returned as table name */
   profiles?: { company_name?: string; full_name?: string; contact_name?: string } | null
+}
+
+const REPAYMENT_STATUSES = new Set<RepaymentStatus>([
+  'none',
+  'order_confirmed',
+  'escrow_initialized',
+  'funding',
+  'ready_to_release',
+  'partially_released',
+  'released',
+  'funded',
+])
+
+function mapRepaymentStatus(value: string | null | undefined): RepaymentStatus {
+  if (value && REPAYMENT_STATUSES.has(value as RepaymentStatus)) {
+    return value as RepaymentStatus
+  }
+  return 'none'
+}
+
+function mapRepaymentMilestones(
+  value: RepaymentMilestoneCache[] | null | undefined,
+): RepaymentMilestoneCache[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (m): m is RepaymentMilestoneCache =>
+        m != null &&
+        typeof m === 'object' &&
+        Number.isFinite(Number(m.index)) &&
+        Number.isFinite(Number(m.amount)),
+    )
+    .map((m) => ({
+      index: Number(m.index),
+      description: typeof m.description === 'string' ? m.description : '',
+      amount: Number(m.amount),
+      released: Boolean(m.released),
+    }))
 }
 
 export interface MilestoneRow {
@@ -157,15 +219,23 @@ export function mapDealFromDb(row: DealRow): Deal {
     supplierCompany?.contact_name ||
     'Supplier'
 
+  const principal = Number(row.amount)
+  const platformFeePercent =
+    row.platform_fee != null && Number.isFinite(Number(row.platform_fee))
+      ? Number(row.platform_fee)
+      : PLATFORM_FEE_PERCENT
+
   return {
     id: row.id,
     productName: row.product_name || row.title,
     quantity: row.product_quantity ?? 0,
-    priceUSDC: Number(row.amount),
+    priceUSDC: principal,
+    investorFundingTotal: investorFundingTotal(principal),
+    platformFeePercent,
     supplier: supplierName,
     supplierId: row.supplier_id ?? undefined,
     supplierOwnerId: supplierCompany?.owner_id ?? undefined,
-    supplierAddress: supplierCompany?.address?.trim() || row.escrow_contract_address?.trim() || row.escrow_address?.trim() || undefined,
+    supplierAddress: supplierCompany?.address?.trim() || undefined,
     term: row.term_days ?? 0,
     status,
     createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : '',
@@ -173,6 +243,24 @@ export function mapDealFromDb(row: DealRow): Deal {
     completedAt: row.completed_at ? new Date(row.completed_at).toISOString().slice(0, 10) : undefined,
     milestones,
     escrowAddress: row.escrow_contract_address ?? row.escrow_address ?? undefined,
+    fundingTxHash: row.funding_tx_hash ?? undefined,
+    trackingId: row.tracking_id?.trim() || undefined,
+    shippedAt: row.shipped_at
+      ? new Date(row.shipped_at).toISOString()
+      : undefined,
+    deliveredAt: row.delivered_at
+      ? new Date(row.delivered_at).toISOString()
+      : undefined,
+    repaymentStatus: mapRepaymentStatus(row.repayment_status),
+    repaymentDueAt: row.repayment_due_at
+      ? new Date(row.repayment_due_at).toISOString()
+      : undefined,
+    repaymentTotalAmount:
+      row.repayment_total_amount != null &&
+      Number.isFinite(Number(row.repayment_total_amount))
+        ? Number(row.repayment_total_amount)
+        : undefined,
+    repaymentMilestones: mapRepaymentMilestones(row.repayment_milestones),
     pymeName,
     pymeId: row.pyme_id ?? undefined,
     pymeStakeAmount:
@@ -181,6 +269,7 @@ export function mapDealFromDb(row: DealRow): Deal {
         : undefined,
     investorName: investorName ?? undefined,
     investorId: row.investor_id ?? undefined,
+    investorAddress: row.investor?.address?.trim() || undefined,
     description: row.description ?? undefined,
     category: row.category ?? undefined,
     fundingStatus,
@@ -196,7 +285,7 @@ export function mapDealFromDb(row: DealRow): Deal {
       ? new Date(row.extended_at).toISOString()
       : undefined,
     yieldAPR: (() => {
-      const amount = Number(row.amount ?? 0)
+      const amount = principal
       const termDays = row.term_days ?? 0
       if (amount <= 0 || termDays <= 0) return undefined
       const stored = row.interest_rate

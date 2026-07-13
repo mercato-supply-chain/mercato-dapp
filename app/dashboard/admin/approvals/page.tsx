@@ -58,13 +58,12 @@ export default async function AdminApprovalsPage({
 
       {queue.emptyState ? (
         <AdminApprovalsEmpty emptyState />
-      ) : queue.items.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
-          <p className="font-medium">{tr(m, 'adminPage.pendingTitle')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{tr(m, 'adminPage.noPending')}</p>
-        </div>
       ) : (
-        <AdminEscrowsProvider items={queue.items} releaseFallbackItems={queue.releaseFallbackItems} />
+        <AdminEscrowsProvider
+          items={queue.items}
+          createEscrowItems={queue.createEscrowItems}
+          releaseFallbackItems={queue.releaseFallbackItems}
+        />
       )}
     </div>
   )

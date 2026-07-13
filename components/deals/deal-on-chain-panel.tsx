@@ -1,73 +1,121 @@
 'use client'
 
-import { AlertCircle, ExternalLink } from 'lucide-react'
+import { AlertCircle, ExternalLink, ArrowRightLeft } from 'lucide-react'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n/provider'
+import {
+  stellarExpertContractUrl,
+  stellarExpertTxUrl,
+} from '@/lib/stellar/explorer'
 
 type DealOnChainPanelProps = {
   escrowAddress?: string
+  fundingTxHash?: string
   investorAddress?: string
   supplierAddress?: string
   indexerEscrow: GetEscrowsFromIndexerResponse | null
   compact?: boolean
 }
 
-function truncateContract(id: string, head = 8, tail = 6) {
+function truncateId(id: string, head = 8, tail = 6) {
   if (id.length <= head + tail + 3) return id
   return `${id.slice(0, head)}…${id.slice(-tail)}`
 }
 
 export function DealOnChainPanel({
   escrowAddress,
+  fundingTxHash,
   investorAddress,
   supplierAddress,
   indexerEscrow,
   compact = false,
 }: DealOnChainPanelProps) {
   const { t } = useI18n()
+  const hasActivity = Boolean(fundingTxHash || escrowAddress)
 
-  if (!escrowAddress) {
+  if (!hasActivity) {
     return (
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
         <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
-        {t('dealDetail.escrowPendingDeploy')}
+        {t('dealDetail.onChainActivityEmpty')}
       </p>
     )
   }
 
   return (
     <div className={compact ? 'space-y-3' : 'space-y-4'}>
-      <div>
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {t('dealDetail.escrowContract')}
-        </p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs">
-            {compact ? truncateContract(escrowAddress) : escrowAddress}
-          </code>
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" asChild>
-            <a
-              href={`https://viewer.trustlesswork.com/${escrowAddress}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              TrustlessWork
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </a>
-          </Button>
-          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
-            <a
-              href={`https://stellar.expert/explorer/public/contract/${escrowAddress}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={t('dealDetail.titleStellarExpert')}
-            >
-              <ExternalLink className="h-4 w-4" aria-hidden />
-            </a>
-          </Button>
+      {fundingTxHash ? (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t('dealDetail.onChainActivityTitle')}
+          </p>
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+            <div className="flex items-start gap-2">
+              <ArrowRightLeft className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-medium">{t('dealDetail.fundingPaymentTitle')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('dealDetail.fundingPaymentDescription')}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs">
+                    {compact ? truncateId(fundingTxHash) : fundingTxHash}
+                  </code>
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" asChild>
+                    <a
+                      href={stellarExpertTxUrl(fundingTxHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Stellar Expert
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
+
+      {escrowAddress ? (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t('dealDetail.escrowContract')}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs">
+              {compact ? truncateId(escrowAddress) : escrowAddress}
+            </code>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" asChild>
+              <a
+                href={`https://viewer.trustlesswork.com/${escrowAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                TrustlessWork
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              </a>
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
+              <a
+                href={stellarExpertContractUrl(escrowAddress)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t('dealDetail.titleStellarExpert')}
+              >
+                <ExternalLink className="h-4 w-4" aria-hidden />
+              </a>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
+          {t('dealDetail.escrowPendingDeploy')}
+        </p>
+      )}
 
       {!compact && investorAddress && (
         <div>
@@ -86,20 +134,31 @@ export function DealOnChainPanel({
       {indexerEscrow && (
         <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">{t('dealDetail.fromIndexer')}</p>
+          {indexerEscrow.type ? (
+            <p className="mt-1 capitalize">{indexerEscrow.type.replace('-', ' ')}</p>
+          ) : null}
           {indexerEscrow.balance != null && (
             <p className="mt-1">
               {t('dealDetail.balanceLine', { bal: indexerEscrow.balance.toLocaleString() })}
             </p>
           )}
-          {indexerEscrow.milestones?.map((m, i) => (
-            <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="mt-0.5">
-              {t('dealDetail.indexerMilestoneLine', {
-                i,
-                status: m.status ?? '—',
-                amt: m.amount != null ? ` (${m.amount})` : '',
-              })}
-            </p>
-          ))}
+          {indexerEscrow.milestones?.map((m, i) => {
+            const amount =
+              'amount' in m && m.amount != null ? ` (${m.amount})` : ''
+            const released =
+              'flags' in m && m.flags && typeof m.flags === 'object' && 'released' in m.flags
+                ? Boolean((m.flags as { released?: boolean }).released)
+                : false
+            return (
+              <p key={`indexer-milestone-${i}-${m.status ?? ''}`} className="mt-0.5">
+                {t('dealDetail.indexerMilestoneLine', {
+                  i,
+                  status: released ? 'released' : (m.status ?? '—'),
+                  amt: amount,
+                })}
+              </p>
+            )
+          })}
         </div>
       )}
     </div>

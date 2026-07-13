@@ -10,7 +10,7 @@ export default async function AdminSectionLayout({ children }: { children: React
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl px-4 py-8">
       <AdminSubnav
-        pendingCount={queue.items.length}
+        pendingCount={queue.items.length + queue.createEscrowItems.length}
         releaseCount={queue.releaseFallbackItems.length}
         vaultConfigured={vaultConfigured}
       />

@@ -6,11 +6,10 @@ import { ArrowRight } from 'lucide-react'
 import { StepProgress } from './step-progress'
 import { DealBasicsStep } from './deal-basics-step'
 import { SupplierStep } from './supplier-step'
-import { MilestonesStep } from './milestones-step'
 import { DealSummaryCard } from './deal-summary-card'
 import { HowItWorksCard } from './how-it-works-card'
 import { useI18n } from '@/lib/i18n/provider'
-import type { FormStep, MilestoneDraft, CreateDealFormData, SupplierProductRow } from '../types'
+import type { FormStep, CreateDealFormData, SupplierProductRow } from '../types'
 
 interface CreateDealFormBodyProps {
   formData: CreateDealFormData
@@ -20,14 +19,13 @@ interface CreateDealFormBodyProps {
   productsForSupplier: { id: string; name: string; category: string; price_per_unit: number; description?: string | null; image_url?: string | null; unit?: string; stock_quantity?: number; reserved_quantity?: number }[]
   selectedProduct: SupplierProductRow | null | undefined
   totalAmount: number
-  baseAPR: number
-  effectiveAPR: number
-  estimatedYield: number
-  yieldBonusApr: number
-  maxYieldBonusApr: number
+  fundingTotal: number
+  feeAmount: number
+  platformFeePercent: number
+  yieldAPR: number
+  estimatedEarnings: number
   canProceedStep1: boolean
   canProceedStep2: boolean
-  milestonesOk: boolean
   canSubmit: boolean
   supplierLogoUrl?: string | null
   productImageUrl?: string | null
@@ -39,7 +37,17 @@ interface CreateDealFormBodyProps {
   goNext: () => void
   updateFormData: (field: keyof CreateDealFormData, value: string) => void
   handleSupplierSelect: (supplierId: string) => void
-  onMilestonesChange: (milestones: MilestoneDraft[]) => void
+  /** Override create-flow copy (edit deal page). */
+  copy?: {
+    badge: string
+    title: string
+    description: string
+    submit: string
+    submitting: string
+  }
+  /** When false, skip the connect-wallet gate on the final step. */
+  requireWallet?: boolean
+  showHowItWorks?: boolean
 }
 
 export function CreateDealFormBody({
@@ -50,14 +58,13 @@ export function CreateDealFormBody({
   productsForSupplier,
   selectedProduct,
   totalAmount,
-  baseAPR,
-  effectiveAPR,
-  estimatedYield,
-  yieldBonusApr,
-  maxYieldBonusApr,
+  fundingTotal,
+  feeAmount,
+  platformFeePercent,
+  yieldAPR,
+  estimatedEarnings,
   canProceedStep1,
   canProceedStep2,
-  milestonesOk,
   canSubmit,
   supplierLogoUrl,
   productImageUrl,
@@ -69,27 +76,34 @@ export function CreateDealFormBody({
   goNext,
   updateFormData,
   handleSupplierSelect,
-  onMilestonesChange,
+  copy,
+  requireWallet = true,
+  showHowItWorks = true,
 }: CreateDealFormBodyProps) {
   const { t } = useI18n()
+  const badge = copy?.badge ?? t('createDeal.badge')
+  const title = copy?.title ?? t('createDeal.title')
+  const description = copy?.description ?? t('createDeal.description')
+  const submitLabel = copy?.submit ?? t('createDeal.create')
+  const submittingLabel = copy?.submitting ?? t('createDeal.creating')
 
   return (
     <>
       <div className="mb-8">
         <Badge className="mb-3" variant="secondary">
-          {t('createDeal.badge')}
+          {badge}
         </Badge>
         <h1 className="mb-2 text-4xl font-bold tracking-tight">
-          {t('createDeal.title')}
+          {title}
         </h1>
         <p className="text-lg text-muted-foreground">
-          {t('createDeal.description')}
+          {description}
         </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <StepProgress currentStep={currentStep} />
+          <StepProgress currentStep={currentStep} totalSteps={2} />
 
           {currentStep === 1 && (
             <DealBasicsStep
@@ -107,20 +121,10 @@ export function CreateDealFormBody({
               formData={formData}
               filteredSuppliers={filteredSuppliers}
               totalAmount={totalAmount}
-              estimatedYield={estimatedYield}
-              baseAPR={totalAmount > 0 ? baseAPR : undefined}
-              effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
-              yieldBonusApr={yieldBonusApr}
-              maxYieldBonusApr={maxYieldBonusApr}
+              estimatedEarnings={estimatedEarnings}
+              yieldAPR={totalAmount > 0 ? yieldAPR : undefined}
               onUpdate={updateFormData}
               onSupplierSelect={handleSupplierSelect}
-            />
-          )}
-          {currentStep === 3 && (
-            <MilestonesStep
-              milestones={formData.milestones ?? []}
-              totalAmount={totalAmount}
-              onMilestonesChange={onMilestonesChange}
             />
           )}
 
@@ -134,31 +138,22 @@ export function CreateDealFormBody({
               {t('common.back')}
             </Button>
 
-            {currentStep < 3 ? (
+            {currentStep < 2 ? (
               <Button
                 type="button"
                 onClick={goNext}
-                disabled={
-                  currentStep === 1 ? !canProceedStep1 : !canProceedStep2
-                }
+                disabled={!canProceedStep1}
               >
                 {t('common.continue')}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
               </Button>
-            ) : isConnected ? (
+            ) : !requireWallet || isConnected ? (
               <Button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                title={
-                  !milestonesOk
-                    ? t('createDeal.invalidMilestones')
-                    : undefined
-                }
               >
-                {isSubmitting
-                  ? t('createDeal.creatingDeploying')
-                  : t('createDeal.createDeploy')}
+                {isSubmitting ? submittingLabel : submitLabel}
               </Button>
             ) : (
               <Button type="button" onClick={handleConnect}>
@@ -175,11 +170,13 @@ export function CreateDealFormBody({
             productImageUrl={productImageUrl}
             supplierLogoUrl={supplierLogoUrl}
             totalAmount={totalAmount}
-            baseAPR={totalAmount > 0 ? baseAPR : undefined}
-            effectiveAPR={totalAmount > 0 ? effectiveAPR : undefined}
-            yieldBonusApr={yieldBonusApr}
+            fundingTotal={fundingTotal}
+            feeAmount={feeAmount}
+            platformFeePercent={platformFeePercent}
+            yieldAPR={totalAmount > 0 ? yieldAPR : undefined}
+            estimatedEarnings={totalAmount > 0 ? estimatedEarnings : undefined}
           />
-          <HowItWorksCard />
+          {showHowItWorks ? <HowItWorksCard /> : null}
         </div>
       </div>
     </>

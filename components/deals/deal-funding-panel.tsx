@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { FundEscrowPayload } from '@trustless-work/escrow'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,6 +19,13 @@ import type { Deal } from '@/lib/types'
 import type { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/provider'
+import { buildUsdcSplitPaymentXdr } from '@/lib/stellar/build-usdc-split-payment'
+import { submitSignedTransaction } from '@/lib/stellar-submit'
+import { signTransaction } from '@/lib/trustless/wallet-kit'
+import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
+import { investorFundingTotal } from '@/lib/deals/fees'
+import { usePollarSession } from '@/providers/pollar-provider'
+import { useWallet } from '@/hooks/use-wallet'
 
 type Supabase = ReturnType<typeof createClient>
 
@@ -33,11 +39,6 @@ interface DealFundingPanelProps {
   onConnect: () => void
   canFund: boolean
   showMobileBar: boolean
-  signAndSend: (unsignedTransaction: string, address: string) => Promise<void>
-  fundEscrow: (
-    payload: FundEscrowPayload,
-    type: string,
-  ) => Promise<{ status: string; unsignedTransaction?: string }>
   supabase: Supabase
   fetchDeal: () => Promise<Deal | null>
   onDealUpdate: (deal: Deal) => void
@@ -54,22 +55,32 @@ export function DealFundingPanel({
   onConnect,
   canFund,
   showMobileBar,
-  signAndSend,
-  fundEscrow,
   supabase,
   fetchDeal,
   onDealUpdate,
   userId,
 }: DealFundingPanelProps) {
   const { t } = useI18n()
+  const pollar = usePollarSession()
+  const { provider } = useWallet()
   const [isFunding, setIsFunding] = useState(false)
   const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false)
   const [extendFundingDialogOpen, setExtendFundingDialogOpen] = useState(false)
   const [extendFundingDays, setExtendFundingDays] = useState('7')
   const [isExtendingFundingWindow, setIsExtendingFundingWindow] = useState(false)
 
+  const fundingTotal = deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
+
   const handleFundDeal = async () => {
-    if (!deal || !walletAddress || !deal.escrowAddress) return
+    if (!deal || !walletAddress) return
+    if (!deal.supplierAddress) {
+      toast.error(t('dealDetail.toastSupplierAddressMissing'))
+      return
+    }
+    if (!MERCATO_PLATFORM_ADDRESS) {
+      toast.error(t('createDeal.platformMissing'))
+      return
+    }
     if (userType !== 'investor') {
       toast.error(t('dealDetail.toastFundOnlyInvestors'))
       return
@@ -92,25 +103,51 @@ export function DealFundingPanel({
         toast.error(t('dealDetail.toastFundOnlyInvestors'))
         return
       }
-      const payload: FundEscrowPayload = {
-        contractId: deal.escrowAddress,
-        signer: walletAddress,
-        amount: deal.priceUSDC,
+
+      const unsignedXdr = await buildUsdcSplitPaymentXdr({
+        sourceAddress: walletAddress,
+        supplierAddress: deal.supplierAddress,
+        platformAddress: MERCATO_PLATFORM_ADDRESS,
+        principal: deal.priceUSDC,
+      })
+
+      let fundingTxHash: string | undefined
+
+      if (provider === 'pollar') {
+        fundingTxHash = await pollar.signAndSubmitTx(unsignedXdr)
+      } else {
+        const signedXdr = await signTransaction({
+          unsignedTransaction: unsignedXdr,
+          address: walletAddress,
+        })
+        if (!signedXdr) throw new Error(t('dealDetail.errorSignedTxMissing'))
+        const result = await submitSignedTransaction(signedXdr)
+        if (!result.successful) {
+          throw new Error(t('dealDetail.errorTxFailed'))
+        }
+        fundingTxHash = result.hash
       }
-      const fundResponse = await fundEscrow(payload, 'multi-release')
-      if (fundResponse.status !== 'SUCCESS' || !fundResponse.unsignedTransaction) {
-        throw new Error(t('dealDetail.errorFundTxBuild'))
-      }
-      await signAndSend(fundResponse.unsignedTransaction, walletAddress)
+
+      const fundedAt = new Date()
+
       const { error: updateError } = await supabase
         .from('deals')
         .update({
           investor_id: user.id,
           status: 'funded',
-          funded_at: new Date().toISOString(),
+          funded_at: fundedAt.toISOString(),
+          funding_tx_hash: fundingTxHash ?? null,
+          // Repayment due is set only after SMB confirms delivery
         })
         .eq('id', deal.id)
       if (updateError) throw updateError
+
+      // Persist investor wallet for repayment escrow receiver role
+      await supabase
+        .from('profiles')
+        .update({ address: walletAddress })
+        .eq('id', user.id)
+
       const updated = await fetchDeal()
       if (!updated || updated.status !== 'funded') {
         throw new Error(t('dealDetail.errorFundingDbSync'))
@@ -196,10 +233,9 @@ export function DealFundingPanel({
 
   return (
     <>
-      {/* Desktop header action area */}
       {deal.status === 'awaiting_funding' && (
         isFundingOpen ? (
-          deal.escrowAddress ? (
+          deal.supplierAddress ? (
             userType === 'investor' ? (
               fundDialog
             ) : (
@@ -212,7 +248,7 @@ export function DealFundingPanel({
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               <Clock className="h-4 w-4 shrink-0" aria-hidden />
-              {t('dealDetail.escrowDeploying')}
+              {t('dealDetail.supplierAddressMissing')}
             </div>
           )
         ) : (
@@ -264,7 +300,6 @@ export function DealFundingPanel({
         )
       )}
 
-      {/* Mobile sticky fund bar */}
       {showMobileBar && canFund && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 shadow-lg backdrop-blur lg:hidden">
           <DealFundDialog
@@ -279,7 +314,7 @@ export function DealFundingPanel({
             trigger={
               <Button size="lg" className="w-full gap-2 shadow-sm">
                 <Wallet className="h-5 w-5" aria-hidden />
-                {t('deals.fundThisDeal')} · {formatCurrency(deal.priceUSDC)}
+                {t('deals.fundThisDeal')} · {formatCurrency(fundingTotal)}
               </Button>
             }
           />

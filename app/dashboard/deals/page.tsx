@@ -14,7 +14,6 @@ import {
   Clock,
   Lock,
   Upload,
-  Handshake,
   ShieldCheck,
 } from 'lucide-react'
 import { formatDate } from '@/lib/date-utils'
@@ -36,6 +35,9 @@ type DealRow = {
   created_at: string | null
   funded_at: string | null
   escrow_contract_address: string | null
+  tracking_id: string | null
+  shipped_at: string | null
+  delivered_at: string | null
   pyme_id: string
   milestones: MilestoneRow[]
   pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
@@ -96,6 +98,9 @@ export default async function DashboardDealsPage({
       created_at,
       funded_at,
       escrow_contract_address,
+      tracking_id,
+      shipped_at,
+      delivered_at,
       pyme_id,
       milestones(id, title, status, percentage, amount),
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name),
@@ -119,7 +124,7 @@ export default async function DashboardDealsPage({
         <div className="mb-6">
           <h1 className="text-3xl font-bold">My deals</h1>
           <p className="text-muted-foreground">
-            Deals where you are the supplier. Once funded, accept the deal to unlock 50% and add delivery proof to unlock the rest.
+            Deals where you are the supplier. Once funded, confirm shipment with a tracking ID so the buyer can verify delivery.
           </p>
           {companies.length > 1 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -181,9 +186,9 @@ export default async function DashboardDealsPage({
               <CardContent className="flex flex-wrap items-center gap-3 pt-6">
                 <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
                 <div>
-                  <p className="font-medium">Funds are in escrow</p>
+                  <p className="font-medium">Supplier paid at funding</p>
                   <p className="text-sm text-muted-foreground">
-                    Complete &quot;Accept deal&quot; to unlock the first 50%. Add delivery proof for the remaining 50% after admin approval.
+                    Confirm shipment with a tracking ID after funding. The buyer confirms receipt to start repayment.
                   </p>
                 </div>
               </CardContent>
@@ -200,10 +205,11 @@ export default async function DashboardDealsPage({
                 deal.investor?.full_name ||
                 deal.investor?.contact_name ||
                 null
-              const milestones = deal.milestones ?? []
-              const completedCount = milestones.filter((m) => m.status === 'completed').length
               const isFunded = deal.status === 'funded' || deal.status === 'in_progress'
               const hasEscrow = Boolean(deal.escrow_contract_address)
+              const needsShipment = isFunded && !deal.shipped_at
+              const shipmentDone = Boolean(deal.shipped_at)
+              const deliveryDone = Boolean(deal.delivered_at)
 
               return (
                 <Card key={deal.id}>
@@ -228,7 +234,6 @@ export default async function DashboardDealsPage({
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    {/* Deal overview */}
                     <div>
                       <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
                         Deal overview
@@ -250,7 +255,7 @@ export default async function DashboardDealsPage({
                           <p className="font-medium">{investorName ?? 'Awaiting funding'}</p>
                         </div>
                         <div className="rounded-lg border border-border bg-muted/30 p-3">
-                          <p className="text-xs font-medium text-muted-foreground">Escrow</p>
+                          <p className="text-xs font-medium text-muted-foreground">Repayment escrow</p>
                           <p className="flex items-center gap-1.5 text-sm">
                             {hasEscrow ? (
                               <>
@@ -259,7 +264,7 @@ export default async function DashboardDealsPage({
                               </>
                             ) : (
                               <span className="text-muted-foreground">
-                                {isFunded ? 'Pending' : 'After funding'}
+                                {deliveryDone ? 'Pending admin' : isFunded ? 'After delivery' : 'After funding'}
                               </span>
                             )}
                           </p>
@@ -267,76 +272,70 @@ export default async function DashboardDealsPage({
                       </div>
                     </div>
 
-                    {/* Milestones and next actions */}
-                    {milestones.length > 0 && (
+                    {isFunded ? (
                       <div>
                         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-                          Milestones
+                          Delivery
                         </h3>
                         <div className="space-y-2">
-                          {milestones.map((m, index) => {
-                            const isPending = m.status === 'pending'
-                            const isInProgress = m.status === 'in_progress'
-                            const isCompleted = m.status === 'completed'
-                            return (
-                              <div
-                                key={m.id}
-                                className={`flex items-center justify-between gap-4 rounded-lg border p-3 ${
-                                  isCompleted ? 'border-success bg-success/5' : 'border-border'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {isCompleted ? (
-                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
-                                  ) : (
-                                    <Clock className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
-                                  )}
-                                  <div>
-                                    <p className="font-medium">
-                                      {index === 0 ? 'Accept deal' : index === 1 ? 'Delivery proof' : m.title} — {m.percentage}%
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {isCompleted
-                                        ? 'Completed'
-                                        : isInProgress
-                                          ? 'Proof uploaded — awaiting approval'
-                                          : 'Pending'}
-                                    </p>
-                                  </div>
-                                </div>
-                                {isPending && isFunded && hasEscrow && (
-                                  <Button asChild size="sm" variant={index === 0 ? 'default' : 'outline'}>
-                                    <Link
-                                      href={
-                                        index === 0
-                                          ? `/deals/${deal.id}?action=accept`
-                                          : `/deals/${deal.id}?action=delivery`
-                                      }
-                                    >
-                                      {index === 0 ? (
-                                        <>
-                                          <Handshake className="mr-2 h-4 w-4" aria-hidden />
-                                          Accept deal
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Upload className="mr-2 h-4 w-4" aria-hidden />
-                                          Add delivery proof
-                                        </>
-                                      )}
-                                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                                    </Link>
-                                  </Button>
-                                )}
+                          <div
+                            className={`flex items-center justify-between gap-4 rounded-lg border p-3 ${
+                              shipmentDone ? 'border-success bg-success/5' : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {shipmentDone ? (
+                                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
+                              ) : (
+                                <Clock className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                              )}
+                              <div>
+                                <p className="font-medium">Confirm shipment</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {shipmentDone
+                                    ? deal.tracking_id
+                                      ? `Tracking: ${deal.tracking_id}`
+                                      : 'Shipped'
+                                    : 'Add a tracking ID after sending the goods'}
+                                </p>
                               </div>
-                            )
-                          })}
+                            </div>
+                            {needsShipment ? (
+                              <Button asChild size="sm">
+                                <Link href={`/deals/${deal.id}?action=ship`}>
+                                  <Upload className="mr-2 h-4 w-4" aria-hidden />
+                                  Confirm shipment
+                                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                                </Link>
+                              </Button>
+                            ) : null}
+                          </div>
+                          <div
+                            className={`flex items-center justify-between gap-4 rounded-lg border p-3 ${
+                              deliveryDone ? 'border-success bg-success/5' : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {deliveryDone ? (
+                                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
+                              ) : (
+                                <Clock className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                              )}
+                              <div>
+                                <p className="font-medium">Buyer confirms receipt</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {deliveryDone
+                                    ? 'Delivery confirmed — repayment period started'
+                                    : shipmentDone
+                                      ? 'Waiting for the SMB to confirm arrival'
+                                      : 'Available after you confirm shipment'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {completedCount} of {milestones.length} completed
-                        </p>
                       </div>
-                    )}
+                    ) : null}
 
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                       <span className="text-sm text-muted-foreground">
