@@ -4,9 +4,10 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Rocket, ShieldCheck } from 'lucide-react'
+import { CheckCircle2, Rocket, ShieldCheck } from 'lucide-react'
 import { PendingApprovals } from './pending-approvals'
 import { CreateRepaymentEscrows } from './create-repayment-escrows'
+import { ReleaseFundsFallback } from './release-funds-fallback'
 import type {
   CreateEscrowItem,
   PendingApprovalItem,
@@ -79,6 +80,11 @@ export function AdminEscrowsProvider({
     }
   }, [contractIdsKey])
 
+  // Release-ready items already appear in the manage queue — only surface a
+  // compact release strip when Approvals has no manage items but Releases does.
+  const showInlineReleaseQueue =
+    releaseFallbackItems.length > 0 && items.length === 0
+
   return (
     <div className="space-y-6">
       {createEscrowItems.length > 0 ? (
@@ -108,6 +114,24 @@ export function AdminEscrowsProvider({
           <PendingApprovals items={items} escrowsByContractId={escrowsByContractId} />
         </CardContent>
       </Card>
+
+      {showInlineReleaseQueue ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" aria-hidden />
+              {t('adminEscrows.fallbackCardTitle')}
+            </CardTitle>
+            <CardDescription>{t('adminEscrows.fallbackCardDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReleaseFundsFallback
+              items={releaseFallbackItems}
+              escrowsByContractId={escrowsByContractId}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }

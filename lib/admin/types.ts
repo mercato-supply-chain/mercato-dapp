@@ -30,6 +30,7 @@ export type PendingApprovalItem = {
   proofNotes: string | null
   proofDocumentUrl: string | null
   pymeName: string
+  pymeAddress?: string | null
   supplierName: string
   supplierLogoUrl: string | null
   repaymentStatus?: string | null
@@ -51,6 +52,8 @@ export type ReleaseFallbackItem = {
   milestonePercentage: number
   completedAt: string | null
   supplierLogoUrl: string | null
+  investorAddress?: string | null
+  pymeAddress?: string | null
 }
 
 export type AdminQueueFilters = {

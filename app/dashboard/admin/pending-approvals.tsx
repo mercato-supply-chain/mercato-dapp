@@ -2,18 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import {
-  useApproveMilestone,
-  useReleaseFunds,
-  useSendTransaction,
-  useGetEscrowFromIndexerByContractIds,
-} from '@trustless-work/escrow/hooks'
-import type {
-  ApproveMilestonePayload,
-  MultiReleaseReleaseFundsPayload,
-} from '@trustless-work/escrow'
+import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
-import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import { toast } from 'sonner'
@@ -30,15 +20,36 @@ import {
   DollarSign,
   FileText,
   Plus,
+  RefreshCw,
+  Scale,
 } from 'lucide-react'
 import type { PendingApprovalItem } from '@/lib/admin/types'
 import { useI18n } from '@/lib/i18n/provider'
 import { formatCurrency } from '@/lib/format'
+import {
+  AdminResolveDisputeDialog,
+  type ResolveDisputeTarget,
+} from './admin-resolve-dispute-dialog'
+import {
+  MERCATO_PLATFORM_ADDRESS,
+  MERCATO_DISPUTE_RESOLVER_ADDRESS,
+} from '@/lib/trustless/config'
 
 interface PendingApprovalsProps {
   items: PendingApprovalItem[]
   /** When provided (from AdminEscrowsProvider), skip internal fetch to avoid duplicate API calls */
   escrowsByContractId?: Map<string, GetEscrowsFromIndexerResponse>
+}
+
+type MilestoneFlags = {
+  status?: string
+  flags?: {
+    released?: boolean
+    approved?: boolean
+    disputed?: boolean
+    resolved?: boolean
+  }
+  released?: boolean
 }
 
 function SupplierLogoPending({
@@ -67,17 +78,41 @@ function SupplierLogoPending({
   )
 }
 
+function getMilestone(
+  escrow: GetEscrowsFromIndexerResponse | undefined,
+  milestoneIndex: number,
+): MilestoneFlags | undefined {
+  return escrow?.milestones?.[milestoneIndex] as MilestoneFlags | undefined
+}
+
 function isMilestoneReleased(
   escrow: GetEscrowsFromIndexerResponse | undefined,
   milestoneIndex: number,
 ): boolean {
-  const m = escrow?.milestones?.[milestoneIndex] as
-    | { status?: string; flags?: { released?: boolean }; released?: boolean }
-    | undefined
+  const m = getMilestone(escrow, milestoneIndex)
   if (!m) return false
   if (m.flags?.released === true || m.released === true) return true
   const s = (m.status ?? '').toLowerCase()
   return s === 'released' || s === 'completed'
+}
+
+function isMilestoneApproved(
+  escrow: GetEscrowsFromIndexerResponse | undefined,
+  milestoneIndex: number,
+): boolean {
+  const m = getMilestone(escrow, milestoneIndex)
+  return m?.flags?.approved === true
+}
+
+function isMilestoneDisputed(
+  escrow: GetEscrowsFromIndexerResponse | undefined,
+  milestoneIndex: number,
+): boolean {
+  const m = getMilestone(escrow, milestoneIndex)
+  if (!m) return false
+  if (m.flags?.resolved === true) return false
+  if (m.flags?.disputed === true) return true
+  return (m.status ?? '').toLowerCase() === 'disputed'
 }
 
 function canReleaseMilestoneInOrder(
@@ -100,17 +135,25 @@ export function PendingApprovals({
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [releasingId, setReleasingId] = useState<string | null>(null)
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [resyncingId, setResyncingId] = useState<string | null>(null)
+  const [disputeTarget, setDisputeTarget] = useState<ResolveDisputeTarget | null>(
+    null,
+  )
   const [addAmounts, setAddAmounts] = useState<Record<string, string>>({})
   const [localEscrows, setLocalEscrows] = useState<
     Map<string, GetEscrowsFromIndexerResponse>
   >(new Map())
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
-  const { approveMilestone } = useApproveMilestone()
-  const { releaseFunds } = useReleaseFunds()
-  const { sendTransaction } = useSendTransaction()
-  const { addRepaymentMilestone, syncDealFromIndexer, isWorking } =
-    useRepaymentEscrow()
+  const {
+    approveRepaymentMilestone,
+    releaseRepaymentMilestone,
+    addRepaymentMilestone,
+    startRepaymentDispute,
+    syncDealFromIndexer,
+    isWorking,
+  } = useRepaymentEscrow()
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
+  const [disputingId, setDisputingId] = useState<string | null>(null)
 
   const escrowsByContractId = escrowsFromParent ?? localEscrows
 
@@ -160,28 +203,13 @@ export function PendingApprovals({
     }
     setApprovingId(item.milestoneId)
     try {
-      const approvePayload: ApproveMilestonePayload = {
+      await approveRepaymentMilestone({
+        dealId: item.dealId,
         contractId: item.escrowContractAddress,
-        milestoneIndex: String(item.milestoneIndex),
-        approver: walletInfo.address,
-      }
-      const approveResponse = await approveMilestone(approvePayload, 'multi-release')
-      if (approveResponse.status !== 'SUCCESS' || !approveResponse.unsignedTransaction) {
-        throw new Error(t('adminPending.approveFailCreate'))
-      }
-      const approveSigned = await signTransaction({
-        unsignedTransaction: approveResponse.unsignedTransaction,
-        address: walletInfo.address,
+        releaseSigner: walletInfo.address,
+        milestoneIndex: item.milestoneIndex,
+        provider,
       })
-      if (!approveSigned) throw new Error(t('adminPending.signApproveFail'))
-      const approveTx = await sendTransaction(approveSigned)
-      if (approveTx.status !== 'SUCCESS') {
-        throw new Error(
-          'message' in approveTx
-            ? (approveTx as { message: string }).message
-            : t('adminPending.approveTxFail'),
-        )
-      }
       toast.success(t('adminPending.approveSuccess', { title: item.milestoneTitle }))
       window.location.reload()
     } catch (err) {
@@ -204,29 +232,13 @@ export function PendingApprovals({
     }
     setReleasingId(item.milestoneId)
     try {
-      const releasePayload: MultiReleaseReleaseFundsPayload = {
+      await releaseRepaymentMilestone({
+        dealId: item.dealId,
         contractId: item.escrowContractAddress,
         releaseSigner: walletInfo.address,
-        milestoneIndex: String(item.milestoneIndex),
-      }
-      const releaseResponse = await releaseFunds(releasePayload, 'multi-release')
-      if (releaseResponse.status !== 'SUCCESS' || !releaseResponse.unsignedTransaction) {
-        throw new Error(t('adminPending.releaseFailCreate'))
-      }
-      const releaseSigned = await signTransaction({
-        unsignedTransaction: releaseResponse.unsignedTransaction,
-        address: walletInfo.address,
+        milestoneIndex: item.milestoneIndex,
+        provider,
       })
-      if (!releaseSigned) throw new Error(t('adminPending.releaseSignFail'))
-      const releaseTx = await sendTransaction(releaseSigned)
-      if (releaseTx.status !== 'SUCCESS') {
-        throw new Error(
-          'message' in releaseTx
-            ? (releaseTx as { message: string }).message
-            : t('adminPending.releaseTxFail'),
-        )
-      }
-      await syncDealFromIndexer(item.dealId, item.escrowContractAddress)
       toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
       window.location.reload()
     } catch (err) {
@@ -235,6 +247,69 @@ export function PendingApprovals({
       toast.error(message)
     } finally {
       setReleasingId(null)
+    }
+  }
+
+  const handleResync = async (item: PendingApprovalItem) => {
+    if (!item.escrowContractAddress) return
+    setResyncingId(item.dealId)
+    try {
+      await syncDealFromIndexer(item.dealId, item.escrowContractAddress)
+      toast.success(t('adminPending.resyncSuccess'))
+      window.location.reload()
+    } catch (err) {
+      console.error(err)
+      toast.error(
+        err instanceof Error ? err.message : t('adminPending.resyncFail'),
+      )
+    } finally {
+      setResyncingId(null)
+    }
+  }
+
+  const handleStartDispute = async (item: PendingApprovalItem) => {
+    if (!walletInfo?.address) {
+      toast.error(t('adminPending.connectWallet'))
+      return
+    }
+    if (
+      MERCATO_PLATFORM_ADDRESS &&
+      walletInfo.address !== MERCATO_PLATFORM_ADDRESS
+    ) {
+      toast.error(t('adminCreateEscrow.platformWalletRequired'))
+      return
+    }
+    if (
+      MERCATO_DISPUTE_RESOLVER_ADDRESS &&
+      walletInfo.address === MERCATO_DISPUTE_RESOLVER_ADDRESS
+    ) {
+      toast.error(t('adminDispute.cannotOpenAsResolver'))
+      return
+    }
+    if (!item.escrowContractAddress) {
+      toast.error(t('adminPending.noEscrow'))
+      return
+    }
+    setDisputingId(item.milestoneId)
+    try {
+      await startRepaymentDispute({
+        dealId: item.dealId,
+        contractId: item.escrowContractAddress,
+        signer: walletInfo.address,
+        milestoneIndex: item.milestoneIndex,
+        provider,
+      })
+      toast.success(
+        t('adminDispute.startSuccess', { title: item.milestoneTitle }),
+      )
+      window.location.reload()
+    } catch (err) {
+      console.error(err)
+      toast.error(
+        err instanceof Error ? err.message : t('adminDispute.startFail'),
+      )
+    } finally {
+      setDisputingId(null)
     }
   }
 
@@ -274,6 +349,11 @@ export function PendingApprovals({
     }
   }
 
+  const canPlatformOpenDispute =
+    Boolean(MERCATO_PLATFORM_ADDRESS) &&
+    Boolean(MERCATO_DISPUTE_RESOLVER_ADDRESS) &&
+    MERCATO_PLATFORM_ADDRESS !== MERCATO_DISPUTE_RESOLVER_ADDRESS
+
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">{t('adminPending.emptyPendingList')}</p>
@@ -282,18 +362,32 @@ export function PendingApprovals({
 
   return (
     <div className="space-y-4">
+      <AdminResolveDisputeDialog
+        target={disputeTarget}
+        open={disputeTarget != null}
+        onOpenChange={(next) => {
+          if (!next) setDisputeTarget(null)
+        }}
+      />
       {items.map((item) => {
         const escrow = escrowsByContractId.get(item.escrowContractAddress)
         const alreadyReleased = isMilestoneReleased(escrow, item.milestoneIndex)
+        const alreadyApproved = isMilestoneApproved(escrow, item.milestoneIndex)
+        const isDisputed = isMilestoneDisputed(escrow, item.milestoneIndex)
         const canReleaseInOrder = canReleaseMilestoneInOrder(
           escrow,
           item.milestoneIndex,
         )
+        const balance = Number(escrow?.balance ?? 0)
+        const onChainStatus = getMilestone(escrow, item.milestoneIndex)?.status ?? null
         const showAdd =
           (item.remainingToSchedule ?? 0) > 0.01 &&
           (item.repaymentStatus === 'partially_released' ||
             alreadyReleased ||
             item.repaymentStatus === 'ready_to_release')
+        const isReleaseReady =
+          item.repaymentStatus === 'ready_to_release' ||
+          item.repaymentStatus === 'funded'
 
         return (
           <div
@@ -312,11 +406,29 @@ export function PendingApprovals({
                       t('adminPage.fallbackDeal')}
                   </Link>
                   <Badge variant="secondary">{item.milestoneTitle}</Badge>
+                  {isDisputed ? (
+                    <Badge variant="destructive">{t('adminDispute.disputedBadge')}</Badge>
+                  ) : null}
+                  {isReleaseReady && !alreadyReleased && !isDisputed ? (
+                    <Badge className="bg-orange-500/15 text-orange-900 dark:text-orange-200">
+                      {t('adminPending.readyBadge')}
+                    </Badge>
+                  ) : null}
+                  {alreadyApproved && !alreadyReleased ? (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      {t('adminPending.approvedBadge')}
+                    </Badge>
+                  ) : null}
                   {alreadyReleased && (
                     <Badge variant="secondary" className="bg-success/10 text-success">
                       {t('adminPending.releasedBadge')}
                     </Badge>
                   )}
+                  {onChainStatus && !alreadyReleased ? (
+                    <Badge variant="outline" className="text-xs">
+                      {t('adminPending.onChainStatus', { status: onChainStatus })}
+                    </Badge>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -355,6 +467,27 @@ export function PendingApprovals({
                     })}
                   </div>
                 </div>
+
+                {escrow ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t('adminPending.escrowBalanceLine', {
+                      amount: formatCurrency(balance),
+                    })}
+                    {item.escrowContractAddress ? (
+                      <>
+                        {' · '}
+                        <span className="font-mono">
+                          {item.escrowContractAddress.slice(0, 4)}…
+                          {item.escrowContractAddress.slice(-4)}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
+                ) : item.escrowContractAddress ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t('adminPending.indexerPending')}
+                  </p>
+                ) : null}
 
                 {(item.proofNotes || item.proofDocumentUrl) && (
                   <>
@@ -432,6 +565,47 @@ export function PendingApprovals({
                   </Button>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2">
+                    {isDisputed ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={alreadyReleased || isWorking}
+                        onClick={() =>
+                          setDisputeTarget({
+                            dealId: item.dealId,
+                            escrowContractAddress: item.escrowContractAddress,
+                            milestoneId: item.milestoneId,
+                            milestoneTitle: item.milestoneTitle,
+                            milestoneIndex: item.milestoneIndex,
+                            milestoneAmount: item.milestoneAmount,
+                            investorAddress: item.investorAddress ?? null,
+                            pymeAddress: item.pymeAddress ?? null,
+                          })
+                        }
+                      >
+                        <Scale className="mr-2 h-4 w-4" aria-hidden />
+                        {t('adminDispute.resolveCta')}
+                      </Button>
+                    ) : canPlatformOpenDispute ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={
+                          disputingId === item.milestoneId ||
+                          alreadyReleased ||
+                          isWorking
+                        }
+                        onClick={() => handleStartDispute(item)}
+                        title={t('adminDispute.startTooltip')}
+                      >
+                        <Scale className="mr-2 h-4 w-4" aria-hidden />
+                        {disputingId === item.milestoneId
+                          ? t('adminDispute.starting')
+                          : t('adminDispute.startCta')}
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="sm"
@@ -440,13 +614,18 @@ export function PendingApprovals({
                       disabled={
                         approvingId === item.milestoneId ||
                         alreadyReleased ||
-                        !canReleaseInOrder
+                        alreadyApproved ||
+                        isDisputed ||
+                        !canReleaseInOrder ||
+                        isWorking
                       }
                     >
                       <FileText className="mr-2 h-4 w-4" aria-hidden />
                       {approvingId === item.milestoneId
                         ? t('adminPending.approvingShort')
-                        : t('adminPending.approveBtn')}
+                        : alreadyApproved
+                          ? t('adminPending.approvedBadge')
+                          : t('adminPending.approveBtn')}
                     </Button>
                     <Button
                       type="button"
@@ -455,7 +634,9 @@ export function PendingApprovals({
                       disabled={
                         releasingId === item.milestoneId ||
                         alreadyReleased ||
-                        !canReleaseInOrder
+                        isDisputed ||
+                        !canReleaseInOrder ||
+                        isWorking
                       }
                     >
                       <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
@@ -467,12 +648,31 @@ export function PendingApprovals({
                     </Button>
                   </div>
                 )}
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/deals/${item.dealId}`}>
-                    {t('adminPending.viewDeal')}{' '}
-                    <ExternalLink className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />
-                  </Link>
-                </Button>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={resyncingId === item.dealId || isWorking}
+                    onClick={() => handleResync(item)}
+                  >
+                    <RefreshCw
+                      className={`mr-1 h-3.5 w-3.5 ${
+                        resyncingId === item.dealId ? 'animate-spin' : ''
+                      }`}
+                      aria-hidden
+                    />
+                    {resyncingId === item.dealId
+                      ? t('adminPending.resyncing')
+                      : t('adminPending.resyncBtn')}
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/deals/${item.dealId}`}>
+                      {t('adminPending.viewDeal')}{' '}
+                      <ExternalLink className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
