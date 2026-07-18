@@ -2384,5 +2384,23 @@
       "pillReputation": "4.8 avg reputation",
       "pillApr": "8–15% investor APR"
     }
+  },
+  "supplierReferral": {
+    "title": "Referral link",
+    "description": "Share this link to invite new PyMEs to the platform.",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "referredCount": "{count} PyME referred",
+    "referredCountPlural": "{count} PyMEs referred"
+  },
+  "referral": {
+    "onboarding": {
+      "referredBy": "Referred by",
+      "referredByBanner": "You were invited by {company}",
+      "referralConfirmed": "Referral confirmed",
+      "referralCode": "Referral code (optional)",
+      "referralCodePlaceholder": "Paste supplier code",
+      "referralCodeInvalid": "Code not found. Check with your supplier and try again."
+    }
   }
 }

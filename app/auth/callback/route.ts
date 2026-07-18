@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const nextParam = searchParams.get('next') ?? '/dashboard'
@@ -11,7 +11,16 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const response = NextResponse.redirect(`${origin}${next}`)
+      const referralId = request.cookies.get('mercato-referral')?.value
+      if (referralId) {
+        response.cookies.set('mercato-referral', referralId, {
+          path: '/',
+          maxAge: 86400,
+          sameSite: 'lax',
+        })
+      }
+      return response
     }
   }
 

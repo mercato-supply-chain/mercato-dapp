@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Building2, Check, Loader2, Package, TrendingUp, Users } from 'lucide-react'
@@ -22,6 +22,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import type { ReferralSupplier } from '@/app/api/referral/route'
 
 const STEPS = ['role', 'profile', 'done'] as const
 type Step = (typeof STEPS)[number]
@@ -40,6 +41,10 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
   const [step, setStep] = useState<Step>('role')
   const [userType, setUserType] = useState<OnboardingUserType | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [referral, setReferral] = useState<ReferralSupplier | null>(null)
+  const [referralInput, setReferralInput] = useState('')
+  const [referralInputError, setReferralInputError] = useState(false)
+  const [isResolvingReferral, setIsResolvingReferral] = useState(false)
   const [form, setForm] = useState({
     full_name: initialFullName,
     company_name: '',
@@ -48,6 +53,37 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     sector: '',
     bio: '',
   })
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)mercato-referral=([^;]+)/)
+    const referralId = match ? decodeURIComponent(match[1]) : null
+    if (!referralId) return
+    fetch(`/api/referral?code=${encodeURIComponent(referralId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: ReferralSupplier | null) => { if (data?.id) setReferral(data) })
+      .catch(() => {})
+  }, [])
+
+  const handleResolveReferralInput = async () => {
+    const code = referralInput.trim()
+    if (!code) return
+    setIsResolvingReferral(true)
+    setReferralInputError(false)
+    try {
+      const res = await fetch(`/api/referral?code=${encodeURIComponent(code)}`)
+      const data: ReferralSupplier | null = res.ok ? await res.json() : null
+      if (data?.id) {
+        setReferral(data)
+        setReferralInputError(false)
+      } else {
+        setReferralInputError(true)
+      }
+    } catch {
+      setReferralInputError(true)
+    } finally {
+      setIsResolvingReferral(false)
+    }
+  }
 
   const stepIndex = STEPS.indexOf(step)
   const roles: {
@@ -100,6 +136,7 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
           sector: form.sector || null,
           bio: form.bio.trim() || null,
           updated_at: new Date().toISOString(),
+          ...(referral && userType === 'pyme' ? { referred_by_supplier_id: referral.id } : {}),
         })
         .eq('id', userId)
 
@@ -126,6 +163,9 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     if (!validateProfile()) return
     const ok = await saveProfile()
     if (!ok) return
+    if (referral && userType === 'pyme') {
+      fetch('/api/referral/notify', { method: 'POST' }).catch(() => {})
+    }
     setStep('done')
   }
 
@@ -222,6 +262,47 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
                 </p>
               </div>
             </div>
+
+            {userType === 'pyme' && (
+              <div className="mb-4 space-y-2">
+                {referral ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-brand-light/40 bg-brand-ultra px-3 py-2 text-sm dark:bg-brand-dark/20">
+                    <Check className="h-3.5 w-3.5 shrink-0 text-brand-mid" aria-hidden />
+                    <span className="font-medium text-brand-mid">{t('referral.onboarding.referredBy')}:</span>
+                    <span className="text-foreground">{referral.company_name}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="onb-referral" className="text-sm font-normal text-muted-foreground">
+                      {t('referral.onboarding.referralCode')}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="onb-referral"
+                        value={referralInput}
+                        onChange={(e) => { setReferralInput(e.target.value); setReferralInputError(false) }}
+                        onBlur={handleResolveReferralInput}
+                        placeholder={t('referral.onboarding.referralCodePlaceholder')}
+                        className={cn('h-9 text-sm', referralInputError && 'border-destructive')}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 shrink-0"
+                        disabled={!referralInput.trim() || isResolvingReferral}
+                        onClick={handleResolveReferralInput}
+                      >
+                        {isResolvingReferral ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('common.continue')}
+                      </Button>
+                    </div>
+                    {referralInputError && (
+                      <p className="text-xs text-destructive">{t('referral.onboarding.referralCodeInvalid')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="space-y-2">
