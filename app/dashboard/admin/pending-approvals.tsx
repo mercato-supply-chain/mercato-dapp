@@ -24,6 +24,14 @@ import {
   Scale,
 } from 'lucide-react'
 import type { PendingApprovalItem } from '@/lib/admin/types'
+import {
+  getMilestone,
+  isMilestoneReleased,
+  isMilestoneApproved,
+  isMilestoneDisputed,
+  canReleaseMilestoneInOrder,
+} from '@/lib/admin/milestone-flags'
+import { SupplierLogoInline } from '@/components/admin/supplier-logo-inline'
 import { useI18n } from '@/lib/i18n/provider'
 import { formatCurrency } from '@/lib/format'
 import {
@@ -39,91 +47,6 @@ interface PendingApprovalsProps {
   items: PendingApprovalItem[]
   /** When provided (from AdminEscrowsProvider), skip internal fetch to avoid duplicate API calls */
   escrowsByContractId?: Map<string, GetEscrowsFromIndexerResponse>
-}
-
-type MilestoneFlags = {
-  status?: string
-  flags?: {
-    released?: boolean
-    approved?: boolean
-    disputed?: boolean
-    resolved?: boolean
-  }
-  released?: boolean
-}
-
-function SupplierLogoPending({
-  logoUrl,
-  companyName,
-  fallbackIcon: Icon = User,
-}: {
-  logoUrl: string | null
-  companyName: string
-  fallbackIcon?: typeof User
-}) {
-  const [imageError, setImageError] = useState(false)
-  return (
-    <div className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted/30">
-      {logoUrl && !imageError ? (
-        <img
-          src={logoUrl}
-          alt={companyName}
-          className="h-full w-full object-cover"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <Icon className="h-3 w-3" aria-hidden />
-      )}
-    </div>
-  )
-}
-
-function getMilestone(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): MilestoneFlags | undefined {
-  return escrow?.milestones?.[milestoneIndex] as MilestoneFlags | undefined
-}
-
-function isMilestoneReleased(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  const m = getMilestone(escrow, milestoneIndex)
-  if (!m) return false
-  if (m.flags?.released === true || m.released === true) return true
-  const s = (m.status ?? '').toLowerCase()
-  return s === 'released' || s === 'completed'
-}
-
-function isMilestoneApproved(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  const m = getMilestone(escrow, milestoneIndex)
-  return m?.flags?.approved === true
-}
-
-function isMilestoneDisputed(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  const m = getMilestone(escrow, milestoneIndex)
-  if (!m) return false
-  if (m.flags?.resolved === true) return false
-  if (m.flags?.disputed === true) return true
-  return (m.status ?? '').toLowerCase() === 'disputed'
-}
-
-function canReleaseMilestoneInOrder(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  if (milestoneIndex === 0) return true
-  for (let i = 0; i < milestoneIndex; i++) {
-    if (!isMilestoneReleased(escrow, i)) return false
-  }
-  return true
 }
 
 export function PendingApprovals({
@@ -455,9 +378,11 @@ export function PendingApprovals({
                     className="flex items-center gap-2 text-muted-foreground"
                     title="Supplier"
                   >
-                    <SupplierLogoPending
+                    <SupplierLogoInline
                       logoUrl={item.supplierLogoUrl}
-                      companyName={item.supplierName}
+                      alt={item.supplierName}
+                      fallbackIcon={User}
+                      boxClassName="bg-muted/30"
                     />
                     <span className="truncate">{item.supplierName}</span>
                   </div>
