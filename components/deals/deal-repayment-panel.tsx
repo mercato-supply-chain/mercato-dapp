@@ -14,12 +14,11 @@ import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import {
-  repaymentEscrowAmount,
-  repaymentBreakdown,
-  repaymentRemainingAmount,
-} from '@/lib/deals/fees'
-import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
-import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
+  computeRepaymentState,
+  canFund as canFundCheck,
+  canRelease as canReleaseCheck,
+  canAddMilestone as canAddMilestoneCheck,
+} from '@/lib/deals/repayment-eligibility'
 import { stellarExpertContractUrl } from '@/lib/stellar/explorer'
 import { Badge } from '@/components/ui/badge'
 
@@ -30,14 +29,6 @@ interface DealRepaymentPanelProps {
   fetchDeal: () => Promise<Deal | null>
   onDealUpdate: (deal: Deal) => void
 }
-
-const FUNDABLE_STATUSES = new Set([
-  'escrow_initialized',
-  'funding',
-  'ready_to_release',
-  'partially_released',
-  'funded',
-])
 
 export function DealRepaymentPanel({
   deal,
@@ -58,37 +49,35 @@ export function DealRepaymentPanel({
   const [fundAmount, setFundAmount] = useState('')
   const [addAmount, setAddAmount] = useState('')
 
-  const apr = deal.yieldAPR ?? 0
-  const { profit } = computeInvestorReturns(deal.priceUSDC, apr, deal.term)
-  const breakdown = repaymentBreakdown(deal.priceUSDC, profit)
-  const escrowAmount =
-    deal.repaymentTotalAmount && deal.repaymentTotalAmount > 0
-      ? deal.repaymentTotalAmount
-      : repaymentEscrowAmount(deal.priceUSDC, profit)
-  const status = deal.repaymentStatus ?? 'none'
-  const milestones = deal.repaymentMilestones ?? []
-  const openMilestones = milestones.filter((m) => !m.released)
-  const openAmount = openMilestones.reduce((sum, m) => sum + m.amount, 0)
-  const scheduledAmounts = milestones.map((m) => m.amount)
-  const remainingToSchedule = repaymentRemainingAmount(escrowAmount, scheduledAmounts)
-  const currentMilestone = openMilestones[0]
-  const defaultFundAmount =
-    openAmount > 0 ? openAmount : remainingToSchedule > 0 ? remainingToSchedule : escrowAmount
+  const {
+    status,
+    milestones,
+    openMilestones,
+    currentMilestone,
+    escrowAmount,
+    openAmount,
+    remainingToSchedule,
+    defaultFundAmount,
+    breakdown,
+  } = computeRepaymentState(deal)
 
   if (deal.status === 'awaiting_funding') return null
 
-  const canFund = isPyme && Boolean(deal.escrowAddress) && FUNDABLE_STATUSES.has(status)
-  const canRelease =
-    (isAdmin || walletInfo?.address === MERCATO_PLATFORM_ADDRESS) &&
-    Boolean(deal.escrowAddress) &&
-    Boolean(currentMilestone) &&
-    (status === 'ready_to_release' || status === 'funded')
-  const canAddMilestone =
-    (isAdmin || walletInfo?.address === MERCATO_PLATFORM_ADDRESS) &&
-    Boolean(deal.escrowAddress) &&
-    remainingToSchedule > 0 &&
-    status !== 'none' &&
-    status !== 'order_confirmed'
+  const canFund = canFundCheck(isPyme, deal.escrowAddress, status)
+  const canRelease = canReleaseCheck(
+    isAdmin,
+    walletInfo?.address,
+    deal.escrowAddress,
+    currentMilestone,
+    status
+  )
+  const canAddMilestone = canAddMilestoneCheck(
+    isAdmin,
+    walletInfo?.address,
+    deal.escrowAddress,
+    remainingToSchedule,
+    status
+  )
 
   const refresh = async () => {
     const updated = await fetchDeal()
