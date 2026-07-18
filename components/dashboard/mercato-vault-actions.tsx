@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AlertCircle, Loader2 } from 'lucide-react'
-import { StellarMark, TokenAvatar } from '@/components/dashboard/vault-ui'
+import { Row, StellarMark, TokenAvatar } from '@/components/dashboard/vault-ui'
 import { formatDecimal, formatPercent } from '@/lib/format'
 import { getPrimarySupplyAsset } from '@/lib/defindex/vault-display'
 import {
   displayToRawTokenAmount,
   getPublicDefindexAssetDecimals,
 } from '@/lib/defindex/client-amounts'
+import { parsePositiveAmount, projectedEarnings } from '@/lib/defindex/vault-math'
 import { VaultAssetTrustlineCard } from '@/components/admin/vault-asset-trustline-card'
 import type { MercatoVaultMeta } from '@/hooks/useDefindex'
 import type { SendTransactionResponse } from '@defindex/sdk'
@@ -33,22 +34,6 @@ type Props = {
   onRefreshBalances?: () => Promise<unknown>
   initialTab?: 'deposit' | 'withdraw'
   variant?: 'panel' | 'card'
-}
-
-function parsePositiveAmount(raw: string): number | null {
-  const t = raw.trim().replace(',', '.')
-  if (!t) return null
-  const n = Number(t)
-  if (!Number.isFinite(n) || n <= 0) return null
-  return n
-}
-
-function projectedEarnings(amount: number, apy: number) {
-  const yearly = amount * (apy / 100)
-  return {
-    monthly: yearly / 12,
-    yearly,
-  }
 }
 
 export function MercatoVaultActions({
@@ -394,11 +379,4 @@ export function MercatoVaultActions({
   )
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5">
-      <dt className="min-w-0 truncate text-muted-foreground">{label}</dt>
-      <dd className="shrink-0 text-right font-medium tabular-nums">{value}</dd>
-    </div>
-  )
-}
+
