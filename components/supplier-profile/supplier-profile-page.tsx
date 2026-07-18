@@ -11,6 +11,7 @@ import { SupplierCompanyDetails } from './supplier-company-details'
 import { SupplierProductCatalog } from './supplier-product-catalog'
 import { SupplierFirstCompany } from './supplier-first-company'
 import { SupplierProfileDialogs } from './supplier-profile-dialogs'
+import { SupplierReferralCard } from './supplier-referral-card'
 import type { CompanyFieldsValues } from './supplier-company-fields'
 
 export function SupplierProfilePage() {
@@ -87,7 +88,7 @@ export function SupplierProfilePage() {
                   </TabsList>
                 </div>
 
-                <TabsContent value="profile" className="mt-0 px-4 py-6 sm:px-6">
+                <TabsContent value="profile" className="mt-0 space-y-6 px-4 py-6 sm:px-6">
                   <SupplierCompanyDetails
                     company={sp.selectedCompany}
                     form={sp.companyForm}
@@ -95,6 +96,7 @@ export function SupplierProfilePage() {
                     isSaving={sp.isSavingBio}
                     onSubmit={sp.handleSaveCompany}
                   />
+                  <SupplierReferralCard companyId={sp.selectedCompany.id} />
                 </TabsContent>
 
                 <TabsContent value="catalog" className="mt-0 px-4 py-6 sm:px-6">

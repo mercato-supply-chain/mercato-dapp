@@ -2384,5 +2384,23 @@
       "pillReputation": "4.8 reputación prom.",
       "pillApr": "8–15% APR inversionista"
     }
+  },
+  "supplierReferral": {
+    "title": "Link de referido",
+    "description": "Comparte este link para invitar nuevos PyMEs a la plataforma.",
+    "copyLink": "Copiar link",
+    "copied": "¡Copiado!",
+    "referredCount": "{count} PyME referido",
+    "referredCountPlural": "{count} PyMEs referidos"
+  },
+  "referral": {
+    "onboarding": {
+      "referredBy": "Referido por",
+      "referredByBanner": "Fuiste invitado por {company}",
+      "referralConfirmed": "Referido confirmado",
+      "referralCode": "Código de referido (opcional)",
+      "referralCodePlaceholder": "Pega el código del supplier",
+      "referralCodeInvalid": "Código no encontrado. Verifica con tu supplier e intenta de nuevo."
+    }
   }
 }

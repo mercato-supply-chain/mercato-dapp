@@ -105,7 +105,7 @@ begin
     where company_id is null;
 
     alter table public.supplier_products drop constraint if exists supplier_products_supplier_id_fkey;
-    alter table public.supplier_products drop column if exists supplier_id;
+    alter table public.supplier_products drop column if exists supplier_id cascade;
     alter table public.supplier_products rename column company_id to supplier_id;
     alter table public.supplier_products alter column supplier_id set not null;
   end if;
@@ -140,7 +140,7 @@ begin
       and supplier_company_id is null;
 
     alter table public.deals drop constraint if exists deals_supplier_id_fkey;
-    alter table public.deals drop column if exists supplier_id;
+    alter table public.deals drop column if exists supplier_id cascade;
     alter table public.deals rename column supplier_company_id to supplier_id;
   end if;
 end $$;

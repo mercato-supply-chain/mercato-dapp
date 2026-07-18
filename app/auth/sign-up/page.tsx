@@ -1,6 +1,7 @@
 'use client'
 
-import type { FormEvent } from 'react'
+import { Suspense, useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,13 +15,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 import { MercatoLogo } from '@/components/mercato-logo'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
+import type { ReferralSupplier } from '@/app/api/referral/route'
 
-export default function SignUpPage() {
+function SignUpContent() {
   const { t } = useI18n()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get('ref')
+
+  const [referral, setReferral] = useState<ReferralSupplier | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
@@ -30,6 +35,19 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { connectPollarWallet, connectExternalWallet } = useWallet()
+
+  useEffect(() => {
+    if (!refCode) return
+    fetch(`/api/referral?code=${encodeURIComponent(refCode)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: ReferralSupplier | null) => {
+        if (data?.id) {
+          setReferral(data)
+          document.cookie = `mercato-referral=${data.id}; path=/; max-age=86400; samesite=lax`
+        }
+      })
+      .catch(() => {})
+  }, [refCode])
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
@@ -60,6 +78,7 @@ export default function SignUpPage() {
           data: {
             full_name: fullName,
             company_name: companyName,
+            ...(referral ? { referred_by_supplier_id: referral.id } : {}),
           },
         },
       })
@@ -94,6 +113,11 @@ export default function SignUpPage() {
               <CardDescription className="text-base">
                 {t('auth.signUpDescription')}
               </CardDescription>
+              {referral && (
+                <p className="mt-1 inline-flex w-fit rounded-full border border-brand-light/40 bg-brand-ultra px-3 py-1 text-xs font-medium text-brand-mid dark:bg-brand-dark/30">
+                  {t('referral.onboarding.referredBy')}: {referral.company_name}
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp} className="space-y-6">
@@ -230,5 +254,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpContent />
+    </Suspense>
   )
 }
