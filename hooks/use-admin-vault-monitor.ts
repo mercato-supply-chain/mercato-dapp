@@ -1,19 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { readErrorMessage } from '@/lib/defindex/vault-cache'
 import type { VaultMonitorPayload } from '@/lib/defindex/vault-monitor'
 
 const DEFAULT_POLL_MS = 30_000
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { error?: unknown }
-    if (typeof data?.error === 'string' && data.error) return data.error
-  } catch {
-    /* ignore */
-  }
-  return `Request failed (${response.status})`
-}
 
 type UseAdminVaultMonitorOptions = {
   /** Override contract id (e.g. newly deployed vault not yet in env). */
