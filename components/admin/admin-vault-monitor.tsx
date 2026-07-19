@@ -4,13 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Activity,
-  AlertTriangle,
   CheckCircle2,
   ExternalLink,
   Landmark,
   PauseCircle,
   RefreshCw,
-  ShieldAlert,
   TrendingUp,
   Wallet,
   XCircle,
@@ -26,35 +24,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAdminVaultMonitor } from '@/hooks/use-admin-vault-monitor'
 import { useI18n } from '@/lib/i18n/provider'
 import { formatCurrency, formatPercent } from '@/lib/format'
-import type { VaultMonitorAlertSeverity } from '@/lib/defindex/vault-monitor'
 import { cn } from '@/lib/utils'
+import { alertStyles, alertIcon } from '@/lib/defindex/vault-monitor-alert-styles'
+import { KpiTile } from '@/components/admin/vault-monitor-kpi-tile'
 
 import { LAST_DEPLOY_STORAGE_KEY } from '@/components/admin/vault-create-panel'
 
 type AdminVaultMonitorProps = {
   configuredVaultAddress: string
-}
-
-function alertStyles(severity: VaultMonitorAlertSeverity) {
-  switch (severity) {
-    case 'critical':
-      return 'border-red-500/40 bg-red-500/5 text-red-900 dark:text-red-200'
-    case 'warning':
-      return 'border-amber-500/40 bg-amber-500/5 text-amber-900 dark:text-amber-200'
-    default:
-      return 'border-blue-500/30 bg-blue-500/5 text-blue-900 dark:text-blue-200'
-  }
-}
-
-function alertIcon(severity: VaultMonitorAlertSeverity) {
-  switch (severity) {
-    case 'critical':
-      return <XCircle className="h-4 w-4 shrink-0" aria-hidden />
-    case 'warning':
-      return <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-    default:
-      return <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
-  }
 }
 
 export function AdminVaultMonitor({ configuredVaultAddress }: AdminVaultMonitorProps) {
@@ -378,39 +355,11 @@ export function AdminVaultMonitor({ configuredVaultAddress }: AdminVaultMonitorP
                   ))}
                 </div>
               </div>
-
               <p className="text-[11px] text-muted-foreground">{m.autoRefreshHint}</p>
             </>
           )}
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-function KpiTile({
-  label,
-  value,
-  icon: Icon,
-  highlight,
-}: {
-  label: string
-  value: string
-  icon: React.ComponentType<{ className?: string }>
-  highlight?: boolean
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-border/70 bg-card p-4 shadow-sm',
-        highlight && 'border-amber-500/40 bg-amber-500/5',
-      )}
-    >
-      <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="text-xs font-medium">{label}</span>
-      </div>
-      <p className="text-lg font-semibold tabular-nums tracking-tight">{value}</p>
     </div>
   )
 }
