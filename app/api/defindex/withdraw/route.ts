@@ -7,6 +7,7 @@ import {
   requireDefindexConfigured,
   resolveSlippageBps,
   validateCaller,
+  warnIfCallerMismatch,
 } from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
   const callerResult = validateCaller(body?.caller)
   if (!callerResult.ok) return callerResult.response
   const { caller } = callerResult
+  await warnIfCallerMismatch(auth.userId, caller)
 
   const amountsResult = parseAmounts(body?.amounts)
   if (!amountsResult.ok) return amountsResult.response

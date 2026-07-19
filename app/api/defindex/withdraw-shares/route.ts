@@ -6,6 +6,7 @@ import {
   requireDefindexConfigured,
   resolveSlippageBps,
   validateCaller,
+  warnIfCallerMismatch,
 } from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   const callerResult = validateCaller(body?.caller)
   if (!callerResult.ok) return callerResult.response
   const { caller } = callerResult
+  await warnIfCallerMismatch(auth.userId, caller)
 
   if (typeof body?.shares !== 'number' || !Number.isFinite(body.shares) || body.shares <= 0) {
     return NextResponse.json({ error: 'Valid positive `shares` is required.' }, { status: 400 })

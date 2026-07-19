@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { defindexErrorMessage } from './api-error'
 import {
   getMercatoVaultContractId,
@@ -116,6 +117,39 @@ export function parseAmounts(value: unknown): { ok: true; amounts: number[] } | 
 /** DeFindex slippage tolerance in basis points; defaults to 100 (1%) when absent/invalid. */
 export function resolveSlippageBps(value: unknown, fallback = 100): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+/**
+ * Best-effort security observability: warn (but do NOT block) when the requested
+ * `caller` does not match the authenticated user's known wallet.
+ *
+ * User-facing routes accept `caller` from the request body and only require it to be
+ * a valid Stellar account, so a signed-in user could build (unsigned) transactions
+ * naming a third-party `caller`. This is intentionally not enforced — the resulting
+ * XDR still requires that caller's own signature to execute, so it is inert without
+ * it (see docs/defindex-integration.md, "caller binding"). We log mismatches so the
+ * anomaly is visible for triage. `profiles.stellar_public_key` is synced best-effort
+ * from the client, so a missing value is treated as "unknown", never a mismatch. This
+ * function never throws.
+ */
+export async function warnIfCallerMismatch(userId: string, caller: string): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('profiles')
+      .select('stellar_public_key')
+      .eq('id', userId)
+      .maybeSingle()
+    const known = typeof data?.stellar_public_key === 'string' ? data.stellar_public_key.trim() : ''
+    if (known && known !== caller) {
+      console.warn('[defindex] caller does not match the session wallet', { userId, caller, known })
+    }
+  } catch (error) {
+    console.warn('[defindex] caller check skipped (profile lookup failed)', {
+      userId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
 }
 
 /**
