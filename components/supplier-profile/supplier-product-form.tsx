@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -19,6 +18,7 @@ import { getLocalizedCategoryLabel, PRODUCT_CATEGORIES } from '@/lib/categories'
 import type { ProductFormState } from '@/lib/supplier-profile/types'
 import { useI18n } from '@/lib/i18n/provider'
 import { TOTAL_STEPS, type ProductFormStep } from './product-form-steps/types'
+import { ProductFormStepProgress } from './product-form-steps/product-form-step-progress'
 
 const UNIT_VALUES = ['unit', 'kg', 'lb', 'box', 'case', 'pallet', 'liter', 'm'] as const
 
@@ -347,30 +347,6 @@ function ProductMediaStep({
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function ProductFormStepProgress({ currentStep }: { currentStep: ProductFormStep }) {
-  const { t } = useI18n()
-  const progress = (currentStep / TOTAL_STEPS) * 100
-
-  return (
-    <div className="mb-5">
-      <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-medium">
-          {t('supplierProfile.wizardStepProgress', {
-            current: currentStep,
-            total: TOTAL_STEPS,
-          })}
-        </span>
-        <span className="text-muted-foreground">
-          {t('supplierProfile.wizardProgressComplete', {
-            percent: Math.round(progress),
-          })}
-        </span>
-      </div>
-      <Progress value={progress} className="h-2" />
     </div>
   )
 }
