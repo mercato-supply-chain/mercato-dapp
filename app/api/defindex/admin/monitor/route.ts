@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork, getMercatoVaultContractId } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  getMercatoVaultContractId,
-  isDefindexApiConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexApiConfigured,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 import {
   buildVaultMonitorPayload,
@@ -19,12 +18,8 @@ export async function GET(request: Request) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 },
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const { searchParams } = new URL(request.url)
   const configuredVault = getMercatoVaultContractId()
@@ -62,6 +57,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(payload)
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'admin:monitor')
   }
 }

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  getMercatoVaultContractId,
-  isDefindexConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexConfigured,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
-import { isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 import { buildVaultMonitorPayload } from '@/lib/defindex/vault-monitor'
 
 export const dynamic = 'force-dynamic'
@@ -17,17 +15,9 @@ export async function GET() {
   const auth = await requireAuth()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexConfigured()) {
-    return NextResponse.json(
-      { error: 'Mercato vault is not configured (missing vault id or API key).' },
-      { status: 503 }
-    )
-  }
-
-  const vaultAddress = getMercatoVaultContractId()
-  if (!isLikelyStellarContractId(vaultAddress)) {
-    return NextResponse.json({ error: 'Invalid vault contract id in environment.' }, { status: 500 })
-  }
+  const configured = requireDefindexConfigured()
+  if (!configured.ok) return configured.response
+  const { vaultAddress } = configured
 
   const network = getDefindexSupportedNetwork()
 
@@ -61,6 +51,6 @@ export async function GET() {
       explorerContractUrl: monitor.explorerContractUrl,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'vault')
   }
 }

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { CreateVaultParams } from '@defindex/sdk'
 import { requireAdmin } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  isDefindexApiConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexApiConfigured,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 import { isLikelyStellarAccountId } from '@/lib/defindex/stellar-address'
 
@@ -30,12 +30,8 @@ export async function POST(request: Request) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 }
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const body = (await request.json().catch(() => null)) as
     | { config?: unknown }
@@ -76,6 +72,6 @@ export async function POST(request: Request) {
       network,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'admin:create-vault')
   }
 }

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { InstructionParam } from '@defindex/sdk'
 import { requireAdmin } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork, getMercatoVaultContractId } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  getMercatoVaultContractId,
-  isDefindexApiConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexApiConfigured,
+  validateCaller,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 import { resolveMonitorVaultAddress } from '@/lib/defindex/vault-monitor'
-import { isLikelyStellarAccountId, isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
+import { isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,12 +65,8 @@ export async function POST(request: Request) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 },
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const body = (await request.json().catch(() => null)) as RebalanceBody | null
   const vaultOverride = typeof body?.vault === 'string' ? body.vault : null
@@ -81,10 +77,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: resolved.error ?? 'Vault address required.' }, { status: 400 })
   }
 
-  const caller = typeof body?.caller === 'string' ? body.caller.trim() : ''
-  if (!caller || !isLikelyStellarAccountId(caller)) {
-    return NextResponse.json({ error: 'Valid `caller` (Stellar account) is required.' }, { status: 400 })
-  }
+  const callerResult = validateCaller(body?.caller)
+  if (!callerResult.ok) return callerResult.response
+  const { caller } = callerResult
 
   const instructionsResult = parseInstructions(body?.instructions)
   if (instructionsResult instanceof Response) return instructionsResult
@@ -114,6 +109,6 @@ export async function POST(request: Request) {
       network,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'admin:rebalance')
   }
 }
