@@ -18,11 +18,9 @@ import {
 import { getLocalizedCategoryLabel, PRODUCT_CATEGORIES } from '@/lib/categories'
 import type { ProductFormState } from '@/lib/supplier-profile/types'
 import { useI18n } from '@/lib/i18n/provider'
+import { TOTAL_STEPS, type ProductFormStep } from './product-form-steps/types'
 
 const UNIT_VALUES = ['unit', 'kg', 'lb', 'box', 'case', 'pallet', 'liter', 'm'] as const
-const TOTAL_STEPS = 3
-
-type ProductFormStep = 1 | 2 | 3
 
 type SupplierProductFormProps = {
   formProduct: ProductFormState
