@@ -1,4 +1,4 @@
-import { getDefindexAssetDecimals } from './config'
+import { getDefindexAssetDecimals } from './client-config'
 
 /** Parse on-chain raw token amounts from API JSON (number, string, or bigint-like). */
 export function parseRawTokenAmount(value: unknown): number {
@@ -61,7 +61,28 @@ export function sumUnderlyingDisplayAmounts(rawPerAsset: number[]): number {
   }, 0)
 }
 
-export function rawToDisplayAmount(raw: number, decimals = getDefindexAssetDecimals()): number {
-  if (!Number.isFinite(raw) || raw <= 0) return 0
-  return raw / 10 ** decimals
+/**
+ * Convert on-chain raw units to a human display amount. Canonical converter — the
+ * single "raw ÷ 10^decimals" implementation for the whole DeFindex integration
+ * (server and client). Accepts string or number raw units.
+ */
+export function rawToDisplayAmount(
+  raw: string | number,
+  decimals = getDefindexAssetDecimals()
+): number {
+  const n = typeof raw === 'string' ? Number(raw) : raw
+  if (!Number.isFinite(n)) return 0
+  return n / 10 ** decimals
+}
+
+/**
+ * Convert a human display amount (e.g. USDC) to on-chain raw units. Canonical
+ * inverse of {@link rawToDisplayAmount}; non-positive/non-finite inputs → 0.
+ */
+export function displayToRawAmount(
+  display: number,
+  decimals = getDefindexAssetDecimals()
+): number {
+  if (!Number.isFinite(display) || display <= 0) return 0
+  return Math.round(display * 10 ** decimals)
 }

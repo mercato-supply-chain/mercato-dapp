@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/ramp-api'
 import { parseVaultBalancePayload } from '@/lib/defindex/amounts'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  getMercatoVaultContractId,
-  isDefindexConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexConfigured,
+  validateCaller,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
-import { isLikelyStellarAccountId, isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,23 +16,14 @@ export async function GET(request: Request) {
   const auth = await requireAuth()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexConfigured()) {
-    return NextResponse.json(
-      { error: 'Mercato vault is not configured (missing vault id or API key).' },
-      { status: 503 }
-    )
-  }
-
-  const vaultAddress = getMercatoVaultContractId()
-  if (!isLikelyStellarContractId(vaultAddress)) {
-    return NextResponse.json({ error: 'Invalid vault contract id in environment.' }, { status: 500 })
-  }
+  const configured = requireDefindexConfigured()
+  if (!configured.ok) return configured.response
+  const { vaultAddress } = configured
 
   const { searchParams } = new URL(request.url)
-  const caller = searchParams.get('caller')?.trim() ?? ''
-  if (!caller || !isLikelyStellarAccountId(caller)) {
-    return NextResponse.json({ error: 'A valid Stellar account address `caller` is required.' }, { status: 400 })
-  }
+  const callerResult = validateCaller(searchParams.get('caller'))
+  if (!callerResult.ok) return callerResult.response
+  const { caller } = callerResult
 
   const network = getDefindexSupportedNetwork()
 
@@ -51,6 +41,6 @@ export async function GET(request: Request) {
       underlyingTotal: parsed.underlyingTotalDisplay,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'balance')
   }
 }

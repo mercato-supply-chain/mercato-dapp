@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
-import { getDefindexSupportedNetwork, isDefindexApiConfigured } from '@/lib/defindex/config'
+import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
+import {
+  defindexErrorResponse,
+  requireDefindexApiConfigured,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 
 export const dynamic = 'force-dynamic'
@@ -13,12 +16,8 @@ export async function POST(request: Request) {
   const auth = await requireAuth()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 }
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const body = (await request.json().catch(() => null)) as Body | null
   const xdr = typeof body?.xdr === 'string' ? body.xdr.trim() : ''
@@ -33,6 +32,6 @@ export async function POST(request: Request) {
     const result = await sdk.sendTransaction(xdr, network)
     return NextResponse.json(result)
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'submit')
   }
 }

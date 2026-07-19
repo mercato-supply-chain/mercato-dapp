@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork, getMercatoVaultContractId } from '@/lib/defindex/config'
 import {
-  getDefindexSupportedNetwork,
-  getMercatoVaultContractId,
-  isDefindexApiConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  parseAmounts,
+  requireDefindexApiConfigured,
+  resolveSlippageBps,
+  validateCaller,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
 import { resolveMonitorVaultAddress } from '@/lib/defindex/vault-monitor'
-import { isLikelyStellarAccountId } from '@/lib/defindex/stellar-address'
 import { VAULT_MIN_INIT_DEPOSIT_RAW } from '@/lib/defindex/vault-activation'
 
 export const dynamic = 'force-dynamic'
@@ -21,31 +22,13 @@ type DepositBody = {
   slippageBps?: unknown
 }
 
-function parseAmounts(value: unknown): number[] | Response {
-  if (!Array.isArray(value) || value.length === 0) {
-    return NextResponse.json({ error: '`amounts` must be a non-empty number array.' }, { status: 400 })
-  }
-  const amounts: number[] = []
-  for (const item of value) {
-    if (typeof item !== 'number' || !Number.isFinite(item) || item <= 0) {
-      return NextResponse.json({ error: 'Each `amounts` entry must be a positive finite number.' }, { status: 400 })
-    }
-    amounts.push(Math.floor(item))
-  }
-  return amounts
-}
-
 /** POST /api/defindex/admin/deposit — admin builds unsigned deposit XDR (optional vault override). */
 export async function POST(request: Request) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 },
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const body = (await request.json().catch(() => null)) as DepositBody | null
   const vaultOverride = typeof body?.vault === 'string' ? body.vault : null
@@ -56,14 +39,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: resolved.error ?? 'Vault address required.' }, { status: 400 })
   }
 
-  const caller = typeof body?.caller === 'string' ? body.caller.trim() : ''
-  if (!caller || !isLikelyStellarAccountId(caller)) {
-    return NextResponse.json({ error: 'Valid `caller` (Stellar account) is required.' }, { status: 400 })
-  }
+  const callerResult = validateCaller(body?.caller)
+  if (!callerResult.ok) return callerResult.response
+  const { caller } = callerResult
 
   const amountsResult = parseAmounts(body?.amounts)
-  if (amountsResult instanceof Response) return amountsResult
-  const amounts = amountsResult
+  if (!amountsResult.ok) return amountsResult.response
+  const { amounts } = amountsResult
 
   const totalRaw = amounts.reduce((s, a) => s + a, 0)
   if (totalRaw < VAULT_MIN_INIT_DEPOSIT_RAW) {
@@ -76,8 +58,7 @@ export async function POST(request: Request) {
   }
 
   const invest = typeof body?.invest === 'boolean' ? body.invest : false
-  const slippageBps =
-    typeof body?.slippageBps === 'number' && Number.isFinite(body.slippageBps) ? body.slippageBps : 100
+  const slippageBps = resolveSlippageBps(body?.slippageBps)
 
   const network = getDefindexSupportedNetwork()
 
@@ -104,6 +85,6 @@ export async function POST(request: Request) {
       network,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'admin:deposit')
   }
 }

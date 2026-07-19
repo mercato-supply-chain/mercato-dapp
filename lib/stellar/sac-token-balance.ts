@@ -8,7 +8,7 @@ import {
 } from '@stellar/stellar-sdk'
 import { getDefindexAssetDecimals } from '@/lib/defindex/config'
 import { isLikelyStellarAccountId, isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
-import { rawToDisplayAmount } from '@/lib/defindex/vault-activation'
+import { rawToDisplayAmount } from '@/lib/defindex/amounts'
 import { getStellarNetworkConfig, type StellarNetwork } from '@/lib/stellar/network-config'
 
 export type SacTokenBalanceResult = {

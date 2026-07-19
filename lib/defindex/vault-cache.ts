@@ -1,6 +1,7 @@
 'use client'
 
 import { createDedupedFetcher } from '@/lib/client/deduped-fetch'
+import { hasClientVaultConfigured } from './client-config'
 import type { MercatoVaultMeta } from '@/hooks/useDefindex'
 
 type BalanceApiOk = {
@@ -16,6 +17,14 @@ type SacBalancePayload = {
   rawBalance?: string
 }
 
+/**
+ * Extract an error message from a failed `fetch` Response (client side).
+ *
+ * Intentionally distinct from `api-error.ts#defindexErrorMessage`, which extracts
+ * messages from caught `@defindex/sdk` exceptions on the server. This one parses
+ * the `{ error }` JSON body our own route handlers return; that one inspects thrown
+ * Error objects. Two call sites, two shapes — kept separate on purpose.
+ */
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const data = (await response.json()) as { error?: unknown }
@@ -24,14 +33,6 @@ async function readErrorMessage(response: Response): Promise<string> {
     /* ignore */
   }
   return `Request failed (${response.status})`
-}
-
-function hasClientVaultConfigured(): boolean {
-  if (typeof process === 'undefined') return false
-  return Boolean(
-    process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
-      process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim()
-  )
 }
 
 const vaultMetaRequest = createDedupedFetcher(

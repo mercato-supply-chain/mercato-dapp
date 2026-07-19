@@ -1,26 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { CreateVaultParams } from '@defindex/sdk'
 import { requireAdmin } from '@/lib/ramp-api'
-import { defindexErrorMessage } from '@/lib/defindex/api-error'
+import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
+import { validateCreateVaultParams } from '@/lib/defindex/create-vault-validation'
 import {
-  getDefindexSupportedNetwork,
-  isDefindexApiConfigured,
-} from '@/lib/defindex/config'
+  defindexErrorResponse,
+  requireDefindexApiConfigured,
+} from '@/lib/defindex/route-helpers'
 import { getServerDefindexSdk } from '@/lib/defindex/server-sdk'
-import { isLikelyStellarAccountId } from '@/lib/defindex/stellar-address'
 
 export const dynamic = 'force-dynamic'
-
-function isCreateVaultParams(value: unknown): value is CreateVaultParams {
-  if (!value || typeof value !== 'object') return false
-  const o = value as Record<string, unknown>
-  if (typeof o.caller !== 'string' || !isLikelyStellarAccountId(o.caller.trim())) return false
-  if (typeof o.name !== 'string' || typeof o.symbol !== 'string') return false
-  if (typeof o.vaultFeeBps !== 'number' || typeof o.upgradable !== 'boolean') return false
-  if (!o.roles || typeof o.roles !== 'object') return false
-  if (!Array.isArray(o.assets) || o.assets.length === 0) return false
-  return true
-}
 
 /**
  * POST /api/defindex/admin/create-vault
@@ -30,12 +19,8 @@ export async function POST(request: Request) {
   const auth = await requireAdmin()
   if (!auth.ok) return auth.response
 
-  if (!isDefindexApiConfigured()) {
-    return NextResponse.json(
-      { error: 'DeFindex API is not configured (set DEFINDEX_API_KEY).' },
-      { status: 503 }
-    )
-  }
+  const apiConfigured = requireDefindexApiConfigured()
+  if (!apiConfigured.ok) return apiConfigured.response
 
   const body = (await request.json().catch(() => null)) as
     | { config?: unknown }
@@ -47,21 +32,16 @@ export async function POST(request: Request) {
       ? (body as { config: unknown }).config
       : body
 
-  if (!isCreateVaultParams(config)) {
-    return NextResponse.json(
-      {
-        error:
-          'Invalid vault config. Expects CreateVaultParams: caller (G…), name, symbol, vaultFeeBps, upgradable, roles, assets[].',
-      },
-      { status: 400 }
-    )
+  const validation = validateCreateVaultParams(config)
+  if (!validation.ok) {
+    return NextResponse.json({ error: `Invalid vault config: ${validation.error}` }, { status: 400 })
   }
 
   const network = getDefindexSupportedNetwork()
 
   try {
     const sdk = getServerDefindexSdk()
-    const tx = await sdk.createVault(config, network)
+    const tx = await sdk.createVault(validation.params, network)
 
     if (!tx.xdr) {
       return NextResponse.json(
@@ -76,6 +56,6 @@ export async function POST(request: Request) {
       network,
     })
   } catch (error) {
-    return NextResponse.json({ error: defindexErrorMessage(error) }, { status: 502 })
+    return defindexErrorResponse(error, 'admin:create-vault')
   }
 }

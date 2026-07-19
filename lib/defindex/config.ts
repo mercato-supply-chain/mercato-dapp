@@ -1,16 +1,13 @@
 import { SupportedNetworks } from '@defindex/sdk'
+import { getClientVaultContractId, getDefindexAssetDecimals } from './client-config'
 
 /**
  * Mercato’s shared DeFindex vault contract id (Soroban `C…`).
- * Prefer server-only `MERCATO_DEFINDEX_VAULT_ADDRESS`; `NEXT_PUBLIC_*` stays for client display.
+ * Prefer server-only `MERCATO_DEFINDEX_VAULT_ADDRESS`; the `NEXT_PUBLIC_*` fallback
+ * chain lives in `client-config.ts` and is shared with the client (single source of truth).
  */
 export function getMercatoVaultContractId(): string {
-  return (
-    process.env.MERCATO_DEFINDEX_VAULT_ADDRESS?.trim() ||
-    process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim() ||
-    process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
-    ''
-  )
+  return process.env.MERCATO_DEFINDEX_VAULT_ADDRESS?.trim() || getClientVaultContractId()
 }
 
 /**
@@ -37,12 +34,12 @@ export function getDefindexSupportedNetwork(): SupportedNetworks {
     : SupportedNetworks.TESTNET
 }
 
-/** Raw on-chain amounts (e.g. USDC) typically use 7 decimals on Stellar. */
-export function getDefindexAssetDecimals(): number {
-  const raw = process.env.NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS ?? '7'
-  const n = Number(raw)
-  return Number.isFinite(n) && n >= 0 ? n : 7
-}
+/**
+ * Raw on-chain amounts (e.g. USDC) typically use 7 decimals on Stellar.
+ * Re-exported from the client-safe `client-config.ts` so server callers keep the
+ * same import surface while sharing one implementation.
+ */
+export { getDefindexAssetDecimals }
 
 export function isDefindexConfigured(): boolean {
   const vault = getMercatoVaultContractId()

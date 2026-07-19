@@ -1,5 +1,6 @@
 import { SupportedNetworks, type VaultInfoResponse } from '@defindex/sdk'
-import { getDefindexAssetDecimals, getDefindexSupportedNetwork } from './config'
+import { rawToDisplayAmount } from './amounts'
+import { getDefindexSupportedNetwork } from './config'
 import { isLikelyStellarContractId } from './stellar-address'
 
 export type VaultMonitorAlertSeverity = 'critical' | 'warning' | 'info'
@@ -55,12 +56,6 @@ export type VaultMonitorPayload = {
   }
   alerts: VaultMonitorAlert[]
   explorerContractUrl: string
-}
-
-export function rawStroopsToDisplay(raw: string | number): number {
-  const n = typeof raw === 'string' ? Number(raw) : raw
-  if (!Number.isFinite(n)) return 0
-  return n / 10 ** getDefindexAssetDecimals()
 }
 
 function explorerBase(network: string): string {
@@ -206,9 +201,9 @@ export function buildVaultMonitorPayload(
 
   const assets: VaultMonitorAssetRow[] = (info.totalManagedFunds ?? []).map((mf) => {
     const meta = findAssetMeta(info, mf.asset)
-    const idleDisplay = rawStroopsToDisplay(mf.idle_amount)
-    const investedDisplay = rawStroopsToDisplay(mf.invested_amount)
-    const totalDisplay = rawStroopsToDisplay(mf.total_amount)
+    const idleDisplay = rawToDisplayAmount(mf.idle_amount)
+    const investedDisplay = rawToDisplayAmount(mf.invested_amount)
+    const totalDisplay = rawToDisplayAmount(mf.total_amount)
     const idlePercent = totalDisplay > 0 ? (idleDisplay / totalDisplay) * 100 : 0
 
     const strategyByAddress = new Map(meta.strategies.map((s) => [s.address, s]))
@@ -219,7 +214,7 @@ export function buildVaultMonitorPayload(
         address: alloc.strategy_address,
         name: cfg?.name ?? alloc.strategy_address.slice(0, 8) + '…',
         paused: alloc.paused ?? cfg?.paused ?? false,
-        allocatedDisplay: rawStroopsToDisplay(alloc.amount),
+        allocatedDisplay: rawToDisplayAmount(alloc.amount),
         allocatedRaw: alloc.amount,
       }
     })
