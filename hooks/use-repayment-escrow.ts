@@ -47,123 +47,20 @@ import {
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import { createClient } from '@/lib/supabase/client'
 import type { RepaymentMilestoneCache, RepaymentStatus } from '@/lib/types'
-
-export function repaymentEngagementId(dealId: string): string {
-  return `${dealId}:repayment`
-}
-
-function roundUsdc(n: number): number {
-  return Math.round(n * 100) / 100
-}
-
-function isMilestoneReleased(m: MultiReleaseMilestone | undefined): boolean {
-  if (!m) return false
-  if (m.flags?.released === true) return true
-  const s = (m.status ?? '').toLowerCase()
-  return s === 'released' || s === 'completed'
-}
-
-export function cacheMilestonesFromIndexer(
-  escrow: GetEscrowsFromIndexerResponse | null | undefined,
-): RepaymentMilestoneCache[] {
-  if (!escrow?.milestones?.length) return []
-  return escrow.milestones.map((m, index) => {
-    const multi = m as MultiReleaseMilestone
-    return {
-      index,
-      description: multi.description ?? `Milestone ${index + 1}`,
-      amount: Number(multi.amount ?? 0),
-      released: isMilestoneReleased(multi),
-    }
-  })
-}
-
-export function deriveRepaymentStatusFromMilestones(
-  milestones: RepaymentMilestoneCache[],
-  balance: number,
-  totalGrossed = 0,
-): RepaymentStatus {
-  if (milestones.length === 0) return 'escrow_initialized'
-  const allReleased = milestones.every((m) => m.released)
-  const scheduled = milestones.reduce((sum, m) => sum + m.amount, 0)
-  const remaining =
-    totalGrossed > 0 ? repaymentRemainingAmount(totalGrossed, milestones.map((m) => m.amount)) : 0
-
-  if (allReleased) {
-    // More repayment still to schedule via updateEscrow
-    if (remaining > 0.01) return 'partially_released'
-    return 'released'
-  }
-
-  const anyReleased = milestones.some((m) => m.released)
-  const openAmount = milestones
-    .filter((m) => !m.released)
-    .reduce((sum, m) => sum + m.amount, 0)
-  if (openAmount > 0 && balance + 1e-9 >= openAmount) {
-    return 'ready_to_release'
-  }
-  if (balance > 0) return 'funding'
-  return anyReleased || scheduled > 0 ? (anyReleased ? 'partially_released' : 'escrow_initialized') : 'escrow_initialized'
-}
-
-interface DeployRepaymentParams {
-  dealId: string
-  /** Platform / admin wallet that signs deploy. */
-  adminAddress: string
-  investorAddress: string
-  principal: number
-  aprPercent: number
-  termDays: number
-  productName: string
-  /** Percent of total grossed for the first milestone (default 50). */
-  firstMilestonePercent?: number
-  provider: string | null
-}
-
-interface FundRepaymentParams {
-  dealId: string
-  contractId: string
-  pymeAddress: string
-  amount: number
-  provider: string | null
-}
-
-interface ReleaseMilestoneParams {
-  dealId: string
-  contractId: string
-  releaseSigner: string
-  milestoneIndex: number
-  provider: string | null
-}
-
-interface AddMilestoneParams {
-  dealId: string
-  contractId: string
-  adminAddress: string
-  investorAddress: string
-  /** Amount for the new milestone; defaults to remaining grossed total. */
-  amount?: number
-  description?: string
-  provider: string | null
-}
-
-interface DisputeMilestoneParams {
-  dealId: string
-  contractId: string
-  signer: string
-  milestoneIndex: number
-  provider: string | null
-}
-
-interface ResolveDisputeParams {
-  dealId: string
-  contractId: string
-  disputeResolver: string
-  milestoneIndex: number
-  /** Must sum to the milestone amount (post-fee rules enforced on-chain). */
-  distributions: Array<{ address: string; amount: number }>
-  provider: string | null
-}
+import {
+  repaymentEngagementId,
+  roundUsdc,
+  cacheMilestonesFromIndexer,
+  deriveRepaymentStatusFromMilestones,
+} from '@/lib/deals/repayment-escrow-helpers'
+import type {
+  DeployRepaymentParams,
+  FundRepaymentParams,
+  ReleaseMilestoneParams,
+  AddMilestoneParams,
+  DisputeMilestoneParams,
+  ResolveDisputeParams,
+} from '@/lib/deals/repayment-escrow-types'
 
 export function useRepaymentEscrow() {
   const supabase = useMemo(() => createClient(), [])
