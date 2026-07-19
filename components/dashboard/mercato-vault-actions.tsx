@@ -11,10 +11,8 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { StellarMark, TokenAvatar } from '@/components/dashboard/vault-ui'
 import { formatDecimal, formatPercent } from '@/lib/format'
 import { getPrimarySupplyAsset } from '@/lib/defindex/vault-display'
-import {
-  displayToRawTokenAmount,
-  getPublicDefindexAssetDecimals,
-} from '@/lib/defindex/client-amounts'
+import { displayToRawAmount } from '@/lib/defindex/amounts'
+import { getDefindexAssetDecimals, hasClientVaultConfigured } from '@/lib/defindex/client-config'
 import { VaultAssetTrustlineCard } from '@/components/admin/vault-asset-trustline-card'
 import type { MercatoVaultMeta } from '@/hooks/useDefindex'
 import type { SendTransactionResponse } from '@defindex/sdk'
@@ -79,12 +77,7 @@ export function MercatoVaultActions({
     setActiveTab(initialTab)
   }, [initialTab])
 
-  const vaultConfigured =
-    typeof process !== 'undefined' &&
-    Boolean(
-      process.env.NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS?.trim() ||
-        process.env.NEXT_PUBLIC_MERCATO_DEFINDEX_VAULT_ADDRESS?.trim(),
-    )
+  const vaultConfigured = hasClientVaultConfigured()
 
   const assetCount = vaultMeta?.assets?.length ?? 0
   const singleAssetVault = assetCount <= 1
@@ -106,14 +99,14 @@ export function MercatoVaultActions({
       toast.error('Enter a valid deposit amount.')
       return
     }
-    const raw = displayToRawTokenAmount(usd)
+    const raw = displayToRawAmount(usd)
     if (raw <= 0) {
       toast.error('Enter a valid deposit amount.')
       return
     }
 
     const maxRaw =
-      walletRawBalance > 0 ? walletRawBalance : displayToRawTokenAmount(walletBalance)
+      walletRawBalance > 0 ? walletRawBalance : displayToRawAmount(walletBalance)
     if (maxRaw <= 0) {
       toast.error(
         `No ${supply.symbol} available to deposit. Add a SAC trustline for the vault asset and fund your wallet with ${supply.symbol}.`,
@@ -151,11 +144,11 @@ export function MercatoVaultActions({
       toast.error('Enter a valid withdrawal amount.')
       return
     }
-    const raw = displayToRawTokenAmount(usd)
+    const raw = displayToRawAmount(usd)
     const maxRaw =
       vaultRawBalance > 0
         ? vaultRawBalance
-        : displayToRawTokenAmount(vaultBalance)
+        : displayToRawAmount(vaultBalance)
     const amounts = [Math.min(raw, maxRaw)]
     if (amounts[0] <= 0) {
       toast.error('Amount is too small or exceeds vault balance.')
@@ -387,7 +380,7 @@ export function MercatoVaultActions({
 
       {variant === 'card' && (
         <p className="border-t border-border/60 px-5 pb-4 text-[11px] text-muted-foreground">
-          Raw amounts use {getPublicDefindexAssetDecimals()} decimals.
+          Raw amounts use {getDefindexAssetDecimals()} decimals.
         </p>
       )}
     </div>

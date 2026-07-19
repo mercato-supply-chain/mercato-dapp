@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label'
 import { VaultAssetTrustlineCard } from '@/components/admin/vault-asset-trustline-card'
 import { useAdminVaultTransactions } from '@/hooks/use-admin-vault-transactions'
 import { useI18n } from '@/lib/i18n/provider'
-import { displayToRawTokenAmount, getPublicDefindexAssetDecimals } from '@/lib/defindex/client-amounts'
+import { displayToRawAmount } from '@/lib/defindex/amounts'
+import { getDefindexAssetDecimals } from '@/lib/defindex/client-config'
 import {
   minInitDepositDisplay,
   VAULT_MIN_INIT_DEPOSIT_RAW,
@@ -36,7 +37,7 @@ export function VaultDepositPanel({
   const m = messages.adminVaultMonitor
   const { walletAddress, submitAdminXdr } = useAdminVaultTransactions()
 
-  const decimals = getPublicDefindexAssetDecimals()
+  const decimals = getDefindexAssetDecimals()
   const minDisplay = minInitDepositDisplay(decimals)
   const assetCount = Math.max(monitor.assets.length, 1)
   const primaryAsset = monitor.assets[0]
@@ -54,7 +55,7 @@ export function VaultDepositPanel({
 
   const onDeposit = async () => {
     const display = Number(depositDisplay)
-    const raw = displayToRawTokenAmount(display, decimals)
+    const raw = displayToRawAmount(display, decimals)
     if (raw < VAULT_MIN_INIT_DEPOSIT_RAW) {
       toast.error(m.depositTooSmall.replace('{min}', formatDecimal(minDisplay, { maxFractionDigits: 7 })))
       return
