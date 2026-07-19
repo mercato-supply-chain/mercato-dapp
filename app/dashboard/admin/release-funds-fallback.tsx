@@ -11,96 +11,19 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Wallet, DollarSign, ExternalLink, RefreshCw, Scale } from 'lucide-react'
 import type { ReleaseFallbackItem } from '@/lib/admin/types'
+import {
+  getMilestone,
+  isMilestoneReleased,
+  isMilestoneApproved,
+  isMilestoneDisputed,
+  canReleaseMilestoneInOrder,
+} from '@/lib/admin/milestone-flags'
+import { SupplierLogoInline } from '@/components/admin/supplier-logo-inline'
 import { useI18n } from '@/lib/i18n/provider'
 import {
   AdminResolveDisputeDialog,
   type ResolveDisputeTarget,
 } from './admin-resolve-dispute-dialog'
-
-function SupplierLogoFallback({
-  logoUrl,
-  alt,
-  label,
-}: {
-  logoUrl: string | null
-  alt: string
-  label: string
-}) {
-  const [imageError, setImageError] = useState(false)
-  if (!logoUrl || imageError) return null
-  return (
-    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-      <div className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-background shadow-sm">
-        <img
-          src={logoUrl}
-          alt={alt}
-          className="h-full w-full object-cover"
-          onError={() => setImageError(true)}
-        />
-      </div>
-      <span>{label}</span>
-    </div>
-  )
-}
-
-type MilestoneFlags = {
-  status?: string
-  flags?: {
-    released?: boolean
-    approved?: boolean
-    disputed?: boolean
-    resolved?: boolean
-  }
-  released?: boolean
-}
-
-function getMilestone(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): MilestoneFlags | undefined {
-  return escrow?.milestones?.[milestoneIndex] as MilestoneFlags | undefined
-}
-
-function isMilestoneReleased(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  const m = getMilestone(escrow, milestoneIndex)
-  if (!m) return false
-  if (m.flags?.released === true || m.released === true) return true
-  const s = (m.status ?? '').toLowerCase()
-  return s === 'released' || s === 'completed'
-}
-
-function isMilestoneApproved(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  return getMilestone(escrow, milestoneIndex)?.flags?.approved === true
-}
-
-function isMilestoneDisputed(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  const m = getMilestone(escrow, milestoneIndex)
-  if (!m) return false
-  if (m.flags?.resolved === true) return false
-  if (m.flags?.disputed === true) return true
-  return (m.status ?? '').toLowerCase() === 'disputed'
-}
-
-/** Release only allowed if all previous milestones are released (order: 0 → 1 → 2 …) */
-function canReleaseMilestoneInOrder(
-  escrow: GetEscrowsFromIndexerResponse | undefined,
-  milestoneIndex: number,
-): boolean {
-  if (milestoneIndex === 0) return true
-  for (let i = 0; i < milestoneIndex; i++) {
-    if (!isMilestoneReleased(escrow, i)) return false
-  }
-  return true
-}
 
 interface ReleaseFundsFallbackProps {
   items: ReleaseFallbackItem[]
@@ -313,10 +236,11 @@ export function ReleaseFundsFallback({
                 })}{' '}
                 ({item.milestonePercentage}%)
               </p>
-              <SupplierLogoFallback
+              <SupplierLogoInline
                 logoUrl={item.supplierLogoUrl}
                 alt={t('adminPending.supplierLogoAlt')}
                 label={t('adminPending.supplierLogoLabel')}
+                boxClassName="bg-background shadow-sm"
               />
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
