@@ -18,6 +18,7 @@ import { useI18n } from '@/lib/i18n/provider'
 import { formatCurrency } from '@/lib/format'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
+import { roundUsdc } from '@/lib/deals/repayment-escrow-helpers'
 import {
   MERCATO_DISPUTE_RESOLVER_ADDRESS,
 } from '@/lib/trustless/config'
@@ -39,10 +40,6 @@ interface AdminResolveDisputeDialogProps {
   target: ResolveDisputeTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-function roundUsdc(n: number): number {
-  return Math.round(n * 100) / 100
 }
 
 export function AdminResolveDisputeDialog({
