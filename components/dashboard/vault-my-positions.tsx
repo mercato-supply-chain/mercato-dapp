@@ -1,31 +1,26 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import {
   ArrowDownToLine,
-  ArrowUpFromLine,
-  ArrowUpRight,
-  ExternalLink,
   PiggyBank,
   Sprout,
-  Users,
   Wallet,
 } from 'lucide-react'
 import { DashboardStatTile } from '@/components/dashboard/dashboard-stat-tile'
-import { DefindexPill, TokenAvatar, VaultSectionHeader } from '@/components/dashboard/vault-ui'
+import { VaultActivitySection } from '@/components/dashboard/vault-my-positions/vault-activity-section'
+import { VaultOwnershipCard } from '@/components/dashboard/vault-my-positions/vault-ownership-card'
+import { DefindexPill, TokenAvatar } from '@/components/dashboard/vault-ui'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createDedupedFetcher } from '@/lib/client/deduped-fetch'
 import { buildVaultPositionSummary } from '@/lib/defindex/vault-position'
-import { formatCompactCurrency, getPrimarySupplyAsset } from '@/lib/defindex/vault-display'
-import { formatDateLong } from '@/lib/date-utils'
+import { getPrimarySupplyAsset } from '@/lib/defindex/vault-display'
 import { formatDecimal, formatPercent } from '@/lib/format'
 import type { MercatoVaultMeta } from '@/hooks/useDefindex'
 import type { VaultActivityEntry } from '@/lib/stellar/vault-activity'
 import { summarizeVaultActivity } from '@/lib/stellar/vault-activity'
-import { cn } from '@/lib/utils'
 
 type VaultActivityApiResponse = {
   activity: VaultActivityEntry[]
@@ -241,219 +236,5 @@ export function VaultMyPositions({
         onRetry={() => void loadActivity()}
       />
     </div>
-  )
-}
-
-function VaultOwnershipCard({
-  ownership,
-  supplySymbol,
-  isLoading,
-}: {
-  ownership: ReturnType<typeof buildVaultPositionSummary>
-  supplySymbol: string
-  isLoading: boolean
-}) {
-  const tvl = ownership.vaultTvlDisplay
-  const userPct = Math.min(100, Math.max(0, ownership.userSharePercent))
-  const othersPct = Math.min(100, Math.max(0, ownership.othersSharePercent))
-
-  return (
-    <Card className="border-border/70 shadow-sm">
-      <CardContent className="p-5 sm:p-6">
-        <VaultSectionHeader
-          title="Who owns the vault"
-          description="Total vault value (TVL) includes your deposits and funds from other investors. Your share is what you can withdraw proportionally."
-          icon={Users}
-        />
-
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full rounded-full" />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Skeleton className="h-16 rounded-xl" />
-              <Skeleton className="h-16 rounded-xl" />
-              <Skeleton className="h-16 rounded-xl" />
-            </div>
-          </div>
-        ) : tvl <= 0 && !ownership.hasPosition ? (
-          <p className="rounded-xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-muted-foreground">
-            No vault TVL data yet. Deposit to become the first liquidity provider.
-          </p>
-        ) : (
-          <>
-            <div
-              className="mb-4 flex h-3 overflow-hidden rounded-full bg-muted"
-              role="img"
-              aria-label={`You own ${userPct.toFixed(1)} percent of the vault; other depositors own ${othersPct.toFixed(1)} percent.`}
-            >
-              <div
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${userPct}%` }}
-              />
-              <div
-                className="h-full bg-slate-300 transition-all dark:bg-slate-600"
-                style={{ width: `${othersPct}%` }}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <OwnershipStat
-                label="Your contribution"
-                value={`$${formatDecimal(ownership.userPositionDisplay, { maxFractionDigits: 2 })}`}
-                sublabel={`${userPct.toFixed(1)}% of vault · ${supplySymbol}`}
-                accent="emerald"
-              />
-              <OwnershipStat
-                label="Other depositors"
-                value={`$${formatDecimal(ownership.othersDisplay, { maxFractionDigits: 2 })}`}
-                sublabel={
-                  ownership.isSoleDepositor
-                    ? 'You are the only depositor so far'
-                    : `${othersPct.toFixed(1)}% of vault · pooled from others`
-                }
-              />
-              <OwnershipStat
-                label="Total vault TVL"
-                value={formatCompactCurrency(tvl)}
-                sublabel="All assets managed by this vault"
-              />
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function OwnershipStat({
-  label,
-  value,
-  sublabel,
-  accent,
-}: {
-  label: string
-  value: string
-  sublabel: string
-  accent?: 'emerald'
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-border/70 bg-muted/20 px-4 py-3',
-        accent === 'emerald' && 'border-emerald-500/20 bg-emerald-500/5',
-      )}
-    >
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-1 font-display text-xl tabular-nums tracking-tight">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
-    </div>
-  )
-}
-
-function VaultActivitySection({
-  activity,
-  isLoading,
-  activityError,
-  supplySymbol,
-  onRetry,
-}: {
-  activity: VaultActivityEntry[]
-  isLoading: boolean
-  activityError: string | null
-  supplySymbol: string
-  onRetry: () => void
-}) {
-  return (
-    <Card className="border-border/70 shadow-sm">
-      <CardContent className="p-5 sm:p-6">
-        <VaultSectionHeader
-          title="Investment history"
-          description="Each deposit and withdrawal to this vault, pulled from the Stellar ledger."
-        />
-
-        {activityError && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-            <span>{activityError}</span>
-            <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onRetry}>
-              Retry
-            </Button>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : activity.length === 0 && !activityError ? (
-          <p className="rounded-xl border border-dashed border-border/80 px-4 py-10 text-center text-sm text-muted-foreground">
-            No vault deposits or withdrawals found for your wallet yet.
-          </p>
-        ) : activity.length === 0 ? null : (
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <ul className="divide-y divide-border">
-              {activity.map((entry) => (
-                <li key={entry.id}>
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        className={cn(
-                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                          entry.kind === 'deposit'
-                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-                        )}
-                      >
-                        {entry.kind === 'deposit' ? (
-                          <ArrowDownToLine className="h-4 w-4" aria-hidden />
-                        ) : (
-                          <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium capitalize">{entry.kind}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDateLong(entry.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-semibold tabular-nums">
-                          {entry.kind === 'deposit' ? '+' : '−'}$
-                          {formatDecimal(entry.amountDisplay, { maxFractionDigits: 2 })}{' '}
-                          <span className="text-xs font-normal text-muted-foreground">{supplySymbol}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {entry.transactionHash.slice(0, 8)}…
-                        </p>
-                      </div>
-                      <Link
-                        href={entry.explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label="View transaction on Stellar Expert"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {!isLoading && activity.length > 0 && (
-          <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-            Amounts reflect on-chain {supplySymbol} units at transaction time.
-          </p>
-        )}
-      </CardContent>
-    </Card>
   )
 }
