@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { VaultHero } from '@/components/dashboard/vault-hero'
 import { VaultListingCard } from '@/components/dashboard/vault-listing-card'
 import { VaultDetailView } from '@/components/dashboard/vault-detail-view'
@@ -24,7 +24,7 @@ export function VaultDashboard({ viewerRole = 'investor' }: VaultDashboardProps)
   const [pageTab, setPageTab] = useState<'vaults' | 'positions'>('vaults')
   const [view, setView] = useState<'list' | 'detail'>('list')
   const [actionTab, setActionTab] = useState<'deposit' | 'withdraw'>('deposit')
-  const [refreshNonce, setRefreshNonce] = useState(0)
+  const [historyRefreshNonce, setHistoryRefreshNonce] = useState(0)
 
   const { isConnected, handleConnect, canSignTransactions, publicKey, walletInfo } = useWallet()
   const {
@@ -41,6 +41,22 @@ export function VaultDashboard({ viewerRole = 'investor' }: VaultDashboardProps)
     depositToVault,
     withdrawFromVault,
   } = useDefindex()
+
+  const handleDepositToVault = useCallback(async (...args: Parameters<typeof depositToVault>) => {
+    const res = await depositToVault(...args) as any
+    if (res && res.success !== false) {
+      setHistoryRefreshNonce((n) => n + 1)
+    }
+    return res
+  }, [depositToVault])
+
+  const handleWithdrawFromVault = useCallback(async (...args: Parameters<typeof withdrawFromVault>) => {
+    const res = await withdrawFromVault(...args) as any
+    if (res && res.success !== false) {
+      setHistoryRefreshNonce((n) => n + 1)
+    }
+    return res
+  }, [withdrawFromVault])
 
   const isLoadingVault = vaultMeta == null && !vaultInfoError
   const supply = getPrimarySupplyAsset(vaultMeta)
@@ -85,7 +101,7 @@ export function VaultDashboard({ viewerRole = 'investor' }: VaultDashboardProps)
             size="sm"
             disabled={isLoadingBalances}
             onClick={() => {
-              void refreshBalances().then(() => setRefreshNonce((n) => n + 1))
+              void refreshBalances()
             }}
             className="gap-1.5 rounded-full"
           >
@@ -114,8 +130,8 @@ export function VaultDashboard({ viewerRole = 'investor' }: VaultDashboardProps)
               canSignTransactions={canSignTransactions}
               walletAddress={walletInfo?.address ?? publicKey ?? undefined}
               isLoadingBalances={isLoadingBalances}
-              depositToVault={depositToVault}
-              withdrawFromVault={withdrawFromVault}
+              depositToVault={handleDepositToVault}
+              withdrawFromVault={handleWithdrawFromVault}
               onRefreshBalances={refreshBalances}
               onBack={() => setView('list')}
               initialTab={actionTab}
@@ -161,7 +177,7 @@ export function VaultDashboard({ viewerRole = 'investor' }: VaultDashboardProps)
                 dfTokens={dfTokens}
                 vaultMeta={vaultMeta}
                 isLoadingBalances={isLoadingBalances}
-                refreshNonce={refreshNonce}
+                historyRefreshNonce={historyRefreshNonce}
                 onDeposit={() => {
                   setPageTab('vaults')
                   openDetail('deposit')
