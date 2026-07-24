@@ -55,6 +55,7 @@ type VaultMyPositionsProps = {
   vaultMeta: MercatoVaultMeta | null
   isLoadingBalances: boolean
   refreshNonce?: number
+  historyRefreshNonce?: number
   onDeposit: () => void
   onWithdraw: () => void
 }
@@ -67,6 +68,7 @@ export function VaultMyPositions({
   vaultMeta,
   isLoadingBalances,
   refreshNonce = 0,
+  historyRefreshNonce = 0,
   onDeposit,
   onWithdraw,
 }: VaultMyPositionsProps) {
@@ -111,7 +113,7 @@ export function VaultMyPositions({
   useEffect(() => {
     vaultActivityRequest.invalidate(walletAddress)
     void loadActivity()
-  }, [loadActivity, refreshNonce, walletAddress])
+  }, [loadActivity, historyRefreshNonce || refreshNonce, walletAddress])
 
   const vaultName = vaultMeta?.name ?? 'Mercato Vault'
   const isLoading = isLoadingBalances
@@ -233,7 +235,10 @@ export function VaultMyPositions({
         isLoading={isLoadingHistory}
         activityError={activityError}
         supplySymbol={supply.symbol}
-        onRetry={() => void loadActivity()}
+        onRetry={() => {
+          vaultActivityRequest.invalidate(walletAddress)
+          void loadActivity()
+        }}
       />
     </div>
   )
