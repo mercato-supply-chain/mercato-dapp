@@ -5,3 +5,6 @@ frozenLockfile = false
 [install.cache]
 # Reuse the global Bun install cache for faster reinstalls.
 disable = false
+
+[test]
+preload = ["./happydom.ts"]

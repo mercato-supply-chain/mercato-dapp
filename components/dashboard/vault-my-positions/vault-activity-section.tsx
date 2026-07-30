@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, ExternalLink } from 'lucide-react'
 import { VaultSectionHeader } from '@/components/dashboard/vault-ui'
@@ -8,6 +9,9 @@ import { formatDateLong } from '@/lib/date-utils'
 import { formatDecimal } from '@/lib/format'
 import type { VaultActivityEntry } from '@/lib/stellar/vault-activity'
 import { cn } from '@/lib/utils'
+
+const INITIAL_VISIBLE_COUNT = 10
+const LOAD_MORE_INCREMENT = 10
 
 export type VaultActivitySectionProps = {
   activity: VaultActivityEntry[]
@@ -30,6 +34,15 @@ export function VaultActivitySection({
   onRetry,
   onLoadMore,
 }: VaultActivitySectionProps) {
+  const activityKey = activity.map((entry) => entry.id).join(',')
+  const [prevActivityKey, setPrevActivityKey] = useState(activityKey)
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
+
+  if (activityKey !== prevActivityKey) {
+    setPrevActivityKey(activityKey)
+    setVisibleCount(INITIAL_VISIBLE_COUNT)
+  }
+
   return (
     <Card className="border-border/70 shadow-sm">
       <CardContent className="p-5 sm:p-6">
@@ -60,7 +73,7 @@ export function VaultActivitySection({
         ) : activity.length === 0 ? null : (
           <div className="overflow-hidden rounded-2xl border border-border/70">
             <ul className="divide-y divide-border">
-              {activity.map((entry) => (
+              {activity.slice(0, visibleCount).map((entry) => (
                 <li key={entry.id}>
                   <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm">
                     <div className="flex min-w-0 items-center gap-3">
@@ -111,6 +124,27 @@ export function VaultActivitySection({
                 </li>
               ))}
             </ul>
+            {visibleCount < activity.length ? (
+              <div className="flex justify-center border-t border-border/70 px-4 py-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() =>
+                    setVisibleCount((prev) =>
+                      Math.min(prev + LOAD_MORE_INCREMENT, activity.length),
+                    )
+                  }
+                >
+                  Cargar más ({activity.length - visibleCount} restantes)
+                </Button>
+              </div>
+            ) : activity.length > 0 ? (
+              <p className="border-t border-border/70 px-4 py-3 text-center text-xs text-muted-foreground">
+                No hay más actividad
+              </p>
+            ) : null}
           </div>
         )}
 

@@ -1,9 +1,4 @@
-import { test, expect, mock, beforeEach, spyOn, afterEach, beforeAll, afterAll } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
-
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
+import { test, expect, mock, beforeEach, spyOn, afterEach } from "bun:test";
 
 import React from "react";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
