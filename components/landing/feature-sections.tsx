@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, ArrowRight, TrendingUp, ShieldCheck, Star, Package } from 'lucide-react'
+import { CheckCircle2, ArrowRight, TrendingUp, ShieldCheck, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /* ─── Intersection-observer hook ────────────────────────── */

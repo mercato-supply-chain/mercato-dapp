@@ -66,7 +66,6 @@ export function CreateDealFormBody({
   yieldAPR,
   estimatedEarnings,
   canProceedStep1,
-  canProceedStep2,
   canSubmit,
   supplierLogoUrl,
   productImageUrl,

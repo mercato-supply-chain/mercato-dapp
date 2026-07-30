@@ -45,13 +45,6 @@ export type Smb = {
   completionRate: number
 }
 
-const TIER_ORDER: Record<PymeReputationTier, number> = {
-  top_performer: 0,
-  established: 1,
-  building: 2,
-  new: 3,
-}
-
 const TIER_STYLES: Record<PymeReputationTier, string> = {
   top_performer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   established: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',

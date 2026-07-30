@@ -25,7 +25,7 @@ interface NotificationDropdownProps {
   variant?: 'desktop' | 'mobile'
 }
 
-export function NotificationDropdown({ userId, variant = 'desktop' }: NotificationDropdownProps) {
+export function NotificationDropdown({ userId }: NotificationDropdownProps) {
   const { t } = useI18n()
   const mounted = useMounted()
   const [notifications, setNotifications] = useState<Notification[]>([])

@@ -8,9 +8,6 @@ import {
   Building2,
   CreditCard,
   Landmark,
-  Percent,
-  Scale,
-  Users,
   Wallet,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
