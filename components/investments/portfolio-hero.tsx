@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatInvestUsd } from '@/lib/investments/portfolio-metrics'
 import type { InvestorPortfolio } from '@/lib/investments/types'
-import { cn } from '@/lib/utils'
 
 type PortfolioHeroProps = {
   portfolio: InvestorPortfolio

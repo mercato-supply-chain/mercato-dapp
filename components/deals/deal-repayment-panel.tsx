@@ -52,10 +52,8 @@ export function DealRepaymentPanel({
   const {
     status,
     milestones,
-    openMilestones,
     currentMilestone,
     escrowAmount,
-    openAmount,
     remainingToSchedule,
     defaultFundAmount,
     breakdown,

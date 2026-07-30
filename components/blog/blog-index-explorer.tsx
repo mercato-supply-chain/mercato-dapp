@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { BlogPostCard } from '@/components/blog/blog-post-card'
-import type { BlogAudience, BlogPost } from '@/lib/blog/types'
+import type { BlogPost } from '@/lib/blog/types'
 import type { Locale } from '@/lib/i18n/config'
 import { cn } from '@/lib/utils'
 

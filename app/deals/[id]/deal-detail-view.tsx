@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getFundingTimeRemainingMs } from '@/lib/deals'
@@ -23,7 +23,7 @@ import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 import { investorFundingTotal } from '@/lib/deals/fees'
 
-function useDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
+function getDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
   const statusConfig = {
     awaiting_funding: { label: t('dealStatus.awaiting_funding'), color: 'text-accent', bgColor: 'bg-accent/10' },
     funded:           { label: t('dealStatus.funded'),           color: 'text-success', bgColor: 'bg-success/10' },
@@ -96,7 +96,7 @@ export default function DealDetailPage() {
     )
   }
 
-  const status = useDealStatus(deal, t)
+  const status = getDealStatus(deal, t)
   const isFundingOpen = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
   const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
   const canFund = userType === 'investor' && Boolean(deal.supplierAddress) && isFundingOpen

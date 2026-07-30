@@ -65,7 +65,6 @@ type DashboardDealsPanelProps = {
 export function DashboardDealsPanel({
   userType,
   deals,
-  totalCount,
   viewAllHref,
   statusLabels,
   labels,
@@ -212,7 +211,6 @@ function DealCardMobile({
   columns: DashboardDealsPanelProps['columns']
 }) {
   const milestones = deal.milestones ?? []
-  const completed = milestones.filter((m) => m.status === 'completed').length
   const pending = milestones.filter((m) => m.status === 'in_progress').length
   const hasPending = pending > 0
   const statusLabel = statusLabels[deal.status] ?? deal.status
