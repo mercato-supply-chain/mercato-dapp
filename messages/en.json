@@ -1149,7 +1149,7 @@
     "deliveryStepReceive": "2. SMB confirms receipt",
     "deliveryStepReceiveHint": "After the goods arrive, confirm delivery to open the repayment phase.",
     "deliveryStepRepayment": "3. Repayment escrow",
-    "deliveryStepRepaymentHint": "Mercato creates the escrow; the SMB pays repayments and the investor is paid in milestones.",
+    "deliveryStepRepaymentHint": "Mercato creates the escrow; the SMB pays repayments and the investor receives payment in two installments of 50% each.",
     "deliveryTrackingLabel": "Tracking ID",
     "deliveryTrackingPlaceholder": "e.g. 1Z999AA10123456784",
     "deliveryTrackingHint": "Use the carrier tracking number for this shipment.",

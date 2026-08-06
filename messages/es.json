@@ -1149,7 +1149,7 @@
     "deliveryStepReceive": "2. La PyME confirma la recepción",
     "deliveryStepReceiveHint": "Cuando llegue el pedido, confirma la entrega para abrir la fase de reembolso.",
     "deliveryStepRepayment": "3. Escrow de reembolso",
-    "deliveryStepRepaymentHint": "Mercato crea el escrow; la PyME paga los reembolsos y el inversionista cobra por hitos.",
+    "deliveryStepRepaymentHint": "Mercato crea el escrow; la PyME paga los reembolsos y el inversionista recibe su pago en dos pagos del 50% cada uno.",
     "deliveryTrackingLabel": "ID de rastreo",
     "deliveryTrackingPlaceholder": "p. ej. 1Z999AA10123456784",
     "deliveryTrackingHint": "Usa el número de rastreo del transportista para este envío.",
