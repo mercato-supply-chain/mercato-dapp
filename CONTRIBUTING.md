@@ -4,6 +4,14 @@ Thank you for helping improve MERCATO. This guide is for everyone contributing t
 
 ---
 
+## Branch policy
+
+- **Target `develop` for all contributor pull requests.** It is the integration branch where Wave work is reviewed and merged.
+- **`main` is updated by maintainers only**, by merging `develop` into `main` when the integration branch is ready to sync (for example after a release or branch reconciliation).
+- If you opened a PR against `main` by mistake, ask a maintainer to retarget it to `develop` before review.
+
+---
+
 ## Contributing through Drips Wave
 
 MERCATO may list work on the Stellar Wave program on Drips. If you are picking up an issue from there:
