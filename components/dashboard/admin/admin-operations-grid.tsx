@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Landmark,
   Unlock,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -35,6 +36,12 @@ export function AdminOperationsGrid({ t }: AdminOperationsGridProps) {
       description: m.opVaultMonitorDesc,
       href: '/dashboard/admin/vault',
       icon: Landmark,
+    },
+    {
+      label: m.opLeads,
+      description: m.opLeadsDesc,
+      href: '/dashboard/admin/leads',
+      icon: Users,
     },
   ]
 

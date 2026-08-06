@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { getAllBlogPosts } from '@/lib/blog/posts'
+import { getActiveEventSlugs } from '@/lib/events/config'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://mercato.app'
@@ -36,9 +37,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route === '' ? 1.0 : 0.8,
   }))
 
+  const eventSitemaps = getActiveEventSlugs().map((slug) => ({
+    url: `${baseUrl}/events/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }))
+
   if (!supabaseUrl || !supabaseKey) {
     console.warn('Supabase URL/Key missing for sitemap generation. Returning static routes only.')
-    return [...staticSitemaps, ...blogPosts]
+    return [...staticSitemaps, ...eventSitemaps, ...blogPosts]
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -83,5 +91,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Error fetching suppliers for sitemap:', error)
   }
 
-  return [...staticSitemaps, ...blogPosts, ...dealSitemaps, ...supplierSitemaps]
+  return [...staticSitemaps, ...eventSitemaps, ...blogPosts, ...dealSitemaps, ...supplierSitemaps]
 }
