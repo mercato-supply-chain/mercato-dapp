@@ -426,34 +426,36 @@ export function HowItWorksView() {
             hiwCardHover,
           )}
         >
-          <div className="flex flex-wrap items-start gap-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <RefreshCw
-                className="h-6 w-6 text-primary motion-safe:animate-spin motion-safe:[animation-duration:12s] motion-reduce:animate-none"
-                aria-hidden
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="mb-1 text-lg font-semibold">{hiw.fiatTitle}</h3>
-              <p className="mb-4 text-sm text-muted-foreground">{hiw.fiatDescription}</p>
-              <div className="flex flex-wrap gap-3">
-                {hiw.rampProviders.map((p, i) => (
-                  <div
-                    key={p.name}
-                    style={{ animationDelay: `${i * 60}ms` }}
-                    className={cn(
-                      'rounded-lg border border-border bg-background px-4 py-2',
-                      hiwEnter,
-                      'motion-safe:fill-mode-backwards',
-                    )}
-                  >
-                    <p className="text-sm font-semibold">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.region}</p>
-                  </div>
-                ))}
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="flex min-w-0 flex-1 gap-4 sm:gap-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <RefreshCw
+                  className="h-6 w-6 text-primary motion-safe:animate-spin motion-safe:[animation-duration:12s] motion-reduce:animate-none"
+                  aria-hidden
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="mb-1 text-lg font-semibold leading-snug">{hiw.fiatTitle}</h3>
+                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">{hiw.fiatDescription}</p>
+                <div className="flex flex-wrap gap-3">
+                  {hiw.rampProviders.map((p, i) => (
+                    <div
+                      key={p.name}
+                      style={{ animationDelay: `${i * 60}ms` }}
+                      className={cn(
+                        'rounded-lg border border-border bg-background px-4 py-2',
+                        hiwEnter,
+                        'motion-safe:fill-mode-backwards',
+                      )}
+                    >
+                      <p className="text-sm font-semibold">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.region}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Button asChild variant="outline" size="sm" className="w-full shrink-0 sm:w-auto">
               <Link href="/dashboard/ramp">
                 {hiw.addFunds}
                 <ArrowRight className="ml-2 h-3.5 w-3.5" />
