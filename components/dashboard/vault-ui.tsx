@@ -114,3 +114,12 @@ export function StellarMark({ className }: { className?: string }) {
     </span>
   )
 }
+
+export function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5">
+      <dt className="min-w-0 truncate text-muted-foreground">{label}</dt>
+      <dd className="shrink-0 text-right font-medium tabular-nums">{value}</dd>
+    </div>
+  )
+}
