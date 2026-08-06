@@ -16,7 +16,7 @@ export function EventAudiences() {
   const { ref, visible } = useReveal(0.12)
 
   return (
-    <section className="border-b border-border/50 bg-muted/20 py-16 md:py-20">
+    <section className="border-b border-border/50 bg-muted/20 py-12 sm:py-16 md:py-20">
       <div
         ref={ref}
         className={cn(
@@ -31,7 +31,7 @@ export function EventAudiences() {
           {t('events.sections.audiencesTitle')}
         </h2>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3 md:gap-4">
           {AUDIENCES.map(({ key, icon: Icon }) => (
             <div key={key} className="rounded-2xl border border-border/70 bg-card p-6">
               <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-mid/10 text-brand-mid">

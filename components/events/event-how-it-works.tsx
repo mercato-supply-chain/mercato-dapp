@@ -17,7 +17,7 @@ export function EventHowItWorks() {
   const { ref, visible } = useReveal(0.12)
 
   return (
-    <section className="border-b border-border/50 bg-muted/20 py-16 md:py-20">
+    <section className="border-b border-border/50 bg-muted/20 py-12 sm:py-16 md:py-20">
       <div
         ref={ref}
         className={cn(

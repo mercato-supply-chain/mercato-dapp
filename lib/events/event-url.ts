@@ -1,4 +1,9 @@
-const DEFAULT_ORIGIN = 'https://mercato.app'
+const DEFAULT_ORIGIN =
+  process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://mercatocapital.xyz'
+
+export function getAppOrigin() {
+  return DEFAULT_ORIGIN
+}
 
 export function getEventUtmSource(slug: string) {
   return slug.replace(/-/g, '_')

@@ -11,7 +11,7 @@ export function EventFooter() {
       <div className="container mx-auto flex flex-col items-center gap-3 px-4 text-center text-sm text-muted-foreground">
         <p className="font-medium text-foreground">MERCATO</p>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link href="/" className="underline-offset-4 hover:underline">
+          <Link href="https://mercatocapital.xyz" className="underline-offset-4 hover:underline">
             {t('events.common.footerHome')}
           </Link>
           <Link href="/how-it-works" className="underline-offset-4 hover:underline">

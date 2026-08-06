@@ -9,7 +9,7 @@ export function EventProblem() {
   const { ref, visible } = useReveal(0.12)
 
   return (
-    <section className="border-b border-border/50 py-16 md:py-20">
+    <section className="border-b border-border/50 py-12 sm:py-16 md:py-20">
       <div
         ref={ref}
         className={cn(
@@ -27,7 +27,7 @@ export function EventProblem() {
           {t('events.sections.problemBody')}
         </p>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <div className="rounded-2xl border border-border/70 bg-card p-6">
             <p className="font-display text-4xl text-brand-mid">{t('events.sections.problemStat1')}</p>
             <p className="mt-2 text-sm text-muted-foreground">{t('events.sections.problemStat1Label')}</p>

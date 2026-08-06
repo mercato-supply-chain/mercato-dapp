@@ -12,6 +12,7 @@ import {
   Sprout,
   TrendingUp,
   Unlock,
+  Users,
   Wallet,
 } from 'lucide-react'
 import type { DashboardRoleKey } from './role-theme'
@@ -160,6 +161,11 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               href: '/dashboard/admin/vault',
               labelKey: 'dashboardNav.vaultMonitor',
               icon: Landmark,
+            },
+            {
+              href: '/dashboard/admin/leads',
+              labelKey: 'dashboardNav.leads',
+              icon: Users,
             },
           ],
         },

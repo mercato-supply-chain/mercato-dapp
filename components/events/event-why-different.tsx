@@ -34,7 +34,7 @@ export function EventWhyDifferent() {
   const { ref, visible } = useReveal(0.12)
 
   return (
-    <section className="border-b border-border/50 py-16 md:py-20">
+    <section className="border-b border-border/50 py-12 sm:py-16 md:py-20">
       <div
         ref={ref}
         className={cn(
@@ -49,7 +49,7 @@ export function EventWhyDifferent() {
           {t('events.sections.whyTitle')}
         </h2>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3 md:gap-4">
           {COLUMNS.map(({ id, icon: Icon, titleKey, points, muted }) => (
             <div
               key={id}

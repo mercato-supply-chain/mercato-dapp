@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 export const leadRoleValues = ['pyme', 'investor', 'supplier', 'other'] as const
 
+export type LeadRole = (typeof leadRoleValues)[number]
+
 export const leadSubmissionSchema = z.object({
   event_slug: z.string().min(1).max(100),
   name: z.string().trim().min(2).max(120),

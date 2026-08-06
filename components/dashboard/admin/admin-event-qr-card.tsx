@@ -19,10 +19,7 @@ export function AdminEventQrCard({ event }: AdminEventQrCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(true)
 
-  const landingUrl =
-    typeof window !== 'undefined'
-      ? getEventLandingUrl(event.slug, { origin: window.location.origin })
-      : getEventLandingUrl(event.slug)
+  const landingUrl = getEventLandingUrl(event.slug)
 
   useEffect(() => {
     let cancelled = false

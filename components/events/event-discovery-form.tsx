@@ -28,9 +28,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useReveal } from '@/hooks/use-scroll-motion'
 import { useI18n } from '@/lib/i18n/provider'
-import { leadRoleValues } from '@/lib/events/lead-schema'
+import { leadRoleValues, type LeadRole } from '@/lib/events/lead-schema'
 import type { EventConfig } from '@/lib/events/config'
 import { EventThankYou } from '@/components/events/event-thank-you'
+import { roleFormCopyKey, type RoleFormFieldKey } from '@/lib/events/role-form-copy'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 const formSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -60,10 +62,21 @@ const ROLE_LABEL_KEYS: Record<(typeof leadRoleValues)[number], string> = {
   other: 'events.common.roleOther',
 }
 
+const STEP_FIELDS: (keyof FormValues)[][] = [
+  ['name', 'email', 'role'],
+  ['company', 'country', 'phone'],
+  ['current_financing', 'funding_timeline'],
+  ['supplier_payment_process', 'biggest_challenge', 'last_financing_experience'],
+  ['consent'],
+]
+
+const TOTAL_STEPS = STEP_FIELDS.length
+
 export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
   const { t, locale } = useI18n()
   const searchParams = useSearchParams()
   const { ref, visible } = useReveal(0.1)
+  const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -89,7 +102,47 @@ export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
+    mode: 'onTouched',
   })
+
+  const role = form.watch('role') as LeadRole
+
+  const rq = (field: RoleFormFieldKey) => t(roleFormCopyKey(role, field))
+
+  const stepTitle =
+    step === 0
+      ? t('events.common.formStep1Title')
+      : step === 1
+        ? t('events.common.formStep2Title')
+        : step === 2
+          ? rq('formStep3Title')
+          : step === 3
+            ? rq('formStep4Title')
+            : t('events.common.formStep5Title')
+
+  const stepSubtitle =
+    step === 0
+      ? t('events.common.formStep1Subtitle')
+      : step === 1
+        ? rq('formStep2Subtitle')
+        : step === 2
+          ? rq('formStep3Subtitle')
+          : step === 3
+            ? rq('formStep4Subtitle')
+            : t('events.common.formStep5Subtitle')
+
+  const goNext = async () => {
+    const fields = STEP_FIELDS[step]
+    const valid = await form.trigger(fields, { shouldFocus: true })
+    if (!valid) return
+    setStep((current) => Math.min(current + 1, TOTAL_STEPS - 1))
+    setSubmitError(null)
+  }
+
+  const goBack = () => {
+    setStep((current) => Math.max(current - 1, 0))
+    setSubmitError(null)
+  }
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true)
@@ -123,12 +176,14 @@ export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
     }
   }
 
+  const isLastStep = step === TOTAL_STEPS - 1
+
   return (
-    <section id="event-discovery-form" className="scroll-mt-20 py-16 md:py-24">
+    <section id="event-discovery-form" className="scroll-mt-16 py-12 md:py-20">
       <div
         ref={ref}
         className={cn(
-          'container mx-auto max-w-2xl px-4 transition-all duration-700',
+          'container mx-auto max-w-lg px-4 transition-all duration-700 sm:max-w-xl',
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
         )}
       >
@@ -136,233 +191,326 @@ export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
           <EventThankYou />
         ) : (
           <>
-            <div className="mb-8 text-center">
-              <h2 className="font-display mb-3 text-3xl font-normal tracking-tight md:text-4xl">
+            <div className="mb-6 text-center md:mb-8">
+              <h2 className="font-display mb-2 text-2xl font-normal tracking-tight sm:text-3xl">
                 {t('events.common.formTitle')}
               </h2>
-              <p className="text-muted-foreground">{t('events.common.formSubtitle')}</p>
+              <p className="text-sm text-muted-foreground sm:text-base">
+                {t('events.common.formSubtitle')}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                <span>{t('events.common.stepOf', { current: step + 1, total: TOTAL_STEPS })}</span>
+                <span>{Math.round(((step + 1) / TOTAL_STEPS) * 100)}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand-mid transition-all duration-300"
+                  style={{ width: `${((step + 1) / TOTAL_STEPS) * 100}%` }}
+                />
+              </div>
             </div>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 rounded-2xl border border-border/70 bg-card p-6 md:p-8">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.name')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t('events.common.namePlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.email')}</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder={t('events.common.emailPlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-6"
+              >
+                <div className="mb-6 min-h-[12rem]">
+                  <h3 className="mb-1 text-lg font-semibold">{stepTitle}</h3>
+                  <p className="mb-5 text-sm text-muted-foreground">{stepSubtitle}</p>
+
+                  {step === 0 ? (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.name')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                autoComplete="name"
+                                placeholder={t('events.common.namePlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.email')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                type="email"
+                                inputMode="email"
+                                autoComplete="email"
+                                placeholder={t('events.common.emailPlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.role')}</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-11">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {leadRoleValues.map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {t(ROLE_LABEL_KEYS[role])}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : null}
+
+                  {step === 1 ? (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.company')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                autoComplete="organization"
+                                placeholder={t('events.common.companyPlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.country')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                autoComplete="country-name"
+                                placeholder={t('events.common.countryPlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('events.common.phone')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                placeholder={t('events.common.phonePlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : null}
+
+                  {step === 2 ? (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="current_financing"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{rq('currentFinancing')}</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={4}
+                                className="min-h-[6rem] resize-none"
+                                placeholder={rq('currentFinancingPlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="funding_timeline"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{rq('fundingTimeline')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                className="h-11"
+                                placeholder={rq('fundingTimelinePlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : null}
+
+                  {step === 3 ? (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="supplier_payment_process"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{rq('supplierPaymentProcess')}</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={3}
+                                className="min-h-[5rem] resize-none"
+                                placeholder={rq('supplierPaymentProcessPlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="biggest_challenge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{rq('biggestChallenge')}</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={3}
+                                className="min-h-[5rem] resize-none"
+                                placeholder={rq('biggestChallengePlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="last_financing_experience"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{rq('lastFinancingExperience')}</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                rows={3}
+                                className="min-h-[5rem] resize-none"
+                                placeholder={rq('lastFinancingExperiencePlaceholder')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : null}
+
+                  {step === 4 ? (
+                    <FormField
+                      control={form.control}
+                      name="consent"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+                            <FormControl>
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <Label className="text-sm font-normal leading-relaxed">
+                                {t('events.common.consent')}
+                              </Label>
+                              <FormMessage />
+                            </div>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
                 </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.company')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t('events.common.companyPlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.role')}</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {leadRoleValues.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {t(ROLE_LABEL_KEYS[role])}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.country')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t('events.common.countryPlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('events.common.phone')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t('events.common.phonePlaceholder')} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="current_financing"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('events.common.currentFinancing')}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={3}
-                          placeholder={t('events.common.currentFinancingPlaceholder')}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="funding_timeline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('events.common.fundingTimeline')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('events.common.fundingTimelinePlaceholder')} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="supplier_payment_process"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('events.common.supplierPaymentProcess')}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={3}
-                          placeholder={t('events.common.supplierPaymentProcessPlaceholder')}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="biggest_challenge"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('events.common.biggestChallenge')}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={4}
-                          placeholder={t('events.common.biggestChallengePlaceholder')}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="last_financing_experience"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('events.common.lastFinancingExperience')}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={4}
-                          placeholder={t('events.common.lastFinancingExperiencePlaceholder')}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="consent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-4">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <Label className="text-sm font-normal leading-relaxed">
-                            {t('events.common.consent')}
-                          </Label>
-                          <FormMessage />
-                        </div>
-                      </div>
-                    </FormItem>
-                  )}
-                />
 
                 {submitError ? (
-                  <p className="text-sm text-destructive" role="alert">
+                  <p className="mb-4 text-sm text-destructive" role="alert">
                     {submitError}
                   </p>
                 ) : null}
 
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-12 w-full rounded-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? t('events.common.submitting') : t('events.common.submit')}
-                </Button>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 rounded-full"
+                    onClick={goBack}
+                    disabled={step === 0 || isSubmitting}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+                    {t('events.common.stepBack')}
+                  </Button>
+
+                  {isLastStep ? (
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="h-11 flex-1 rounded-full sm:flex-none sm:px-8"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? t('events.common.submitting') : t('events.common.submit')}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="h-11 flex-1 rounded-full sm:flex-none sm:px-8"
+                      onClick={goNext}
+                    >
+                      {t('events.common.stepNext')}
+                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                    </Button>
+                  )}
+                </div>
               </form>
             </Form>
           </>

@@ -26,7 +26,7 @@ export function EventHero({ event }: EventHeroProps) {
   }
 
   return (
-    <section className="relative overflow-hidden border-b border-border/50 bg-gradient-to-b from-brand-ultra/60 to-background py-16 md:py-24">
+    <section className="relative overflow-hidden border-b border-border/50 bg-gradient-to-b from-brand-ultra/60 to-background py-12 sm:py-16 md:py-24">
       <div
         className="pointer-events-none absolute -right-24 top-0 h-64 w-64 rounded-full bg-brand-light/30 blur-3xl"
         aria-hidden
@@ -67,7 +67,7 @@ export function EventHero({ event }: EventHeroProps) {
 
         <Button
           size="lg"
-          className="mt-10 h-12 rounded-full px-8"
+          className="mt-8 h-12 w-full rounded-full px-8 sm:mt-10 sm:w-auto"
           onClick={scrollToForm}
           type="button"
         >
