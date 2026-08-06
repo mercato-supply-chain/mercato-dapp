@@ -31,7 +31,7 @@ export function DealDetailTabs({ deal, indexerEscrow }: DealDetailTabsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('dealDetail.blockchainInfo')}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="min-w-0 pt-0">
             <DealOnChainPanel
               escrowAddress={deal.escrowAddress}
               fundingTxHash={deal.fundingTxHash}
