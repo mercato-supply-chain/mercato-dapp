@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Briefcase, CheckCircle2, Globe, Mail, ArrowRight } from 'lucide-react'
+import { Briefcase, Globe, ArrowRight } from 'lucide-react'
 import { getCountryLabel, getSectorLabel } from '@/lib/constants'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
 import { useI18n } from '@/lib/i18n/provider'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
+import { VerifiedBadge } from '@/components/verified-badge'
 import type { Supplier } from '@/lib/suppliers/directory-utils'
 
 type SupplierDirectoryCardProps = {
@@ -37,10 +38,11 @@ export function SupplierDirectoryCard({ supplier }: SupplierDirectoryCardProps) 
           />
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {supplier.verified && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success ring-1 ring-success/20">
-                <CheckCircle2 className="h-3 w-3" aria-hidden />
-                {t('suppliersPage.verified')}
-              </span>
+              <VerifiedBadge
+                variant="badge"
+                label={t('common.verified')}
+                tooltip={t('common.verifiedCompanyTooltip')}
+              />
             )}
             {supplier.categories?.[0] && (
               <Badge variant="outline" className="text-xs">
@@ -50,8 +52,11 @@ export function SupplierDirectoryCard({ supplier }: SupplierDirectoryCardProps) 
           </div>
         </div>
 
-        <h3 className="mb-1 text-base font-bold leading-snug transition-colors group-hover:text-primary">
-          {supplier.company_name}
+        <h3 className="mb-1 flex items-center gap-1.5 text-base font-bold leading-snug transition-colors group-hover:text-primary">
+          <span>{supplier.company_name}</span>
+          {supplier.verified ? (
+            <VerifiedBadge label={t('common.verifiedCompanyTooltip')} />
+          ) : null}
         </h3>
 
         {(supplier.sector || supplier.country) && (
@@ -83,14 +88,6 @@ export function SupplierDirectoryCard({ supplier }: SupplierDirectoryCardProps) 
             {t('suppliersPage.products')}
           </p>
           <p className="mt-0.5 line-clamp-1 text-sm">{supplier.products.join(', ')}</p>
-        </div>
-      )}
-
-      {/* Email */}
-      {supplier.email && (
-        <div className="mx-5 mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="truncate">{supplier.email}</span>
         </div>
       )}
 

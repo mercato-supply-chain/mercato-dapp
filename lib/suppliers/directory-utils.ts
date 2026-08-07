@@ -2,9 +2,6 @@ export type Supplier = {
   id: string
   company_name: string
   bio: string | null
-  address: string | null
-  phone: string | null
-  email: string
   categories: string[] | null
   products: string[] | null
   verified: boolean

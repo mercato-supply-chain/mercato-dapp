@@ -126,11 +126,6 @@ export function SupplierStep({
               />
               <div>
                 <p className="text-sm font-semibold">{formData.supplierName}</p>
-                {formData.supplierContact && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('createDeal.contact', { contact: formData.supplierContact })}
-                  </p>
-                )}
               </div>
             </div>
           </div>

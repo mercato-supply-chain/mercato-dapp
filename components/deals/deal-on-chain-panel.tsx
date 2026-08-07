@@ -16,7 +16,6 @@ type DealOnChainPanelProps = {
   escrowAddress?: string
   fundingTxHash?: string
   investorAddress?: string
-  supplierAddress?: string
   indexerEscrow: GetEscrowsFromIndexerResponse | null
   compact?: boolean
 }
@@ -68,7 +67,6 @@ export function DealOnChainPanel({
   escrowAddress,
   fundingTxHash,
   investorAddress,
-  supplierAddress,
   indexerEscrow,
   compact = false,
 }: DealOnChainPanelProps) {
@@ -166,13 +164,6 @@ export function DealOnChainPanel({
         <div className="min-w-0">
           <p className="mb-1.5 text-sm font-medium">{t('dealDetail.investorAddress')}</p>
           <CopyableCodeLine value={investorAddress} label={t('dealDetail.investorAddress')} />
-        </div>
-      ) : null}
-
-      {!compact && supplierAddress ? (
-        <div className="min-w-0">
-          <p className="mb-1.5 text-sm font-medium">{t('dealDetail.supplierWalletAddress')}</p>
-          <CopyableCodeLine value={supplierAddress} label={t('dealDetail.supplierWalletAddress')} />
         </div>
       ) : null}
 

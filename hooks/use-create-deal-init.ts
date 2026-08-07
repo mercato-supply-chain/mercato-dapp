@@ -42,27 +42,12 @@ export function useCreateDealInit(options?: { redirectIfUnauthenticated?: boolea
         const productsResult = await supabase
           .from('supplier_products')
           .select(
-            'id, supplier_id, name, category, price_per_unit, description, image_url, sku, unit, stock_quantity, reserved_quantity, reorder_point, supplier:supplier_companies(id, company_name, address, owner_id, logo_url)'
+            'id, supplier_id, name, category, price_per_unit, description, image_url, sku, unit, stock_quantity, reserved_quantity, reorder_point, supplier:supplier_companies(id, company_name, logo_url)'
           )
           .order('category')
           .order('name')
           .range(0, 49)
-        const raw = (productsResult.data as any) || []
-        const ownerIds = [...new Set(raw.map((p: any) => p.supplier?.owner_id).filter(Boolean))] as string[]
-        const { data: ownerProfiles } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', ownerIds.length ? ownerIds : ['00000000-0000-0000-0000-000000000000'])
-        const emailByOwner: Record<string, string> = {}
-        for (const p of ownerProfiles ?? []) {
-          emailByOwner[p.id] = p.email ?? ''
-        }
-        products = raw.map((p: any) => ({
-          ...p,
-          supplier: p.supplier
-            ? { ...p.supplier, email: emailByOwner[p.supplier.owner_id ?? ''] }
-            : p.supplier,
-        })) as unknown as SupplierProductRow[]
+        products = ((productsResult.data as SupplierProductRow[]) || [])
       }
       setSupplierProducts(products)
       setIsReady(true)

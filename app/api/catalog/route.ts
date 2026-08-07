@@ -14,9 +14,7 @@ export type CatalogProduct = {
   supplier?: {
     id: string
     company_name?: string
-    address?: string
     owner_id?: string
-    email?: string
     logo_url?: string | null
   } | null
 }
@@ -52,7 +50,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('supplier_products')
       .select(
-        'id, supplier_id, name, category, price_per_unit, description, image_url, sku, unit, stock_quantity, reserved_quantity, reorder_point, supplier:supplier_companies(id, company_name, address, owner_id, logo_url)',
+        'id, supplier_id, name, category, price_per_unit, description, image_url, sku, unit, stock_quantity, reserved_quantity, reorder_point, supplier:supplier_companies(id, company_name, owner_id, logo_url)',
         { count: 'exact' }
       )
 
@@ -81,32 +79,18 @@ export async function GET(request: Request) {
       category: string
       price_per_unit: number
       description?: string | null
-      supplier?: { id: string; company_name?: string; address?: string; owner_id?: string; logo_url?: string | null } | null
+      supplier?: { id: string; company_name?: string; owner_id?: string; logo_url?: string | null } | null
     }>
 
-    const ownerIds = [...new Set(rows.map((p) => p.supplier?.owner_id).filter(Boolean))] as string[]
-    const emailByOwner: Record<string, string> = {}
-    if (ownerIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .in('id', ownerIds)
-      for (const p of profiles ?? []) {
-        emailByOwner[p.id] = p.email ?? ''
-      }
-    }
-
-    const withEmail: CatalogProduct[] = rows.map((p) => ({
+    const withSupplier: CatalogProduct[] = rows.map((p) => ({
       ...p,
-      supplier: p.supplier
-        ? { ...p.supplier, email: emailByOwner[p.supplier.owner_id ?? ''] }
-        : p.supplier,
+      supplier: p.supplier ?? null,
     }))
 
     const hasMore = count !== null && start + (products?.length || 0) < count
 
     return NextResponse.json({
-      data: withEmail,
+      data: withSupplier,
       hasMore,
       count
     } as CatalogResponse)

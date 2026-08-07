@@ -25,6 +25,7 @@ import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib
 import { useI18n } from '@/lib/i18n/provider'
 import type { PymeReputation, PymeReputationTier } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
+import { VerifiedBadge } from '@/components/verified-badge'
 
 export type Smb = {
   id: string
@@ -32,11 +33,9 @@ export type Smb = {
   full_name: string | null
   contact_name: string | null
   bio: string | null
-  address: string | null
-  phone: string | null
-  email: string
   country: string | null
   sector: string | null
+  verified: boolean
   deal_count: number
   active_deals: number
   reputation: PymeReputation
@@ -196,6 +195,13 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
                         {getInitials(smb)}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                        {smb.verified && (
+                          <VerifiedBadge
+                            variant="badge"
+                            label={t('common.verified')}
+                            tooltip={t('common.verifiedCompanyTooltip')}
+                          />
+                        )}
                         {smb.reputationTier !== 'new' && (
                           <ReputationTooltip reputation={smb.reputation} side="bottom" align="end">
                             <span
@@ -214,7 +220,12 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
                       </div>
                     </div>
 
-                    <CardTitle className="text-base leading-snug">{displayName(smb)}</CardTitle>
+                    <CardTitle className="flex items-center gap-1.5 text-base leading-snug">
+                      <span>{displayName(smb)}</span>
+                      {smb.verified ? (
+                        <VerifiedBadge label={t('common.verifiedCompanyTooltip')} />
+                      ) : null}
+                    </CardTitle>
 
                     {(smb.country || smb.sector) && (
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

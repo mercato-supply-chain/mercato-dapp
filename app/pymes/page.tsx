@@ -1,52 +1,38 @@
-import { createClient } from '@/lib/supabase/server'
 import { aggregateDealsToStats, computePymeReputation } from '@/lib/pyme-reputation'
+import { fetchPublicPymeProfiles, fetchPymeDealRows } from '@/lib/pymes/directory'
 import { PymesList, type Smb } from './pymes-list'
 
 const TIER_ORDER = { top_performer: 0, established: 1, building: 2, new: 3 } as const
 
+const ACTIVE_DEAL_STATUSES = new Set(['funded', 'in_progress', 'milestone_pending'])
+
 export default async function PymesPage() {
-  const supabase = await createClient()
-
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, company_name, full_name, contact_name, bio, address, phone, email, country, sector')
-    .eq('user_type', 'pyme')
-    .order('company_name')
-
-  const ids = (profiles ?? []).map((p) => p.id)
-
-  const { data: dealRows } = await supabase
-    .from('deals')
-    .select('pyme_id, status, amount')
-    .in('pyme_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
+  const profiles = await fetchPublicPymeProfiles()
+  const ids = profiles.map((p) => p.id)
+  const dealRows = await fetchPymeDealRows(ids)
 
   const dealsBySmb: Record<string, { status: string; amount: number }[]> = {}
   for (const p of ids) dealsBySmb[p] = []
-  for (const row of dealRows ?? []) {
-    const r = row as { pyme_id: string; status: string; amount: number }
-    if (!dealsBySmb[r.pyme_id]) dealsBySmb[r.pyme_id] = []
-    dealsBySmb[r.pyme_id].push({ status: r.status, amount: r.amount })
+  for (const row of dealRows) {
+    if (!dealsBySmb[row.pyme_id]) dealsBySmb[row.pyme_id] = []
+    dealsBySmb[row.pyme_id].push({ status: row.status, amount: row.amount })
   }
 
-  const smbs: Smb[] = (profiles ?? [])
+  const smbs: Smb[] = profiles
     .map((p) => {
       const deals = dealsBySmb[p.id] ?? []
       const stats = aggregateDealsToStats(deals)
       const rep = computePymeReputation(stats)
-      const active_deals = deals.filter(
-        (d) => d.status === 'funded' || d.status === 'in_progress',
-      ).length
+      const active_deals = deals.filter((d) => ACTIVE_DEAL_STATUSES.has(d.status)).length
       return {
         id: p.id,
         company_name: p.company_name,
         full_name: p.full_name,
         contact_name: p.contact_name,
         bio: p.bio,
-        address: p.address,
-        phone: p.phone,
-        email: p.email,
         country: p.country,
         sector: p.sector,
+        verified: p.verified ?? false,
         deal_count: deals.length,
         active_deals,
         reputation: rep,
@@ -56,6 +42,7 @@ export default async function PymesPage() {
       }
     })
     .toSorted((a, b) => {
+      if (a.verified !== b.verified) return a.verified ? -1 : 1
       const tierDiff = TIER_ORDER[a.reputationTier] - TIER_ORDER[b.reputationTier]
       if (tierDiff !== 0) return tierDiff
       return b.deal_count - a.deal_count

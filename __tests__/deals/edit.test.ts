@@ -150,7 +150,7 @@ describe('dealToFormData', () => {
     expect(form.quantity).toBe('100')
     expect(form.term).toBe('60')
     expect(form.fundingWindowDays).toBe('7')
-    expect(form.supplierContact).toBe('ops@acme.test')
+    expect(form.supplierContact).toBe('')
     expect(form.category).toBe('food')
   })
 
