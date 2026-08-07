@@ -19,6 +19,8 @@ import { formatCurrency } from '@/lib/format'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import { roundUsdc } from '@/lib/deals/repayment-escrow-helpers'
+import { fetchInvestorWalletForDeal } from '@/lib/deals/investor-wallet'
+import { createClient } from '@/lib/supabase/client'
 import {
   MERCATO_DISPUTE_RESOLVER_ADDRESS,
 } from '@/lib/trustless/config'
@@ -30,7 +32,6 @@ export type ResolveDisputeTarget = {
   milestoneTitle: string
   milestoneIndex: number
   milestoneAmount: number
-  investorAddress: string | null
   pymeAddress: string | null
 }
 
@@ -50,6 +51,7 @@ export function AdminResolveDisputeDialog({
   const { t } = useI18n()
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
   const { resolveRepaymentDispute, isWorking } = useRepaymentEscrow()
+  const supabase = createClient()
   const [preset, setPreset] = useState<SplitPreset>('investor')
   const [investorAmount, setInvestorAmount] = useState('')
   const [pymeAmount, setPymeAmount] = useState('')
@@ -108,11 +110,12 @@ export function AdminResolveDisputeDialog({
 
     const distributions: Array<{ address: string; amount: number }> = []
     if (invAmt > 0) {
-      if (!target.investorAddress) {
+      const investorWallet = await fetchInvestorWalletForDeal(supabase, target.dealId)
+      if (!investorWallet) {
         toast.error(t('adminCreateEscrow.investorMissing'))
         return
       }
-      distributions.push({ address: target.investorAddress, amount: invAmt })
+      distributions.push({ address: investorWallet, amount: invAmt })
     }
     if (pymeAmt > 0) {
       if (!target.pymeAddress) {

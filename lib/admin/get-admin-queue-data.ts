@@ -42,7 +42,6 @@ type DealRow = {
     contact_name?: string
     logo_url?: string | null
   } | null
-  investor?: { address?: string | null } | null
 }
 
 function companyName(
@@ -62,8 +61,7 @@ export async function getAdminQueueData(
 
   const selectCols = `id, title, product_name, amount, interest_rate, term_days, escrow_contract_address, repayment_status, repayment_total_amount, repayment_milestones, created_at, pyme_id, supplier_id, investor_id,
       pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, address),
-      supplier:supplier_companies(company_name, full_name, contact_name, logo_url),
-      investor:profiles!deals_investor_id_fkey(address)`
+      supplier:supplier_companies(company_name, full_name, contact_name, logo_url)`
 
   let createQuery = supabase
     .from('deals')
@@ -128,7 +126,6 @@ export async function getAdminQueueData(
       termDays,
       totalGrossed,
       defaultFirstMilestoneAmount: firstAmount,
-      investorAddress: deal.investor?.address?.trim() || null,
       pymeName: companyName(deal.pyme, '—'),
       supplierName: companyName(deal.supplier, '—'),
       supplierLogoUrl: deal.supplier?.logo_url ?? null,
@@ -206,7 +203,6 @@ export async function getAdminQueueData(
         supplierName: companyName(deal.supplier, '—'),
         supplierLogoUrl: deal.supplier?.logo_url ?? null,
         repaymentStatus: deal.repayment_status ?? null,
-        investorAddress: deal.investor?.address?.trim() || null,
         remainingToSchedule: remaining,
         createdAt: deal.created_at ?? undefined,
       })
@@ -257,7 +253,6 @@ export async function getAdminQueueData(
         milestonePercentage: pct,
         completedAt: deal.created_at ?? null,
         supplierLogoUrl: deal.supplier?.logo_url ?? null,
-        investorAddress: deal.investor?.address?.trim() || null,
         pymeAddress: deal.pyme?.address?.trim() || null,
       })
     }

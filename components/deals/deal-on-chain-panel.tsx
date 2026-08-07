@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils'
 type DealOnChainPanelProps = {
   escrowAddress?: string
   fundingTxHash?: string
-  investorAddress?: string
   indexerEscrow: GetEscrowsFromIndexerResponse | null
   compact?: boolean
 }
@@ -66,7 +65,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
 export function DealOnChainPanel({
   escrowAddress,
   fundingTxHash,
-  investorAddress,
   indexerEscrow,
   compact = false,
 }: DealOnChainPanelProps) {
@@ -159,13 +157,6 @@ export function DealOnChainPanel({
           {t('dealDetail.escrowPendingDeploy')}
         </p>
       )}
-
-      {!compact && investorAddress ? (
-        <div className="min-w-0">
-          <p className="mb-1.5 text-sm font-medium">{t('dealDetail.investorAddress')}</p>
-          <CopyableCodeLine value={investorAddress} label={t('dealDetail.investorAddress')} />
-        </div>
-      ) : null}
 
       {indexerEscrow ? (
         <div className="min-w-0 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">

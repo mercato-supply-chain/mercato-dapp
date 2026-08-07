@@ -49,10 +49,6 @@ export function CreateRepaymentEscrows({ items }: CreateRepaymentEscrowsProps) {
       toast.error(t('adminCreateEscrow.platformWalletRequired'))
       return
     }
-    if (!item.investorAddress) {
-      toast.error(t('adminCreateEscrow.investorMissing'))
-      return
-    }
 
     const raw = percents[item.dealId]
     const percent = Number.parseFloat(raw ?? String(DEFAULT_FIRST_MILESTONE_PERCENT))
@@ -66,7 +62,6 @@ export function CreateRepaymentEscrows({ items }: CreateRepaymentEscrowsProps) {
       await deployRepaymentEscrow({
         dealId: item.dealId,
         adminAddress: walletInfo.address,
-        investorAddress: item.investorAddress,
         principal: item.principal,
         aprPercent: item.aprPercent,
         termDays: item.termDays,

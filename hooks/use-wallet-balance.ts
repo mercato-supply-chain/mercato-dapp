@@ -12,6 +12,7 @@ import {
 
 export function useWalletBalance(wallet: ConnectedWallet | null) {
   const pollar = usePollarSession()
+  const refreshWalletBalance = pollar.refreshWalletBalance
   const [balances, setBalances] = useState<WalletBalanceSummary | null>(null)
   const [txHistory, setTxHistory] = useState<TxHistoryState | null>(null)
 
@@ -55,7 +56,7 @@ export function useWalletBalance(wallet: ConnectedWallet | null) {
     if (!wallet) return
 
     if (wallet.provider === 'pollar') {
-      await pollar.refreshWalletBalance()
+      await refreshWalletBalance()
       return
     }
 
@@ -65,7 +66,7 @@ export function useWalletBalance(wallet: ConnectedWallet | null) {
     } catch (error) {
       console.error('[wallet-balance] failed to refresh wallet balances', error)
     }
-  }, [pollar, wallet])
+  }, [refreshWalletBalance, wallet])
 
   const clearBalances = useCallback(() => {
     setBalances(null)

@@ -35,7 +35,6 @@ export function DealDetailTabs({ deal, indexerEscrow }: DealDetailTabsProps) {
             <DealOnChainPanel
               escrowAddress={deal.escrowAddress}
               fundingTxHash={deal.fundingTxHash}
-              investorAddress={deal.investorAddress}
               indexerEscrow={indexerEscrow}
             />
           </CardContent>

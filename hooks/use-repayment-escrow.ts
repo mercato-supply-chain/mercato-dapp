@@ -53,6 +53,7 @@ import {
   cacheMilestonesFromIndexer,
   deriveRepaymentStatusFromMilestones,
 } from '@/lib/deals/repayment-escrow-helpers'
+import { fetchInvestorWalletForDeal } from '@/lib/deals/investor-wallet'
 import type {
   DeployRepaymentParams,
   FundRepaymentParams,
@@ -173,7 +174,11 @@ export function useRepaymentEscrow() {
       if (!USDC_TRUSTLINE.address) {
         throw new Error('USDC trustline not configured')
       }
-      if (!params.investorAddress?.trim()) {
+
+      const investor =
+        params.investorAddress?.trim() ||
+        (await fetchInvestorWalletForDeal(supabase, params.dealId))
+      if (!investor) {
         throw new Error('Investor wallet address is required')
       }
 
@@ -193,7 +198,6 @@ export function useRepaymentEscrow() {
         }
 
         const engagementId = repaymentEngagementId(params.dealId)
-        const investor = params.investorAddress.trim()
         // Platform holds every TW role; investor is milestone receiver only.
         const roles = repaymentEscrowRoles()
 
@@ -489,7 +493,13 @@ export function useRepaymentEscrow() {
           )
         }
 
-        const investor = params.investorAddress.trim()
+        const investor =
+          params.investorAddress?.trim() ||
+          (await fetchInvestorWalletForDeal(supabase, params.dealId))
+        if (!investor) {
+          throw new Error('Investor wallet address is required')
+        }
+
         const nextIndex = existing.length
         const newMilestone = {
           description:
