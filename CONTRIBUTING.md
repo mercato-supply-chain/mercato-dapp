@@ -34,7 +34,7 @@ Issues in Drips are labeled by complexity. Each label sets the **base Points** f
 
 ## Local development
 
-Prerequisites and setup match the main [README](README.md). Short version:
+Prerequisites and setup match the main [README](README.md). For AI-oriented architecture context, see [AGENTS.md](AGENTS.md).
 
 ```bash
 bun install

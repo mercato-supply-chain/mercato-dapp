@@ -2,6 +2,8 @@
 
 Use this file as the single setup checklist for local testing.
 
+> **AI agents:** See [AGENTS.md](AGENTS.md) for structured orientation after setup.
+
 ## 1. Install dependencies
 
 ```bash
@@ -43,15 +45,11 @@ These come from your Supabase project dashboard.
 ### Optional
 
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- **DeFindex (Mercato vault)** — `DEFINDEX_API_KEY` (server), `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` (vault `C…` contract), optional `DEFINDEX_API_URL`, `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default `7`)
-- `ETHERFUSE_API_KEY`
-- `ETHERFUSE_BASE_URL`
-- `ALFREDPAY_API_KEY`
-- `ALFREDPAY_API_SECRET`
-- `ALFREDPAY_BASE_URL`
-- `BLINDPAY_API_KEY`
-- `BLINDPAY_INSTANCE_ID`
-- `BLINDPAY_BASE_URL`
+- `NEXT_PUBLIC_APP_URL` — canonical site URL (default `https://mercatocapital.xyz`)
+- **DeFindex (Mercato vault)** — `DEFINDEX_API_KEY` (server), `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` (vault `C…` contract), optional `DEFINDEX_API_URL`, `MERCATO_DEFINDEX_VAULT_ADDRESS`, `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default `7`)
+- `ETHERFUSE_API_KEY`, `ETHERFUSE_BASE_URL`
+- `ALFREDPAY_API_KEY`, `ALFREDPAY_API_SECRET`, `ALFREDPAY_BASE_URL`
+- `BLINDPAY_API_KEY`, `BLINDPAY_INSTANCE_ID`, `BLINDPAY_BASE_URL`
 
 ## 3. Bootstrap Supabase schema
 
@@ -131,14 +129,16 @@ If the Pollar wallet is `pending`:
 
 ## 6. What to verify
 
-- Navbar wallet state works.
-- Dashboard wallet state works.
-- Settings wallet state works.
-- External wallet signing still works.
-- Pollar onboarding works.
-- Pollar metadata is stored in Supabase.
-- Trustless Work escrow signing still uses the external wallet path.
-- If you use a Pollar wallet in a Trustless Work flow, the app should show the limitation message instead of trying to sign with the embedded wallet.
+- Navbar wallet state works (`/dashboard/wallets`)
+- Dashboard wallet state works (SWK and/or Pollar)
+- Settings wallet state works
+- External wallet (Freighter/Albedo) signing works for deal funding
+- Pollar onboarding works (`Continue with Pollar Embedded Wallet`)
+- Pollar metadata is stored in Supabase (`profiles.wallet_provider`, `pollar_wallet_id`)
+- Trustless Work escrow signing uses the external wallet path (admin deploy/release)
+- If you use a Pollar wallet in a Trustless Work flow, the app shows the limitation message
+- Marketplace loads at `/deals` (not `/marketplace`)
+- Optional: DeFindex vault at `/dashboard/vault` when `DEFINDEX_API_KEY` and vault address are set
 
 ## 7. Common problems
 
