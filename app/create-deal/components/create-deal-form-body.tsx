@@ -15,7 +15,7 @@ interface CreateDealFormBodyProps {
   formData: CreateDealFormData
   currentStep: FormStep
   availableCategories: string[]
-  filteredSuppliers: { id: string; company_name: string; email?: string; address?: string; logo_url?: string | null }[]
+  filteredSuppliers: { id: string; company_name: string; logo_url?: string | null }[]
   productsForSupplier: { id: string; name: string; category: string; price_per_unit: number; description?: string | null; image_url?: string | null; unit?: string; stock_quantity?: number; reserved_quantity?: number }[]
   selectedProduct: SupplierProductRow | null | undefined
   totalAmount: number

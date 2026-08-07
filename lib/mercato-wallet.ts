@@ -20,6 +20,15 @@ export interface WalletBalanceSummary {
   updatedAt: string | null
 }
 
+/** Classic trustline USDC balance (used for deal funding and wallet display). */
+export function parseWalletUsdcBalance(
+  balances: WalletBalanceSummary | null | undefined,
+): number {
+  if (!balances?.usdc) return 0
+  const parsed = Number.parseFloat(balances.usdc)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 export interface StoredWalletRecord {
   provider: WalletProviderType
   publicKey: string

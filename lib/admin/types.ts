@@ -8,7 +8,6 @@ export type CreateEscrowItem = {
   termDays: number
   totalGrossed: number
   defaultFirstMilestoneAmount: number
-  investorAddress: string | null
   pymeName: string
   supplierName: string
   supplierLogoUrl: string | null
@@ -34,7 +33,6 @@ export type PendingApprovalItem = {
   supplierName: string
   supplierLogoUrl: string | null
   repaymentStatus?: string | null
-  investorAddress?: string | null
   remainingToSchedule?: number
   createdAt?: string
 }
@@ -52,7 +50,6 @@ export type ReleaseFallbackItem = {
   milestonePercentage: number
   completedAt: string | null
   supplierLogoUrl: string | null
-  investorAddress?: string | null
   pymeAddress?: string | null
 }
 

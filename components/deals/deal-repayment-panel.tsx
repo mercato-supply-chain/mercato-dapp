@@ -135,7 +135,7 @@ export function DealRepaymentPanel({
   }
 
   const handleAddMilestone = async () => {
-    if (!walletInfo?.address || !deal.escrowAddress || !deal.investorAddress) return
+    if (!walletInfo?.address || !deal.escrowAddress) return
     const parsed = Number.parseFloat(addAmount || String(remainingToSchedule))
     if (!Number.isFinite(parsed) || parsed <= 0) {
       toast.error(t('dealDetail.repaymentAddAmountInvalid'))
@@ -147,7 +147,6 @@ export function DealRepaymentPanel({
         dealId: deal.id,
         contractId: deal.escrowAddress,
         adminAddress: walletInfo.address,
-        investorAddress: deal.investorAddress,
         amount: parsed,
         provider,
       })

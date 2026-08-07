@@ -2,7 +2,8 @@ export interface DeployRepaymentParams {
   dealId: string
   /** Platform / admin wallet that signs deploy. */
   adminAddress: string
-  investorAddress: string
+  /** Optional — resolved from the deal's investor profile when omitted. */
+  investorAddress?: string
   principal: number
   aprPercent: number
   termDays: number
@@ -32,7 +33,8 @@ export interface AddMilestoneParams {
   dealId: string
   contractId: string
   adminAddress: string
-  investorAddress: string
+  /** Optional — resolved from the deal's investor profile when omitted. */
+  investorAddress?: string
   /** Amount for the new milestone; defaults to remaining grossed total. */
   amount?: number
   description?: string

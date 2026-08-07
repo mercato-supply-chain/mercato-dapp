@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Navigation } from '@/components/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -30,7 +29,11 @@ import { SupplierDirectoryCard } from '@/components/suppliers/supplier-directory
 
 const FILTER_CATEGORY_VALUES = ['all', ...PRODUCT_CATEGORIES.map((c) => c.value)] as const
 
-export default function SuppliersPage() {
+type SuppliersDirectoryProps = {
+  initialSuppliers: Supplier[]
+}
+
+export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirectoryProps) {
   const { t, messages } = useI18n()
   const countryLabel = (code: string) =>
     messages.geo.countries[code as keyof typeof messages.geo.countries] ?? getCountryLabel(code)
@@ -38,83 +41,7 @@ export default function SuppliersPage() {
     messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
   const categoryLabel = (value: string) => getLocalizedCategoryLabel(value, messages)
 
-  const supabase = createClient()
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadSuppliers = async () => {
-      try {
-        const { data: companies, error } = await supabase
-          .from('supplier_companies')
-          .select('id, company_name, bio, address, phone, verified, country, sector, owner_id, logo_url')
-          .order('company_name')
-
-        if (error) throw error
-
-        const companyIds = (companies ?? []).map((c) => c.id)
-        const ownerIds = [...new Set((companies ?? []).map((c) => c.owner_id).filter(Boolean))]
-
-        const [profilesRes, productsRes] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('id, email')
-            .in('id', ownerIds.length ? ownerIds : ['00000000-0000-0000-0000-000000000000']),
-          companyIds.length > 0
-            ? supabase
-                .from('supplier_products')
-                .select('supplier_id, name, category')
-                .in('supplier_id', companyIds)
-            : Promise.resolve({ data: [] as { supplier_id: string; name: string; category: string }[] }),
-        ])
-
-        const emailByOwner: Record<string, string> = {}
-        for (const p of profilesRes.data ?? []) {
-          emailByOwner[p.id] = p.email ?? ''
-        }
-
-        const productsBySupplier: Record<string, { categories: string[]; products: string[] }> = {}
-        for (const row of productsRes.data ?? []) {
-          const sid = row.supplier_id
-          if (!productsBySupplier[sid]) productsBySupplier[sid] = { categories: [], products: [] }
-          if (row.category && !productsBySupplier[sid].categories.includes(row.category))
-            productsBySupplier[sid].categories.push(row.category)
-          if (row.name) productsBySupplier[sid].products.push(row.name)
-        }
-
-        setSuppliers(
-          (companies ?? []).map((c) => {
-            const fromProducts = productsBySupplier[c.id]
-            return {
-              id: c.id,
-              company_name: c.company_name ?? '',
-              bio: c.bio ?? null,
-              address: c.address ?? null,
-              phone: c.phone ?? null,
-              categories: fromProducts?.categories.length ? fromProducts.categories : null,
-              products: fromProducts?.products.length ? fromProducts.products : null,
-              verified: c.verified ?? false,
-              country: c.country ?? null,
-              sector: c.sector ?? null,
-              email: emailByOwner[c.owner_id] ?? '',
-              logo_url: c.logo_url ?? null,
-            }
-          }) as Supplier[]
-        )
-      } catch (err) {
-        const e = err as { message?: string; details?: string; hint?: string; code?: string }
-        console.error('Error loading suppliers:', e?.message ?? err, {
-          code: e?.code,
-          details: e?.details,
-          hint: e?.hint,
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadSuppliers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const [suppliers] = useState<Supplier[]>(initialSuppliers)
 
   const {
     searchQuery,
@@ -154,7 +81,7 @@ export default function SuppliersPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('suppliersPage.totalSuppliers')}</p>
-              <p className="text-2xl font-bold tabular-nums">{isLoading ? '—' : stats.total}</p>
+              <p className="text-2xl font-bold tabular-nums">{stats.total}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border border-success/30 bg-success/5 p-4">
@@ -163,9 +90,7 @@ export default function SuppliersPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('suppliersPage.verified')}</p>
-              <p className="text-2xl font-bold tabular-nums text-success">
-                {isLoading ? '—' : stats.verified}
-              </p>
+              <p className="text-2xl font-bold tabular-nums text-success">{stats.verified}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
@@ -174,7 +99,7 @@ export default function SuppliersPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('suppliersPage.countries')}</p>
-              <p className="text-2xl font-bold tabular-nums">{isLoading ? '—' : stats.countries}</p>
+              <p className="text-2xl font-bold tabular-nums">{stats.countries}</p>
             </div>
           </div>
         </div>
@@ -308,22 +233,14 @@ export default function SuppliersPage() {
 
         {/* Result count */}
         <p className="mb-4 text-sm text-muted-foreground">
-          {isLoading
-            ? t('suppliersPage.loading')
-            : `${filteredSuppliers.length} ${filteredSuppliers.length === 1 ? t('suppliersPage.supplierOne') : t('suppliersPage.supplierMany')}`}
+          {filteredSuppliers.length}{' '}
+          {filteredSuppliers.length === 1
+            ? t('suppliersPage.supplierOne')
+            : t('suppliersPage.supplierMany')}
         </p>
 
         {/* Grid */}
-        {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="h-72 animate-pulse rounded-2xl border-2 border-border bg-muted/40"
-              />
-            ))}
-          </div>
-        ) : filteredSuppliers.length === 0 ? (
+        {filteredSuppliers.length === 0 ? (
           <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
               <Building2 className="h-6 w-6 text-muted-foreground" aria-hidden />
@@ -347,7 +264,7 @@ export default function SuppliersPage() {
         )}
 
         {/* Bottom CTA */}
-        {!isLoading && suppliers.length > 0 && (
+        {suppliers.length > 0 && (
           <div className="mt-10 flex justify-center">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Package className="h-4 w-4" aria-hidden />

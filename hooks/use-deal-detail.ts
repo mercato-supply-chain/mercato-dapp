@@ -32,7 +32,7 @@ export function useDealDetail(dealId: string | undefined) {
         *,
         milestones(*),
         pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount, address),
-        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name, address),
+        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
         supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
       `,
       )

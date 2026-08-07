@@ -19,7 +19,9 @@
     "email": "Correo",
     "notSet": "Sin definir",
     "buyer": "Comprador",
-    "supplier": "Proveedor"
+    "supplier": "Proveedor",
+    "verified": "Verificado",
+    "verifiedCompanyTooltip": "Identidad y datos de la empresa verificados por Mercato"
   },
   "locale": {
     "label": "Idioma",

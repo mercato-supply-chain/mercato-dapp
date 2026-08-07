@@ -20,6 +20,8 @@ import { DealFactRow } from '@/components/deals/deal-fact-row'
 import { StepIndicator } from '@/components/ramp/step-indicator'
 import { VaultToDealAllocator } from '@/components/vault-to-deal-allocator'
 import { useDefindex } from '@/hooks/useDefindex'
+import { useWallet } from '@/hooks/use-wallet'
+import { parseWalletUsdcBalance } from '@/lib/mercato-wallet'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import {
@@ -60,7 +62,12 @@ export function DealFundDialog({
   triggerSize = 'lg',
 }: DealFundDialogProps) {
   const { t, messages } = useI18n()
-  const { walletBalance, refreshBalances } = useDefindex()
+  const { balances, refreshBalance } = useWallet()
+  const { refreshBalances } = useDefindex()
+  const refreshBalanceRef = React.useRef(refreshBalance)
+  const refreshBalancesRef = React.useRef(refreshBalances)
+  refreshBalanceRef.current = refreshBalance
+  refreshBalancesRef.current = refreshBalances
   const [step, setStep] = React.useState(1)
 
   const rate = deal.yieldAPR ?? 0
@@ -73,7 +80,8 @@ export function DealFundDialog({
     ? getLocalizedCategoryLabel(deal.category, messages)
     : null
 
-  const hasEnoughFunds = walletBalance >= fundingTotal
+  const walletUsdcBalance = parseWalletUsdcBalance(balances)
+  const hasEnoughFunds = walletUsdcBalance >= fundingTotal
   const progress = (step / TOTAL_STEPS) * 100
 
   React.useEffect(() => {
@@ -81,8 +89,10 @@ export function DealFundDialog({
   }, [open])
 
   React.useEffect(() => {
-    if (open && isConnected) void refreshBalances()
-  }, [open, isConnected, refreshBalances])
+    if (!open || !isConnected) return
+    void refreshBalanceRef.current()
+    void refreshBalancesRef.current()
+  }, [open, isConnected])
 
   const handleNext = () => {
     if (step < TOTAL_STEPS) setStep((current) => current + 1)
@@ -231,7 +241,7 @@ export function DealFundDialog({
                   <div className="rounded-lg border border-border bg-muted/30 p-4">
                     <p className="text-sm font-medium">{t('dealDetail.fundWizardWalletBalance')}</p>
                     <p className="mt-1 text-2xl font-bold tabular-nums">
-                      {formatUSDC(walletBalance)}
+                      {formatUSDC(walletUsdcBalance)}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('dealDetail.fundWizardRequired', {

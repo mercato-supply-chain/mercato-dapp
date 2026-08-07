@@ -70,9 +70,9 @@ export function useCreateDealForm(
     .map((sid) => {
       const product = combinedProducts.find((p) => p.supplier_id === sid)
       const sup = product?.supplier
-      return sup ? { id: sid, company_name: sup.company_name ?? '', email: sup.email, address: sup.address, logo_url: sup.logo_url } : null
+      return sup ? { id: sid, company_name: sup.company_name ?? '', logo_url: sup.logo_url } : null
     })
-    .filter(Boolean) as { id: string; company_name: string; email?: string; address?: string; logo_url?: string | null }[]
+    .filter(Boolean) as { id: string; company_name: string; logo_url?: string | null }[]
 
   const productsForSupplier = formData.supplierId
     ? combinedProducts.filter(
@@ -145,7 +145,7 @@ export function useCreateDealForm(
         ...prev,
         supplierId,
         supplierName: sup.company_name ?? '',
-        supplierContact: sup.email ?? sup.address ?? '',
+        supplierContact: '',
         productId: '',
       }))
     }

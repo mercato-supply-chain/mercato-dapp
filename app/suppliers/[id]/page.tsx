@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
@@ -7,9 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Mail,
-  MapPin,
-  Phone,
   Package,
   ArrowLeft,
   ArrowRight,
@@ -32,6 +28,9 @@ import {
 } from '@/lib/i18n/server'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
 import { ProductImage } from '@/components/media/product-image'
+import { fetchPublicSupplier } from '@/lib/suppliers/directory'
+import { createServiceClient } from '@/lib/supabase/service'
+import { VerifiedBadge } from '@/components/verified-badge'
 
 type ProductRow = {
   id: string
@@ -67,22 +66,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: company } = await supabase
-    .from('supplier_companies')
-    .select('company_name, bio, full_name, contact_name')
-    .eq('id', id)
-    .single()
-
-  if (!company) {
-    return {
-      title: 'Supplier Not Found | Mercato',
-    }
+  const profile = await fetchPublicSupplier(id)
+  if (!profile) {
+    return { title: 'Supplier Not Found | Mercato' }
   }
 
-  const displayName = company.company_name || company.full_name || company.contact_name || 'Supplier'
-  const desc = company.bio || `Supplier profile for ${displayName} on Mercato.`
+  const displayName =
+    profile.company_name || profile.full_name || profile.contact_name || 'Supplier'
+  const desc = profile.bio || `Supplier profile for ${displayName} on Mercato.`
 
   return {
     title: `${displayName} | Mercato Suppliers`,
@@ -108,30 +99,22 @@ export default async function SupplierDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const serviceSupabase = createServiceClient()
   const m = await getServerDictionary()
   const locale = await getServerLocale()
 
-  const { data: company, error: companyError } = await supabase
-    .from('supplier_companies')
-    .select(
-      'id, owner_id, company_name, bio, full_name, contact_name, phone, address, categories, products, verified, country, sector, logo_url'
-    )
-    .eq('id', id)
-    .single()
+  const company = await fetchPublicSupplier(id)
+  if (!company) notFound()
 
-  if (companyError || !company) notFound()
-
-  const [{ data: ownerProfile }, { data: products }, { count: dealsCount }, { data: recentDeals }] =
+  const [{ data: products }, { count: dealsCount }, { data: recentDeals }] =
     await Promise.all([
-      supabase.from('profiles').select('email').eq('id', company.owner_id).single(),
-      supabase
+      serviceSupabase
         .from('supplier_products')
         .select('id, name, category, price_per_unit, description, minimum_order, delivery_time, image_url')
         .eq('supplier_id', id)
         .order('name'),
-      supabase.from('deals').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
-      supabase
+      serviceSupabase.from('deals').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+      serviceSupabase
         .from('deals')
         .select('id, title, product_name, status, amount, created_at')
         .eq('supplier_id', id)
@@ -145,7 +128,7 @@ export default async function SupplierDetailPage({
   const catalogCategories = [
     ...new Set(productList.map((p) => p.category).filter(Boolean)),
   ] as string[]
-  const profile = { ...company, email: ownerProfile?.email ?? null, categories: catalogCategories }
+  const profile = { ...company, categories: catalogCategories }
   const displayName =
     company.company_name || company.full_name || company.contact_name || tr(m, 'supplierDetail.fallbackSupplier')
 
@@ -219,12 +202,6 @@ export default async function SupplierDetailPage({
               />
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  {profile.verified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success ring-1 ring-success/20">
-                      <CheckCircle2 className="h-3 w-3" aria-hidden />
-                      {tr(m, 'supplierDetail.verified')}
-                    </span>
-                  )}
                   {profile.sector && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Briefcase className="h-3.5 w-3.5" aria-hidden />
@@ -238,7 +215,15 @@ export default async function SupplierDetailPage({
                     </span>
                   )}
                 </div>
-                <h1 className="text-3xl font-bold">{displayName}</h1>
+                <h1 className="flex items-center gap-2 text-3xl font-bold">
+                  <span>{displayName}</span>
+                  {profile.verified ? (
+                    <VerifiedBadge
+                      label={tr(m, 'common.verifiedCompanyTooltip')}
+                      variant="icon"
+                    />
+                  ) : null}
+                </h1>
               </div>
             </div>
 
@@ -366,38 +351,6 @@ export default async function SupplierDetailPage({
 
           {/* Sidebar */}
           <div className="space-y-5">
-            {/* Contact */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{tr(m, 'supplierDetail.contactTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {profile.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <a href={`mailto:${profile.email}`} className="truncate text-accent hover:underline">
-                      {profile.email}
-                    </a>
-                  </div>
-                )}
-                {profile.phone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4 shrink-0" aria-hidden />
-                    <span>{profile.phone}</span>
-                  </div>
-                )}
-                {profile.address && (
-                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span className="font-mono text-xs break-all">{profile.address}</span>
-                  </div>
-                )}
-                {!profile.email && !profile.phone && !profile.address && (
-                  <p className="text-sm text-muted-foreground">{tr(m, 'supplierDetail.noContact')}</p>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Recent deals */}
             <Card>
               <CardHeader className="pb-3">

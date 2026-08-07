@@ -54,10 +54,7 @@ export function dealToFormData(
 ): CreateDealFormData {
   const matched = findCatalogProductForDeal(deal, products)
   const supplierProduct = products.find((p) => p.supplier_id === deal.supplierId)
-  const supplierContact =
-    supplierProduct?.supplier?.email ??
-    supplierProduct?.supplier?.address ??
-    ''
+  const supplierContact = ''
 
   return {
     category: deal.category ?? matched?.category ?? '',

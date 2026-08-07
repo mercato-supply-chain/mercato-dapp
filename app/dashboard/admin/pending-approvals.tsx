@@ -238,10 +238,6 @@ export function PendingApprovals({
 
   const handleAddMilestone = async (item: PendingApprovalItem) => {
     if (!walletInfo?.address || !item.escrowContractAddress) return
-    if (!item.investorAddress) {
-      toast.error(t('adminCreateEscrow.investorMissing'))
-      return
-    }
     const remaining = item.remainingToSchedule ?? 0
     const parsed = Number.parseFloat(
       addAmounts[item.dealId] ?? String(remaining > 0 ? remaining : item.milestoneAmount),
@@ -256,7 +252,6 @@ export function PendingApprovals({
         dealId: item.dealId,
         contractId: item.escrowContractAddress,
         adminAddress: walletInfo.address,
-        investorAddress: item.investorAddress,
         amount: parsed,
         provider,
       })
@@ -504,7 +499,6 @@ export function PendingApprovals({
                             milestoneTitle: item.milestoneTitle,
                             milestoneIndex: item.milestoneIndex,
                             milestoneAmount: item.milestoneAmount,
-                            investorAddress: item.investorAddress ?? null,
                             pymeAddress: item.pymeAddress ?? null,
                           })
                         }

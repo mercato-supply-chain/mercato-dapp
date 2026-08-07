@@ -19,7 +19,9 @@
     "email": "Email",
     "notSet": "Not set",
     "buyer": "Buyer",
-    "supplier": "Supplier"
+    "supplier": "Supplier",
+    "verified": "Verified",
+    "verifiedCompanyTooltip": "Identity and company details verified by Mercato"
   },
   "locale": {
     "label": "Language",

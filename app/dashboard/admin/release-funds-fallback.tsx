@@ -265,7 +265,6 @@ export function ReleaseFundsFallback({
                           milestoneTitle: item.milestoneTitle,
                           milestoneIndex: item.milestoneIndex,
                           milestoneAmount: item.milestoneAmount,
-                          investorAddress: item.investorAddress ?? null,
                           pymeAddress: item.pymeAddress ?? null,
                         })
                       }

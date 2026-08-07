@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { useDefindex } from '@/hooks/useDefindex'
 import { useWallet } from '@/hooks/use-wallet'
+import { parseWalletUsdcBalance } from '@/lib/mercato-wallet'
 
 export interface VaultToDealAllocatorProps {
   /** USDC amount needed to fund the deal */
@@ -47,9 +48,8 @@ export function VaultToDealAllocator({
   onWithdrawComplete,
   className,
 }: VaultToDealAllocatorProps) {
-  const { walletInfo, isConnected, canSignTransactions } = useWallet()
+  const { walletInfo, isConnected, canSignTransactions, balances } = useWallet()
   const {
-    walletBalance,
     vaultBalance,
     vaultMeta,
     isLoadingBalances,
@@ -60,9 +60,10 @@ export function VaultToDealAllocator({
   const [step, setStep] = React.useState<Step>('idle')
   const [error, setError] = React.useState<string | null>(null)
 
-  const hasEnoughInWallet = walletBalance >= dealAmount
+  const walletUsdcBalance = parseWalletUsdcBalance(balances)
+  const hasEnoughInWallet = walletUsdcBalance >= dealAmount
   const hasEnoughInVault = vaultBalance >= dealAmount
-  const shortfall = Math.max(0, dealAmount - walletBalance)
+  const shortfall = Math.max(0, dealAmount - walletUsdcBalance)
   const canWithdraw =
     isConnected &&
     canSignTransactions &&
@@ -133,26 +134,26 @@ export function VaultToDealAllocator({
               <Sprout className="h-3.5 w-3.5 text-emerald-500" aria-hidden />
               In vault
             </div>
-            <p className="text-base font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <div className="text-base font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
               {isLoadingBalances ? (
                 <Skeleton className="h-5 w-16 inline-block" />
               ) : (
                 formatCurrency(vaultBalance)
               )}
-            </p>
+            </div>
           </div>
           <div className="rounded-md bg-muted/40 p-3">
             <div className="mb-0.5 flex items-center gap-1.5 text-muted-foreground">
               <Wallet className="h-3.5 w-3.5 text-blue-500" aria-hidden />
               In wallet
             </div>
-            <p className="text-base font-semibold tabular-nums text-blue-600 dark:text-blue-400">
+            <div className="text-base font-semibold tabular-nums text-blue-600 dark:text-blue-400">
               {isLoadingBalances ? (
                 <Skeleton className="h-5 w-16 inline-block" />
               ) : (
-                formatCurrency(walletBalance)
+                formatCurrency(walletUsdcBalance)
               )}
-            </p>
+            </div>
           </div>
         </div>
 

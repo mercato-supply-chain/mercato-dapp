@@ -269,7 +269,6 @@ export function mapDealFromDb(row: DealRow): Deal {
         : undefined,
     investorName: investorName ?? undefined,
     investorId: row.investor_id ?? undefined,
-    investorAddress: row.investor?.address?.trim() || undefined,
     description: row.description ?? undefined,
     category: row.category ?? undefined,
     fundingStatus,

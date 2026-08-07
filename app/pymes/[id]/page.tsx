@@ -6,8 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge, badgeVariants } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Mail,
-  Phone,
   ArrowLeft,
   TrendingUp,
   Globe,
@@ -25,6 +23,9 @@ import { ReputationSummaryCard } from '@/components/reputation-summary-card'
 import { dealStatusLabel, getServerDictionary, tr } from '@/lib/i18n/server'
 import { aggregateDealsToStats, computePymeReputation } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
+import { VerifiedBadge } from '@/components/verified-badge'
+import { fetchPublicPymeProfile } from '@/lib/pymes/directory'
+import { createServiceClient } from '@/lib/supabase/service'
 
 type DealRow = {
   id: string
@@ -52,6 +53,37 @@ function getInitials(name: string): string {
     .join('') || '?'
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const profile = await fetchPublicPymeProfile(id)
+  if (!profile) {
+    return { title: 'PyME Not Found | Mercato' }
+  }
+  const displayName =
+    profile.company_name || profile.full_name || profile.contact_name || 'PyME'
+  const desc = profile.bio || `PyME profile for ${displayName} on Mercato.`
+  return {
+    title: `${displayName} | Mercato PyMEs`,
+    description: desc,
+    openGraph: {
+      title: `${displayName} | Mercato`,
+      description: desc,
+      type: 'website',
+    },
+    alternates: {
+      canonical: `/pymes/${id}`,
+      languages: {
+        en: `/pymes/${id}?lang=en`,
+        es: `/pymes/${id}?lang=es`,
+      },
+    },
+  }
+}
+
 export default async function SmbDetailPage({
   params,
 }: {
@@ -59,31 +91,26 @@ export default async function SmbDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  const serviceSupabase = createServiceClient()
   const m = await getServerDictionary()
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, address, user_type, country, sector, verified, stake_amount, referred_by_supplier_id')
-    .eq('id', id)
-    .single()
+  const profile = await fetchPublicPymeProfile(id)
+  if (!profile) notFound()
 
-  if (profileError || !profile || profile.user_type !== 'pyme') {
-    notFound()
-  }
-
-  const dealsPromise = supabase
+  const dealsPromise = serviceSupabase
     .from('deals')
     .select('id, title, product_name, status, amount, created_at')
     .eq('pyme_id', id)
     .order('created_at', { ascending: false })
   const reputationPromise = getReputation(supabase, id)
-  const referringSupplierPromise = profile.referred_by_supplier_id
-    ? supabase
-        .from('supplier_companies')
-        .select('id, company_name')
-        .eq('id', profile.referred_by_supplier_id)
-        .maybeSingle()
-    : null
+  const referringSupplierPromise =
+    'referred_by_supplier_id' in profile && profile.referred_by_supplier_id
+      ? serviceSupabase
+          .from('supplier_companies')
+          .select('id, company_name')
+          .eq('id', profile.referred_by_supplier_id)
+          .maybeSingle()
+      : null
 
   const [{ data: allDeals }, reputation, referringSupplierResult] = await Promise.all([
     dealsPromise,
@@ -143,13 +170,15 @@ export default async function SmbDetailPage({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{displayName}</h1>
-                {profile.verified && (
-                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {tr(m, 'smbDetail.verified')}
-                  </Badge>
-                )}
+                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  <span>{displayName}</span>
+                  {profile.verified ? (
+                    <VerifiedBadge
+                      label={tr(m, 'common.verifiedCompanyTooltip')}
+                      variant="icon"
+                    />
+                  ) : null}
+                </h1>
                 {referringSupplier && (
                   <Link
                     href={`/suppliers/${referringSupplier.id}`}
@@ -254,89 +283,51 @@ export default async function SmbDetailPage({
 
         <ReputationSummaryCard reputation={reputation} className="mb-8" />
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          {/* Contact & details */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">{tr(m, 'smbDetail.contactDetailsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {profile.email && (
-                <div className="flex items-center gap-2.5 text-sm">
-                  <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <a
-                    href={`mailto:${profile.email}`}
-                    className="truncate text-primary hover:underline"
-                  >
-                    {profile.email}
-                  </a>
-                </div>
-              )}
-              {profile.phone && (
-                <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4 shrink-0" aria-hidden />
-                  <span>{profile.phone}</span>
-                </div>
-              )}
-              {profile.address && (
-                <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Wallet className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
-                  <span className="font-mono text-xs break-all">{profile.address}</span>
-                </div>
-              )}
-              {!profile.email && !profile.phone && !profile.address && (
-                <p className="text-sm text-muted-foreground">{tr(m, 'smbDetail.noContact')}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Deals */}
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="h-4 w-4" aria-hidden />
-                {tr(m, 'smbDetail.dealsTitle')}
-              </CardTitle>
-              <CardDescription>{tr(m, 'smbDetail.dealsDescription')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {dealsList.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-sm text-muted-foreground">{tr(m, 'smbDetail.noDealsYet')}</p>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {dealsList.map((d) => (
-                    <li key={d.id}>
-                      <Link
-                        href={`/deals/${d.id}`}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                      >
-                        <span className="font-medium">
-                          {d.product_name || d.title || tr(m, 'smbDetail.dealFallback')}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4" aria-hidden />
+              {tr(m, 'smbDetail.dealsTitle')}
+            </CardTitle>
+            <CardDescription>{tr(m, 'smbDetail.dealsDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dealsList.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-muted-foreground">{tr(m, 'smbDetail.noDealsYet')}</p>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {dealsList.map((d) => (
+                  <li key={d.id}>
+                    <Link
+                      href={`/deals/${d.id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                    >
+                      <span className="font-medium">
+                        {d.product_name || d.title || tr(m, 'smbDetail.dealFallback')}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="tabular-nums text-muted-foreground">
+                          {formatCurrency(d.amount)}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="tabular-nums text-muted-foreground">
-                            {formatCurrency(d.amount)}
-                          </span>
-                          <Badge variant={STATUS_BADGE_VARIANT[d.status] ?? 'outline'} className="text-xs">
-                            {dealStatusLabel(m, d.status)}
-                          </Badge>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {totalDeals > 10 && (
-                <p className="mt-4 text-center text-xs text-muted-foreground">
-                  {tr(m, 'smbDetail.showingLatest', { total: totalDeals })}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                        <Badge variant={STATUS_BADGE_VARIANT[d.status] ?? 'outline'} className="text-xs">
+                          {dealStatusLabel(m, d.status)}
+                        </Badge>
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {totalDeals > 10 && (
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                {tr(m, 'smbDetail.showingLatest', { total: totalDeals })}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
       </div>
     </div>

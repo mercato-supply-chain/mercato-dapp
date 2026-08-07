@@ -87,7 +87,6 @@ export interface Deal {
   pymeStakeAmount?: number
   investorName?: string
   investorId?: string
-  investorAddress?: string
   description?: string
   category?: string
   yieldAPR?: number
