@@ -38,13 +38,13 @@ flowchart TB
 
   subgraph Ramps["Fiat On/Off Ramps"]
     Etherfuse[Etherfuse]
-    AlfredPay[Alfred Pay]
-    BlindPay[BlindPay]
+    MoneyGram[MoneyGram Ramps\nSEP-10 · SEP-24]
   end
 
   subgraph WalletProviders["Wallet Providers"]
     SWK[Stellar Wallets Kit\nFreighter · Albedo]
     Pollar[Pollar\nEmbedded wallet]
+    Privy[Privy\nEmbedded wallet · planned]
   end
 
   subgraph Yield["Yield Vaults"]
@@ -60,19 +60,20 @@ flowchart TB
   API --> Supabase
   Next --> SWK
   Next --> Pollar
+  Next --> Privy
   Next --> Trustless
   Next --> DeFindex
   DeFindex --> StellarNet
   API --> Etherfuse
-  API --> AlfredPay
-  API --> BlindPay
+  API --> MoneyGram
   Trustless --> StellarNet
   SWK --> StellarNet
   Pollar --> StellarNet
+  Privy --> StellarNet
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**; **investor funding** pays the supplier directly (plus a 1% platform fee); **repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**. Users connect **Stellar Wallets Kit** (Freighter, Albedo) or **Pollar** embedded wallets; TW escrow signing requires SWK. Users move fiat to/from Stellar assets via configurable **ramp providers** (Etherfuse, AlfredPay, BlindPay). **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** for investor/PyME treasury at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**; **investor funding** pays the supplier directly (plus a 1% platform fee); **repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. Users move fiat to/from Stellar assets through **Etherfuse** and the planned **MoneyGram Ramps** integration. MoneyGram uses SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** for investor/PyME treasury at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
 
 ---
 
@@ -162,7 +163,6 @@ flowchart LR
     DashAdminVault["/dashboard/admin/vault"]
     DashAdminLeads["/dashboard/admin/leads"]
     Ramp["/dashboard/ramp"]
-    BlindPaySetup["/dashboard/ramp/blindpay-setup"]
     SupplierProfile["/dashboard/supplier-profile"]
     Settings["/settings"]
   end
@@ -177,7 +177,6 @@ flowchart LR
   Dash --> DashAdminApprovals
   Dash --> Ramp
   Dash --> CreateDeal
-  Ramp --> BlindPaySetup
 ```
 
 **Redirects:** `/marketplace` and `/orders` → `/deals`. `/dashboard/admin` → `/dashboard/admin/approvals`.
@@ -201,7 +200,7 @@ flowchart LR
 | `/auth/update-password` | Public | Set new password |
 | `/auth/callback` | API | OAuth / magic-link callback |
 | `/dashboard` | Auth | Role-based overview (stats, quick actions, recent deals) |
-| `/dashboard/wallets` | Auth | Connect SWK or Pollar; balances; Pollar activation |
+| `/dashboard/wallets` | Auth | Connect SWK or Pollar; Privy support planned |
 | `/dashboard/vault` | Auth | DeFindex user vault (investor, PyME) |
 | `/dashboard/admin/approvals` | Admin | Create repayment escrows for order-confirmed deals |
 | `/dashboard/admin/releases` | Admin | Release funded repayment milestones |
@@ -211,7 +210,6 @@ flowchart LR
 | `/dashboard/deliveries` | Auth | Supplier delivery management |
 | `/dashboard/investments` | Auth | Investor portfolio view |
 | `/dashboard/ramp` | Auth | Add funds / cash out (fiat ↔ USDC) |
-| `/dashboard/ramp/blindpay-setup` | Auth | BlindPay onboarding wizard (ToS, KYC, wallet) |
 | `/dashboard/supplier-profile` | Auth | Manage supplier companies and products |
 | `/investors` | Public | Investor directory |
 | `/investors/[id]` | Public | Investor public profile |
@@ -297,12 +295,13 @@ flowchart TB
     StellarSDK["@stellar/stellar-sdk"]
     WalletKit["@creit.tech/stellar-wallets-kit"]
     PollarSDK["@pollar/react"]
+    PrivySDK["Privy SDK\nplanned"]
     DeFindexSDK["@defindex/sdk"]
   end
 
   subgraph RampLib["Ramp Integration"]
     AnchorFactory["anchor-factory.ts"]
-    Anchors["Anchor clients\n(Etherfuse, AlfredPay, BlindPay)"]
+    Anchors["Ramp adapters\n(Etherfuse, MoneyGram planned)"]
     SEP["SEP protocol modules\n(1, 6, 10, 12, 24, 31, 38)"]
   end
 
@@ -319,6 +318,7 @@ flowchart TB
   Next --> StellarSDK
   Next --> WalletKit
   Next --> PollarSDK
+  Next --> PrivySDK
   Next --> DeFindexSDK
 ```
 
@@ -329,7 +329,7 @@ flowchart TB
 | **Theming** | next-themes (light / dark) | 0.4 |
 | **Auth & DB** | Supabase (Auth, Postgres, SSR client) | 2.47 |
 | **Escrow** | Trustless Work API (@trustless-work/escrow) | 3.0 |
-| **Wallets** | Stellar Wallets Kit (Freighter, Albedo) + Pollar embedded | 1.9 / 0.6 |
+| **Wallets** | Stellar Wallets Kit (Freighter, Albedo) + Pollar embedded + Privy embedded (planned) | 1.9 / 0.6 / TBD |
 | **Stellar** | @stellar/stellar-sdk | 14.5 |
 | **Yield vaults (Soroban)** | [DeFindex](https://docs.defindex.io) (@defindex/sdk) — user vault + admin monitor | 0.3 |
 | **i18n** | en/es dictionaries, locale cookie | — |
@@ -351,7 +351,7 @@ mercato-dapp/
 │   ├── create-deal/              # Multi-step deal creation
 │   ├── dashboard/
 │   │   ├── page.tsx              # Role-based overview
-│   │   ├── wallets/              # SWK + Pollar connect, balances
+│   │   ├── wallets/              # SWK + Pollar; Privy target integration
 │   │   ├── vault/                # DeFindex user vault
 │   │   ├── admin/
 │   │   │   ├── approvals/        # Create repayment escrows
@@ -361,7 +361,7 @@ mercato-dapp/
 │   │   ├── deals/                # Supplier deal list
 │   │   ├── deliveries/           # Delivery management
 │   │   ├── investments/          # Investor portfolio
-│   │   ├── ramp/                 # Fiat on/off ramp + blindpay-setup
+│   │   ├── ramp/                 # Fiat on/off ramp; MoneyGram target UI
 │   │   └── supplier-profile/     # Company & product management
 │   ├── blog/, events/, investors/, pymes/, suppliers/
 │   ├── settings/
@@ -386,13 +386,13 @@ mercato-dapp/
 │   ├── trustless/                # TW config, wallet-kit, trustlines
 │   ├── defindex/                 # Vault config, monitor, math, route helpers
 │   ├── anchor-factory.ts, ramp-api.ts
-│   ├── anchors/                  # Etherfuse, AlfredPay, BlindPay + SEP modules
+│   ├── anchors/                  # Etherfuse + SEP modules; MoneyGram target adapter
 │   ├── admin/, dashboard/, investments/
 │   ├── i18n/                     # en/es dictionaries, locale
 │   └── supabase/                 # Client, server, service, proxy
 │
 ├── hooks/                        # use-wallet, use-repayment-escrow, use-deal-detail, useDefindex, …
-├── providers/                    # wallet-provider, pollar-provider
+├── providers/                    # wallet-provider, pollar-provider; Privy target provider
 ├── middleware.ts                 # Supabase session + locale cookie
 └── supabase/migrations/          # Database schema (source of truth)
 ```
@@ -473,7 +473,7 @@ sequenceDiagram
 
 **Repayment status lifecycle:** `none` → `order_confirmed` → `escrow_initialized` → `funding` → `ready_to_release` → `partially_released` → `released` (deal completed).
 
-### 5.4 Wallet Providers (Stellar Wallets Kit + Pollar)
+### 5.4 Wallet Providers (Stellar Wallets Kit + Pollar + Privy)
 
 ```mermaid
 flowchart TB
@@ -488,6 +488,7 @@ flowchart TB
     PP["pollar-provider.tsx"]
     SWK["use-external-wallet.ts\nFreighter · Albedo"]
     Pollar["use-pollar-wallet.ts\n@pollar/react"]
+    Privy["Privy adapter\nplanned"]
   end
 
   subgraph Persist["Persistence"]
@@ -499,6 +500,7 @@ flowchart TB
   NavWallet --> WP
   WP --> SWK
   WP --> PP
+  WP --> Privy
   WP --> LS
   Pollar --> Profile
 ```
@@ -507,8 +509,11 @@ flowchart TB
 |----------|-----|---------|-----------|--------------|
 | Stellar Wallets Kit | `stellar-wallets-kit` | `signTransaction` via `lib/trustless/wallet-kit.ts` | ✅ Required | ✅ |
 | Pollar embedded | `pollar` | `signAndSubmitTx` via `@pollar/react` | ❌ Shows limitation message | ✅ |
+| Privy embedded (planned) | `privy` (proposed) | Capability spike required for Stellar XDR signing | ⚠️ Not validated | ⚠️ Not validated |
 
 Pollar sync: `POST /api/auth/pollar-sync`. Activation: `POST /api/pollar/activate`. Limitation text: `PollarWalletKitLimitations` in `lib/mercato-wallet.ts`.
+
+Privy is additive: it must not replace existing SWK or Pollar accounts. Before enabling a Privy capability, test account creation/recovery, Stellar address validation, classic transaction XDR signing, SEP-10 challenge signing, and Soroban authorization on the configured network. Persisting multiple wallets per user will require a normalized wallet record (for example, `profile_wallets`) rather than overloading the current Pollar-oriented profile columns.
 
 ### 5.5 DeFindex Yield Vaults
 
@@ -553,168 +558,149 @@ User signs deposit/withdraw XDR client-side; server submits via `api/defindex/su
 
 ## 6. Ramp Providers (Fiat On/Off)
 
-MERCATO supports **multiple ramp providers**. Users choose one in the UI; the app proxies all anchor calls through **API routes** so API keys stay server-side.
+The target ramp architecture supports **Etherfuse** and **MoneyGram Ramps**. MoneyGram replaces the other planned providers and must be implemented as a Stellar protocol integration, not forced into Etherfuse's quote and bank-account API model. Its hosted flow uses **SEP-10** for wallet authentication and **SEP-24** for interactive USDC deposit and withdrawal; MoneyGram owns KYC, compliance, cash collection/payout, and settlement.
 
-### 6.1 Architecture
+MoneyGram is **planned, not implemented in the current repository**. Partner allowlisting, sandbox certification, KYB, and legal agreements are launch prerequisites.
+
+### 6.1 Target Architecture
 
 ```mermaid
 flowchart TB
-  subgraph UI["Ramp UI (components/ramp/)"]
-    Page["page.tsx\nOrchestrator"]
-    Provider["RampProvider\nShared context"]
-    OnRamp["OnRampForm\nFiat → USDC"]
-    OffRamp["OffRampForm\nUSDC → Fiat"]
-    Bank["BankAccountSelector"]
-    Shared["QuoteCard · StepIndicator\nCopyButton · ProviderBadges\nWalletBanner · ProviderSelector"]
+  subgraph UI["Ramp UI"]
+    Page["/dashboard/ramp"]
+    Provider["RampProvider\nShared orchestration"]
+    EtherfuseUI["Etherfuse forms"]
+    MoneyGramUI["MoneyGram interactive UI\nwebview or in-app browser"]
+    Status["Transaction status\nrecovery link · pickup reference"]
   end
 
-  subgraph API["API Routes (server)"]
-    ConfigAPI["/api/ramp/config"]
-    CustomerAPI["/api/ramp/customer"]
-    QuoteAPI["/api/ramp/quote"]
-    OnRampAPI["/api/ramp/on-ramp"]
-    OffRampAPI["/api/ramp/off-ramp"]
-    FiatAPI["/api/ramp/fiat-accounts"]
-    BlindPayAPIs["/api/ramp/blindpay/*"]
+  subgraph Server["MERCATO server"]
+    ExistingAPI["Existing /api/ramp/*"]
+    MoneyGramAPI["/api/ramp/moneygram/*\nplanned"]
+    EtherfuseAdapter["Etherfuse adapter"]
+    SEPAdapter["MoneyGram SEP adapter\nSEP-1 · SEP-10 · SEP-24"]
+    RampTransactions["ramp_transactions\nplanned"]
   end
 
-  subgraph Factory["Anchor Factory (lib/)"]
-    AnchorFactory["anchor-factory.ts\ngetConfiguredProviders()\ngetAnchor(providerId)"]
-    RampAPI["ramp-api.ts\nrequireAuthAndAnchor()"]
-  end
-
-  subgraph Anchors["Anchor Clients (lib/anchors/)"]
-    Etherfuse["EtherfuseClient"]
-    AlfredPay["AlfredPayClient"]
-    BlindPay["BlindPayClient"]
-    AnchorInterface["Anchor interface\n(types.ts)"]
+  subgraph External["External services"]
+    Etherfuse["Etherfuse"]
+    TOML["MoneyGram stellar.toml\nendpoint discovery"]
+    MoneyGram["MoneyGram anchor + hosted UI"]
+    Stellar["Stellar\nclassic USDC"]
   end
 
   Page --> Provider
-  Provider --> OnRamp
-  Provider --> OffRamp
-  OffRamp --> Bank
-  OnRamp --> Shared
-  OffRamp --> Shared
-
-  OnRamp --> CustomerAPI
-  OnRamp --> QuoteAPI
-  OnRamp --> OnRampAPI
-  OffRamp --> OffRampAPI
-  OffRamp --> FiatAPI
-
-  ConfigAPI --> AnchorFactory
-  CustomerAPI --> RampAPI --> AnchorFactory
-  QuoteAPI --> RampAPI
-  OnRampAPI --> RampAPI
-  OffRampAPI --> RampAPI
-  FiatAPI --> RampAPI
-  BlindPayAPIs --> BlindPay
-
-  AnchorFactory --> Etherfuse
-  AnchorFactory --> AlfredPay
-  AnchorFactory --> BlindPay
-  Etherfuse --> AnchorInterface
-  AlfredPay --> AnchorInterface
-  BlindPay --> AnchorInterface
+  Provider --> EtherfuseUI --> ExistingAPI --> EtherfuseAdapter --> Etherfuse
+  Provider --> MoneyGramUI
+  Provider --> Status
+  MoneyGramUI --> MoneyGramAPI --> SEPAdapter
+  SEPAdapter --> TOML
+  SEPAdapter --> MoneyGram
+  MoneyGramAPI --> RampTransactions
+  MoneyGram --> Stellar
+  Etherfuse --> Stellar
 ```
 
-### 6.2 Ramp Component Architecture
+The server binds each MoneyGram transaction ID to the authenticated MERCATO user, selected wallet address, network, and on-chain transaction hash. SEP-10 JWTs must remain short-lived and server protected; raw tokens and SEP-9/KYC fields must not appear in analytics or general logs.
 
-The ramp UI follows a **provider + variant** composition pattern:
+### 6.2 Provider Capabilities
 
-| Component | Lines | Responsibility |
-|-----------|-------|---------------|
-| `ramp-provider.tsx` | ~280 | Context provider — shared state (`config`, `customer`, `action`), actions (`ensureCustomer`, `fetchQuote`), and meta (`walletInfo`, `isConnected`) |
-| `on-ramp-form.tsx` | ~340 | On-ramp variant — amount entry, quote review, payment instructions display |
-| `off-ramp-form.tsx` | ~370 | Off-ramp variant — quote, confirm, sign & submit transaction |
-| `bank-account-selector.tsx` | ~210 | Bank account CRUD with collapsible add form |
-| `page.tsx` | ~120 | Thin orchestrator — layout, tabs, Suspense boundary |
+| Provider | Availability | Fiat rail | Stellar asset | KYC flow | Settlement model |
+|----------|--------------|-----------|---------------|----------|------------------|
+| **Etherfuse** | Current, when configured | SPEI | USDC, CETES | Provider iframe | Existing custom adapter |
+| **MoneyGram Ramps** | Planned after partner onboarding | Cash at MoneyGram agent locations | USDC | SEP-24 hosted UI | Cash-in sends USDC to the wallet; cash-out receives USDC then issues a pickup reference |
 
-Shared presentational components: `QuoteCard`, `StepIndicator`, `CopyButton`, `ProviderBadges`, `ProviderSelector`, `WalletBanner`.
+MoneyGram endpoints must be discovered from the environment's `stellar.toml` rather than hardcoded. The supplied integration guide identifies `extmgxanchor.moneygram.com` for sandbox/testnet and `mgxanchor.moneygram.com` for production. The wallet network, home domain, USDC issuer, and published signing key must agree before a transaction begins.
 
-### 6.3 Provider Capabilities
+### 6.3 MoneyGram Authentication and Interactive Flow
 
-| Provider | Region | Fiat rail | Stellar asset | KYC flow | Off-ramp signing |
-|----------|--------|-----------|---------------|----------|-----------------|
-| **Etherfuse** | Mexico | SPEI | USDC, CETES | Iframe | Deferred (poll for XDR, then sign) |
-| **Alfred Pay** | Latin America | SPEI | USDC | Form | Standard |
-| **BlindPay** | Global | Multiple | USDB | Redirect | Anchor payout submission |
+1. Confirm the selected wallet is on the configured Stellar network and has a USDC trustline.
+2. Discover the anchor's signing key, SEP-10 endpoint, and SEP-24 endpoint from SEP-1 (`stellar.toml`).
+3. Request a SEP-10 challenge, verify the anchor signature and timebounds, have the selected wallet sign it, and exchange it for a JWT.
+4. Start a SEP-24 `deposit` (cash-in) or `withdraw` (cash-out), then store the returned transaction ID.
+5. Open the returned interactive URL only from a validated MoneyGram origin.
+6. Treat `COMMIT_RESULT` as a notification and fetch authoritative SEP-24 status from the anchor.
+7. Poll with bounded backoff until a terminal state, preserving recovery through `more_info_url`.
 
-**Etherfuse, Alfred Pay, and BlindPay:** availability is driven by **environment variables**; `getConfiguredProviders()` in `anchor-factory.ts` returns only anchors with all required env vars set. All three implement the shared `Anchor` interface from `lib/anchors/types.ts`.
+For a non-custodial wallet, MERCATO must provide its allowlisted client domain and publish the matching `SIGNING_KEY` in its own `stellar.toml`. Every supported wallet provider must be tested for SEP-10 challenge signing; Privy remains disabled for this flow until that capability is proven.
 
-### 6.4 On-Ramp Data Flow
+### 6.4 MoneyGram Cash-In (Deposit)
 
 ```mermaid
 sequenceDiagram
   participant User
-  participant RampUI
-  participant API
-  participant Anchor
-  participant External
-
-  User->>RampUI: Enter amount and request quote
-  RampUI->>API: POST /api/ramp/customer
-  API->>Anchor: createCustomer()
-  Anchor->>External: Provider API
-  External-->>Anchor: customer data
-  Anchor-->>API: customer
-  API-->>RampUI: customer
-
-  RampUI->>API: GET /api/ramp/quote
-  API->>Anchor: getQuote()
-  Anchor->>External: Quote API
-  External-->>Anchor: quote data
-  Anchor-->>API: quote
-  API-->>RampUI: quote (rate, fee, expiry)
-
-  User->>RampUI: Confirm on-ramp
-  RampUI->>API: POST /api/ramp/on-ramp
-  API->>Anchor: createOnRamp()
-  Anchor->>External: Create order
-  External-->>Anchor: order details
-  Anchor-->>API: payment instructions
-  API-->>RampUI: CLABE and reference
-
-  User->>External: Send fiat via SPEI
-  External->>Stellar: Credit USDC to user wallet
-```
-
-### 6.5 Off-Ramp Data Flow (with deferred signing)
-
-```mermaid
-sequenceDiagram
-  participant User
-  participant RampUI
-  participant API
-  participant Anchor
+  participant App as MERCATO
   participant Wallet
+  participant MG as MoneyGram
   participant Stellar
 
-  User->>RampUI: Select bank, enter USDC amount
-  RampUI->>API: GET /api/ramp/quote
-  API->>Anchor: getQuote()
-  Anchor-->>RampUI: quote
-
-  User->>RampUI: Confirm cash out
-  RampUI->>API: POST /api/ramp/off-ramp
-  API->>Anchor: createOffRamp()
-  Anchor-->>RampUI: off-ramp transaction (pending)
-
-  loop Poll for signable transaction
-    RampUI->>API: GET /api/ramp/off-ramp/[id]
-    API->>Anchor: getOffRampTransaction()
-    Anchor-->>RampUI: signableTransaction (XDR)
-  end
-
-  User->>RampUI: Sign and submit
-  RampUI->>Wallet: signTransaction(XDR)
-  User->>Wallet: Approve in wallet
-  Wallet-->>RampUI: Signed XDR
-  RampUI->>Stellar: submitSignedTransaction()
-  Stellar-->>RampUI: Transaction confirmed
-  Note over User,Stellar: Provider detects on-chain transfer, sends fiat
+  User->>App: Choose cash in
+  App->>MG: Discover endpoints and request SEP-10 challenge
+  App->>Wallet: Sign verified challenge
+  Wallet-->>App: Signed challenge XDR
+  App->>MG: Exchange challenge for JWT
+  App->>MG: SEP-24 deposit (USDC)
+  MG-->>App: Interactive URL + transaction ID
+  App-->>User: Open hosted KYC and location flow
+  MG-->>App: COMMIT_RESULT
+  App->>MG: Fetch and poll authoritative status
+  User->>MG: Present confirmation and pay cash at agent
+  MG->>Stellar: Send USDC to user's wallet
+  App->>Stellar: Reconcile inbound USDC and memo
+  App-->>User: Deposit completed
 ```
+
+The user does not send USDC during cash-in. Their wallet must have a USDC trustline before settlement. The initial commit produces a confirmation code for the agent; `external_transaction_id` may not be available until later, so the app must continue polling.
+
+### 6.5 MoneyGram Cash-Out (Withdrawal)
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant App as MERCATO
+  participant Wallet
+  participant MG as MoneyGram
+  participant Stellar
+
+  User->>App: Choose cash out
+  App->>MG: SEP-10 authenticate selected wallet
+  App->>MG: SEP-24 withdraw (USDC)
+  MG-->>App: Interactive URL + transaction ID
+  App-->>User: Open hosted KYC flow
+  App->>MG: Poll transaction
+  MG-->>App: pending_user_transfer_start
+  App->>MG: Refetch authoritative transaction fields
+  App->>Wallet: Exact USDC payment XDR
+  Note over App,Wallet: destination + amount + memo + memo type
+  User->>Wallet: Review, sign, and submit
+  Wallet->>Stellar: Send classic USDC payment
+  App->>MG: Continue polling
+  MG-->>App: pending_user_transfer_complete
+  App-->>User: Show pickup reference and more_info_url
+```
+
+At `pending_user_transfer_start`, build the payment only from freshly fetched and validated fields: `withdraw_anchor_account`, `amount_in`, `withdraw_memo`, and `withdraw_memo_type`. The supplied guide requires the transfer to be initiated within 30 minutes. Store the intent and transaction hash idempotently before allowing retry so a timeout cannot create a duplicate cash-out payment.
+
+### 6.6 Status, Security, and Recovery
+
+MoneyGram status is separate from `deals.status` and `deals.repayment_status`:
+
+```text
+incomplete
+  -> pending_user_transfer_start
+  -> pending_user_transfer_complete
+  -> pending_anchor
+  -> completed
+
+terminal alternatives: refunded, expired, error, no_market, too_small, too_large
+```
+
+- Verify `event.origin` for every `postMessage`, validate its schema, and accept only expected events such as `COMMIT_RESULT`.
+- Never construct a payment from `postMessage` data; refetch the transaction from SEP-24.
+- Display the complete destination, amount, USDC issuer, and memo before signing.
+- Use `more_info_url` for transaction recovery and pre-pickup cash-out refunds.
+- Reconcile MoneyGram status with Horizon payment data and stop polling terminal transactions.
+- Exclude interactive URLs, JWTs, and KYC fields from logs, analytics, and client persistence.
 
 ---
 
@@ -730,6 +716,8 @@ flowchart LR
     SupplierProducts["supplier_products"]
     Reputations["reputations\n(trust scores, stake signals)"]
     Leads["leads\n(event form submissions)"]
+    ProfileWallets["profile_wallets\n(planned multi-provider wallets)"]
+    RampTransactions["ramp_transactions\n(planned MoneyGram state)"]
   end
 
   subgraph Stellar["Stellar Network"]
@@ -745,10 +733,10 @@ flowchart LR
 
 | Store | Owns | Source of truth for |
 |-------|------|-------------------|
-| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputations, leads, notifications | Who created what, funding tx hash, repayment lifecycle, supplier catalog, wallet metadata |
+| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputations, leads, notifications; planned wallet and ramp records | Who created what, funding tx hash, repayment lifecycle, supplier catalog, wallet metadata, and MoneyGram transaction recovery state |
 | **Stellar** | Direct funding payments, repayment escrow contracts, USDC balances | Funds movement, on-chain escrow milestones, payment receipts |
 
-The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update.
+The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update. In the target architecture, `profile_wallets` supports SWK, Pollar, and Privy coexistence, while `ramp_transactions` caches MoneyGram state; Stellar and the MoneyGram SEP-24 endpoint remain authoritative for settlement and ramp status respectively.
 
 ### 7.1 In-App Notifications
 
@@ -810,17 +798,16 @@ sequenceDiagram
 | `POLLAR_SECRET_KEY` | Server | Pollar secret key |
 | `POLLAR_WEBHOOK_SECRET` | Server | Pollar webhook signing secret |
 | `NEXT_PUBLIC_POLLAR_NETWORK` | Public | `testnet` or `mainnet` for embedded wallets |
+| Privy app/client identifier | Public where required | Planned; exact name follows the capability spike |
+| Privy app secret / webhook secret | Server | Planned; never expose through `NEXT_PUBLIC_*` |
 | `NEXT_PUBLIC_APP_URL` | Public | Canonical site URL (QR codes, links) |
 | `ETHERFUSE_API_KEY` | Server | Etherfuse API key |
 | `ETHERFUSE_BASE_URL` | Server | Etherfuse API base URL |
-| `ALFREDPAY_API_KEY` | Server | AlfredPay API key |
-| `ALFREDPAY_API_SECRET` | Server | AlfredPay API secret |
-| `ALFREDPAY_BASE_URL` | Server | AlfredPay API base URL |
-| `BLINDPAY_API_KEY` | Server | BlindPay API key |
-| `BLINDPAY_INSTANCE_ID` | Server | BlindPay instance ID |
-| `BLINDPAY_BASE_URL` | Server | BlindPay API base URL |
+| MoneyGram home domain | Server-controlled config | Planned; sandbox or production SEP-1 discovery domain |
+| MoneyGram enabled flag | Server-controlled config | Planned; expose availability only after onboarding checks pass |
+| SEP-10 client-domain signing secret | Server/KMS | Planned; corresponds to the public key in MERCATO's `stellar.toml` |
 
-Ramp providers are **opt-in**: only those with all required env vars appear in `/api/ramp/config`. Setting zero ramp env vars disables the ramp UI gracefully.
+Etherfuse remains opt-in through its server credentials. MoneyGram availability depends on an allowlisted domain, a coherent network configuration, published client-domain signing metadata, and completed partner onboarding; SEP-10/SEP-24 do not imply a public MoneyGram API key. Exact Privy and MoneyGram variable names should be finalized during implementation rather than invented in advance.
 
 ---
 
@@ -832,7 +819,7 @@ flowchart TB
     D1["PyMEs get working capital\nvia investor direct funding"]
     D2["Investors fund supplier invoices\nin USDC for short-term yield"]
     D3["Suppliers receive full payment\nup front fee-free"]
-    D4["Users ramp fiat ↔ USDC\nvia chosen anchor provider"]
+    D4["Users ramp fiat ↔ USDC\nvia Etherfuse or MoneyGram"]
     D5["Admins create and release\nmulti-release repayment escrows"]
   end
 
@@ -841,9 +828,9 @@ flowchart TB
     T2["Supabase\nAuth + Postgres"]
     T3["Trustless Work\nmulti-release repayment escrow"]
     T3c["DeFindex\nSoroban yield vaults"]
-    T4["Stellar Wallets Kit\n+ Pollar embedded"]
-    T5["Ramps\nEtherfuse · Alfred Pay · BlindPay"]
-    T6["SEP modules\n1 · 6 · 10 · 12 · 24 · 31 · 38"]
+    T4["Wallet providers\nSWK · Pollar · Privy planned"]
+    T5["Ramps\nEtherfuse · MoneyGram planned"]
+    T6["MoneyGram protocols\nSEP-1 · SEP-10 · SEP-24"]
   end
 
   What --> How
@@ -856,7 +843,10 @@ flowchart TB
 - [Trustless Work](https://docs.trustlesswork.com/) — Escrow API and Stellar integration
 - [Stellar](https://stellar.org) — Network and assets
 - [Stellar Wallets Kit](https://stellarwalletskit.dev/) — Wallet connection (Freighter, Albedo)
+- [MoneyGram Ramps on Stellar](https://developers.stellar.org/docs/tools/ramps/moneygram) — SEP-10/SEP-24 cash-in and cash-out overview
+- [SEP-10](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md) and [SEP-24](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md) — Authentication and hosted deposit/withdrawal standards
+- [Privy](https://docs.privy.io/) — Planned embedded-wallet provider; Stellar signing capabilities require validation
 - [Supabase](https://supabase.com) — Auth and database
-- [lib/anchors/README.md](../lib/anchors/README.md) — Anchor interface and ramp provider details (Etherfuse, Alfred Pay, BlindPay)
+- [lib/anchors/README.md](../lib/anchors/README.md) — Current custom anchor interface and Etherfuse details
 - [AGENTS.md](../AGENTS.md) — AI-oriented index: lifecycles, routes, signing matrix, file map
 - [DeFindex](https://docs.defindex.io) — Soroban yield vaults, strategies, SDKs, and operations
