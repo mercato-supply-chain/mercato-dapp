@@ -92,37 +92,29 @@ sequenceDiagram
   participant Investor
   participant Supplier
 
-  rect rgb(240, 248, 255)
   Note over PyME,Supplier: 1 - PyME creates deal (no escrow)
   PyME->>App: Create deal (product, supplier, terms)
   App-->>PyME: Deal published seeking funding
-  end
 
-  rect rgb(245, 255, 245)
   Note over PyME,Supplier: 2 - Select single or dual-investor funding
   Investor->>App: Browse marketplace and select deal
   alt Single-investor current flow
     Investor->>Stellar: Pay supplier invoice + 1% platform fee
   else Dual-investor planned flow
     Investor->>Trustless: Contribute partial principal to funding escrow
-    Note over App,Trustless: Up to two investors; show amount remaining
+    Note over App,Trustless: Up to two investors and amount remaining
     Trustless->>Stellar: Release full invoice after target is reached
   end
-  end
 
-  rect rgb(255, 248, 240)
   Note over PyME,Supplier: 3 - Supplier ships (paid up front)
   Supplier->>App: Fulfill order / ship goods
-  end
 
-  rect rgb(248, 245, 255)
   Note over PyME,Supplier: 4 - Admin multi-release repayment escrow
   PyME->>App: Confirm order arrived
   App->>Trustless: Admin deploys first milestone (e.g. 50%)
   PyME->>Trustless: Micro-fund until milestone covered
   Trustless->>Stellar: Admin releases milestone to investor
   App->>Trustless: Admin adds next milestone via updateEscrow
-  end
 ```
 
 ### 2.2 User Roles
