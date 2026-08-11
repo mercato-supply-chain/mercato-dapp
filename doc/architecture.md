@@ -34,6 +34,7 @@ flowchart TB
   subgraph Stellar["Stellar Ecosystem"]
     Trustless[Trustless Work API]
     StellarNet[Stellar Network]
+    ReputationContract[PyME + supplier reputation\nSoroban contract · planned]
   end
 
   subgraph Ramps["Fiat On/Off Ramps"]
@@ -52,8 +53,10 @@ flowchart TB
   end
 
   PyME --> Next
+  PyME --> ReputationContract
   Investor --> Next
   Supplier --> Next
+  Supplier --> ReputationContract
   Admin --> Next
   Next --> Middleware --> Supabase
   Next --> API
@@ -67,13 +70,14 @@ flowchart TB
   API --> Etherfuse
   API --> MoneyGram
   Trustless --> StellarNet
+  ReputationContract --> StellarNet
   SWK --> StellarNet
   Pollar --> StellarNet
   Privy --> StellarNet
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**; **investor funding** pays the supplier directly (plus a 1% platform fee); **repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. Users move fiat to/from Stellar assets through **Etherfuse** and the planned **MoneyGram Ramps** integration. MoneyGram uses SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** for investor/PyME treasury at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned dual-investor model aggregates two proportional contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for dual-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. Users move fiat to/from Stellar assets through **Etherfuse** and the planned **MoneyGram Ramps** integration. MoneyGram uses SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`; planned supplier and PyME access is gated by role-specific on-chain reputation, based on fulfillment and repayment behavior respectively. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
 
 ---
 
@@ -97,9 +101,15 @@ sequenceDiagram
   end
 
   rect rgb(245, 255, 245)
-  Note over PyME,Supplier: 2 - Investor funds supplier directly
+  Note over PyME,Supplier: 2 - Select single or dual-investor funding
   Investor->>App: Browse marketplace and select deal
-  Investor->>Stellar: Pay supplier invoice + 1% platform fee
+  alt Single-investor current flow
+    Investor->>Stellar: Pay supplier invoice + 1% platform fee
+  else Dual-investor planned flow
+    Investor->>Trustless: Contribute partial principal to funding escrow
+    Note over App,Trustless: Up to two investors; show amount remaining
+    Trustless->>Stellar: Release full invoice after target is reached
+  end
   end
 
   rect rgb(255, 248, 240)
@@ -121,9 +131,9 @@ sequenceDiagram
 
 | Role | Main actions |
 |------|-------------|
-| **PyME (Buyer)** | Create deal, choose supplier from catalog, confirm order arrival, micro-fund repayment escrow. |
-| **Investor** | Browse marketplace, fund deals in USDC (direct to supplier + 1% platform fee). Receives principal + yield from repayment milestones to their Stellar address. Optional DeFindex vault for idle capital. |
-| **Supplier** | Manage company profile and product catalog, fulfill orders. Receives full invoice payment up front (fee-free). |
+| **PyME (Buyer)** | Create deals, choose suppliers, confirm arrival, and micro-fund repayment escrows. Planned: retain DeFindex access by maintaining a qualifying on-chain repayment reputation. |
+| **Investor** | Browse marketplace and fund a full deal directly, or join the planned dual-investor escrow with a partial contribution. Receives contributed principal plus proportional yield from repayment milestones. Optional DeFindex vault for idle capital. |
+| **Supplier** | Manage company profile and product catalog, fulfill orders, and receive the full invoice payment up front (fee-free). Planned: use DeFindex when the supplier's on-chain reputation satisfies policy. |
 | **Admin** | Create multi-release repayment escrows, approve/release milestones, add subsequent milestones, resolve disputes. |
 
 ### 2.3 Application Routes
@@ -201,7 +211,7 @@ flowchart LR
 | `/auth/callback` | API | OAuth / magic-link callback |
 | `/dashboard` | Auth | Role-based overview (stats, quick actions, recent deals) |
 | `/dashboard/wallets` | Auth | Connect SWK or Pollar; Privy support planned |
-| `/dashboard/vault` | Auth | DeFindex user vault (investor, PyME) |
+| `/dashboard/vault` | Auth | DeFindex user vault (investor; reputation-qualified PyMEs and suppliers in the target model) |
 | `/dashboard/admin/approvals` | Admin | Create repayment escrows for order-confirmed deals |
 | `/dashboard/admin/releases` | Admin | Release funded repayment milestones |
 | `/dashboard/admin/vault` | Admin | DeFindex vault monitor (TVL, strategies, rebalance) |
@@ -331,7 +341,7 @@ flowchart TB
 | **Escrow** | Trustless Work API (@trustless-work/escrow) | 3.0 |
 | **Wallets** | Stellar Wallets Kit (Freighter, Albedo) + Pollar embedded + Privy embedded (planned) | 1.9 / 0.6 / TBD |
 | **Stellar** | @stellar/stellar-sdk | 14.5 |
-| **Yield vaults (Soroban)** | [DeFindex](https://docs.defindex.io) (@defindex/sdk) — user vault + admin monitor | 0.3 |
+| **Yield vaults (Soroban)** | [DeFindex](https://docs.defindex.io) (@defindex/sdk) — investor vault, planned reputation-gated PyME/supplier access, admin monitor | 0.3 |
 | **i18n** | en/es dictionaries, locale cookie | — |
 | **Validation** | Zod, react-hook-form | 3.24 / 7.54 |
 | **Ramps** | Custom anchor clients + SEP modules (lib/anchors) | — |
@@ -399,13 +409,17 @@ mercato-dapp/
 
 ---
 
-## 5. Stellar, Direct Funding, and Trustless Work (Repayment Escrow)
+## 5. Stellar Funding and Trustless Work Escrow Models
 
-**Funding is not escrowed.** Investors pay the supplier (principal) and Mercato (1% platform fee) with a classic Stellar USDC payment built in `lib/stellar/build-usdc-split-payment.ts`.
+MERCATO supports the existing **single-investor model** and plans an optional **dual-investor model** for orders that are too large for one investor. These models have different funding and repayment escrow semantics and must remain explicit in data, UI, and transaction construction.
 
-**Repayment is escrowed and non-custodial.** After the PyME confirms order arrival, an **admin** deploys a Trustless Work **multi-release** repayment escrow. The PyME micro-funds; the platform wallet approves and releases each milestone to the investor. Further milestones are added with `updateEscrow` so investors can receive early payouts (e.g. first 50%) without waiting for the full grossed amount.
+**Current single-investor model:** funding is not escrowed. One investor pays the supplier principal and Mercato's 1% platform fee with a classic Stellar USDC transaction built in `lib/stellar/build-usdc-split-payment.ts`.
 
-### 5.1 Trustless Work Integration
+**Planned dual-investor model:** the first investor may choose partial participation and specify a contribution below the remaining principal. A dedicated funding escrow collects contributions from at most two investors. The marketplace shows the funded and remaining amounts until the target is reached; only then can the supplier receive the full invoice amount. The original single-investor path remains available when an investor chooses to fund the entire order.
+
+In both models, repayment is non-custodial. The single-investor repayment escrow retains its time-sliced milestones. The dual-investor repayment escrow instead creates one payout milestone per investor, with principal and profit allocated from that investor's contribution.
+
+### 5.1 Current Single-Investor Trustless Work Integration
 
 ```mermaid
 flowchart LR
@@ -442,7 +456,7 @@ flowchart LR
 | `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY` | Trustless Work API key |
 | `NEXT_PUBLIC_USDC_ISSUER` | Classic USDC issuer for investor→supplier direct payments |
 
-### 5.3 Repayment Escrow Sequence
+### 5.3 Current Single-Investor Repayment Sequence
 
 ```mermaid
 sequenceDiagram
@@ -473,7 +487,131 @@ sequenceDiagram
 
 **Repayment status lifecycle:** `none` → `order_confirmed` → `escrow_initialized` → `funding` → `ready_to_release` → `partially_released` → `released` (deal completed).
 
-### 5.4 Wallet Providers (Stellar Wallets Kit + Pollar + Privy)
+### 5.4 Planned Dual-Investor Funding Flow
+
+Dual-investor mode is optional and capped at **two investors**. The funding UI gives the first investor an explicit choice: **Fund entire order** or **Make a partial investment**. Choosing a partial amount activates dual mode and reserves the second slot for another investor to complete the target. The deal terms—principal target, return rate, term, supplier, asset, and funding deadline—must be locked when the first contribution is accepted.
+
+```mermaid
+sequenceDiagram
+  participant I1 as Investor 1
+  participant I2 as Investor 2
+  participant App as MERCATO
+  participant FE as Funding escrow
+  participant Admin
+  participant Supplier
+
+  I1->>App: Choose partial investment and amount C1
+  App->>App: Validate C1 is below target and lock deal terms
+  App->>FE: Create or fund dual-investor escrow
+  App-->>I1: Confirm contribution and show remaining amount
+  App-->>I2: Show one investor slot and remaining amount available
+  I2->>App: Commit remaining amount C2
+  App->>App: Revalidate remaining amount atomically
+  App->>FE: Fund escrow with C2
+  FE-->>App: Funding target reached
+  Admin->>FE: Approve supplier release
+  FE->>Supplier: Full invoice principal
+  App->>App: Mark deal funded and snapshot allocations
+```
+
+The marketplace must display `funded_amount`, `remaining_amount`, occupied investor slots, and the contribution required to complete the order. It must not expose private investor details beyond the product's approved visibility rules.
+
+#### Funding rules
+
+- `0 < contribution <= remaining principal`; the second investor normally fills the exact remainder.
+- A single investor can still fund 100% and stay on the original direct-funding path.
+- No third contribution is accepted after two investor slots are occupied.
+- The supplier receives funds only after confirmed escrow balance reaches the locked principal target.
+- The funding escrow is a different contract instance from the post-delivery repayment escrow. Before implementation, validate that the chosen Trustless Work escrow type supports multiple funders, target-gated supplier release, deadline cancellation, and per-investor refunds; otherwise use a purpose-built Soroban funding-pool contract.
+- Platform and protocol fees must not reduce the supplier's invoice amount. If the funding escrow charges release fees, investor deposits must be grossed up or the fee must be paid separately under a documented policy.
+- Contribution acceptance must use a database transaction or equivalent reservation plus ledger reconciliation so two investors cannot overfill the final slot.
+- Every contribution requires an idempotency key and confirmed Stellar transaction hash before it counts toward the displayed funded total.
+- If the target is not reached before the funding deadline, the escrow enters a cancellation/refund path; partial capital must never remain indefinitely locked.
+
+Suggested funding lifecycle:
+
+```text
+open
+  -> partially_funded
+  -> fully_funded
+  -> supplier_release_ready
+  -> supplier_released
+
+terminal alternative: expired -> refunding -> refunded
+```
+
+The existing derived `FundingStatus` is insufficient for this flow. The target schema should introduce a funding mode and contribution records rather than storing both investors in `deals.investor_id`:
+
+| Record | Target fields |
+|--------|---------------|
+| `deals` | `funding_mode` (`single` or `dual`), locked target, funding deadline, funding escrow ID, aggregate funding state |
+| `deal_investments` | deal ID, investor ID, committed principal, ownership share, contribution status, funding transaction hash, timestamps |
+| funding escrow snapshot | contract ID, expected target, confirmed balance, release/refund transaction hashes, last reconciled ledger |
+
+`deal_investments` becomes the source for portfolio ownership and repayment allocation. `deals.investor_id` remains a compatibility field for existing single-investor deals and must not be treated as authoritative for dual-investor orders.
+
+### 5.5 Planned Dual-Investor Repayment Flow
+
+Dual-investor repayment uses a **separate Trustless Work multi-release escrow** created after delivery confirmation. Unlike the current model—where milestones are time slices paid to one investor—each dual-mode milestone belongs to one investor and represents that investor's complete principal-plus-profit entitlement.
+
+Let:
+
+- `P` = locked supplier invoice principal.
+- `Cᵢ` = confirmed principal contributed by investor `i`.
+- `Sᵢ = Cᵢ / P` = investor `i`'s ownership share.
+- `R` = total deal profit computed from the locked deal terms by `computeInvestorReturns`.
+- `F = 1.3%` = current combined repayment release deduction: Mercato 1% + Trustless Work 0.3%.
+
+For each investor:
+
+```text
+profit_i        = roundUSDC(R * S_i)
+net_payout_i    = C_i + profit_i
+gross_milestone_i = roundUSDC(net_payout_i / (1 - F))
+```
+
+The final investor's profit and gross milestone absorb any 7-decimal USDC rounding remainder so that all investor profits equal `R`, all contributed principals equal `P`, and all gross milestones equal the stored repayment target. Allocation inputs and computed outputs must be snapshotted when the order becomes fully funded; later profile or deal changes cannot alter entitlements.
+
+Example for a `10,000 USDC` order with `1,000 USDC` total profit:
+
+| Investor | Contribution | Share | Profit | Net repayment |
+|----------|-------------:|------:|-------:|--------------:|
+| Investor 1 | 6,000 | 60% | 600 | 6,600 |
+| Investor 2 | 4,000 | 40% | 400 | 4,400 |
+| **Total** | **10,000** | **100%** | **1,000** | **11,000** |
+
+Gross milestone amounts are calculated from each net repayment so release deductions do not reduce either investor's principal or profit.
+
+```mermaid
+sequenceDiagram
+  participant PyME
+  participant Admin
+  participant App as MERCATO
+  participant RE as Repayment escrow
+  participant I1 as Investor 1
+  participant I2 as Investor 2
+
+  PyME->>App: Confirm order arrived
+  App->>App: Load immutable contribution allocation
+  App->>App: Calculate profit and gross payout per investor
+  Admin->>RE: Deploy multi-release escrow
+  Note over RE: Milestone 1 receiver I1, milestone 2 receiver I2
+  loop Until gross repayment target is funded
+    PyME->>RE: Micro-fund repayment escrow
+  end
+  App->>App: Reconcile funded balance and milestone readiness
+  Admin->>RE: Approve and release Investor 1 milestone
+  RE->>I1: Principal C1 plus profit 1
+  Admin->>RE: Approve and release Investor 2 milestone
+  RE->>I2: Principal C2 plus profit 2
+  App->>App: Mark repayment released after both payouts confirm
+```
+
+Each repayment milestone must persist the investment ID, investor wallet address captured for that investment, contributed principal, share, profit, net payout, gross amount, and release transaction hash. A milestone cannot be redirected merely because the investor later changes their default profile wallet; wallet changes require a separately authorized update before escrow funding or release.
+
+The deal completes only after every investor milestone is confirmed released. A partial release produces a dual-mode repayment state that identifies which investor has been paid without marking the overall deal complete. Disputes, refunds, and failed releases must be handled per milestone while preserving the aggregate escrow balance and audit trail.
+
+### 5.6 Wallet Providers (Stellar Wallets Kit + Pollar + Privy)
 
 ```mermaid
 flowchart TB
@@ -515,16 +653,20 @@ Pollar sync: `POST /api/auth/pollar-sync`. Activation: `POST /api/pollar/activat
 
 Privy is additive: it must not replace existing SWK or Pollar accounts. Before enabling a Privy capability, test account creation/recovery, Stellar address validation, classic transaction XDR signing, SEP-10 challenge signing, and Soroban authorization on the configured network. Persisting multiple wallets per user will require a normalized wallet record (for example, `profile_wallets`) rather than overloading the current Pollar-oriented profile columns.
 
-### 5.5 DeFindex Yield Vaults
+### 5.7 DeFindex Yield Vaults and Reputation-Gated Access
 
-DeFindex provides Soroban tokenized yield vaults for investor/PyME treasury, separate from deal escrow.
+DeFindex provides Soroban tokenized yield vaults for idle capital, separate from deal funding and repayment escrow. Investors and PyMEs use the current vault flow. In the target model, investors retain access while both **suppliers and PyMEs** qualify through role-specific on-chain reputation. Reliable fulfillment unlocks the feature for suppliers; correct repayment behavior preserves access for PyMEs.
+
+The current `reputations` table and `/api/reputation/*` routes remain an off-chain application score. The role-specific scores described here are a new Soroban-backed model and must not be presented as implemented until the contract, event pipelines, migration policy, and access enforcement are deployed.
 
 ```mermaid
-flowchart LR
-  subgraph User["User flows"]
+flowchart TB
+  subgraph User["Vault users"]
     VaultDash["/dashboard/vault"]
     Hook["useDefindex.ts"]
     Submit["POST /api/defindex/submit"]
+    Supplier["Supplier wallet"]
+    PyME["PyME wallet"]
   end
 
   subgraph Admin["Admin flows"]
@@ -534,12 +676,26 @@ flowchart LR
     Monitor["GET /api/defindex/admin/monitor"]
   end
 
+  subgraph Reputation["Planned reputation layer"]
+    Evidence["Behavior evidence\ndelivery · repayment · resolved flags"]
+    Oracle["Authorized reputation updater"]
+    Score["Soroban reputation contract\nrole scores 0.0–5.0"]
+    Policy["PyME + supplier\nvault policy gate"]
+    Cache["Supabase projection\nscore · events · eligibility"]
+  end
+
   subgraph DeFindex["DeFindex API + Soroban"]
-  SDK["@defindex/sdk"]
-  Contract["Vault contract on Stellar"]
+    SDK["@defindex/sdk"]
+    Contract["Vault contract on Stellar"]
   end
 
   VaultDash --> Hook --> Submit --> SDK --> Contract
+  Supplier --> Policy
+  PyME --> Policy
+  Evidence --> Oracle --> Score
+  Score --> Policy
+  Score --> Cache
+  Policy --> Submit
   VaultMon --> Monitor --> SDK
   Create --> SDK
   Rebalance --> SDK
@@ -552,7 +708,98 @@ flowchart LR
 | `MERCATO_DEFINDEX_VAULT_ADDRESS` | Server override for vault address |
 | `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` | Asset decimals (default 7) |
 
-User signs deposit/withdraw XDR client-side; server submits via `api/defindex/submit`. Admin can create vaults, deposit, rebalance, and monitor TVL/strategies. Blend testnet SAC helpers in `lib/stellar/vault-asset-trustline.ts` support vault asset trustline setup only.
+Users sign deposit/withdraw XDR client-side; the server submits through `api/defindex/submit`. Admins can create vaults, deposit, rebalance, and monitor TVL/strategies. Blend testnet SAC helpers in `lib/stellar/vault-asset-trustline.ts` support vault asset trustline setup only.
+
+#### Role-specific reputation scores
+
+Each planned score is bounded from **0.0 to 5.0** and starts at **5.0** after the participant's identity, role, and wallet are verified. The Soroban contract stores scores as fixed-point integers (for example, `500` = `5.00`) rather than floating-point data. A supplier score represents fulfillment reliability; a PyME score represents repayment reliability. Neither is financial advice or a guarantee of future performance.
+
+| Rule | Architecture requirement |
+|------|--------------------------|
+| Initial score | `5.0` for a newly verified supplier or PyME identity; initialization is idempotent |
+| Supplier: late delivery | A confirmed delivery after the contractually stored deadline may apply a supplier-policy deduction |
+| Supplier: product misuse or quality incident | A substantiated incident may apply a supplier-policy deduction after review |
+| PyME: late repayment | Failure to fund a required repayment amount by its locked due date plus grace period may apply a PyME-policy deduction |
+| PyME: incomplete repayment | A finalized shortfall, default, or unresolved missed milestone may apply a severity-based PyME-policy deduction |
+| Correct repayment | Preserves the PyME score and may contribute to a transparent recovery policy; it cannot exceed `5.0` |
+| User flag | Opens a case only; a flag by itself never changes the score |
+| Bounds | Contract clamps the result to `0.0 <= score <= 5.0` |
+| Corrections | Reversed findings use an explicit compensating event; history is never silently rewritten |
+| Recovery | Any score recovery or decay policy must be transparent, versioned, and approved before launch |
+
+Exact deduction values and eligibility thresholds are governance parameters, not hardcoded assumptions in this document. The initial policy can define separate `MIN_SUPPLIER_DEFINDEX_SCORE` and `MIN_PYME_DEFINDEX_SCORE` values. The UI shows the participant's current role score, applicable threshold, finalized deductions, and steps required to regain access.
+
+#### Reputation contract and evidence model
+
+```text
+ParticipantReputation
+  initialize_subject(subject_id_hash, role, wallet) -> score 5.0
+  apply_event(subject_id_hash, role, event_id, event_type, severity, evidence_hash, policy_version)
+  reverse_event(subject_id_hash, role, original_event_id, correction_event_id)
+  get_score(subject_id_hash, role) -> score, policy_version, updated_ledger
+  is_eligible(subject_id_hash, role, policy_id) -> bool
+```
+
+- A stable participant identity and role map to one or more authorized wallets; changing wallets must not reset reputation, and changing roles must not merge unrelated supplier and PyME scores.
+- Only a governed updater role or approved oracle can apply finalized events. The updater uses objective application and ledger evidence, while the contract independently enforces authorization, bounds, event uniqueness, and policy version and derives the permitted deduction from event type and severity.
+- Store only an opaque supplier identifier, event type, numeric delta, timestamp/ledger, policy version, and evidence hash on-chain. Tracking details, complaints, personal information, and review notes remain access-controlled off-chain.
+- Every event ID is unique to prevent replay or duplicate penalties. Supabase indexes contract events for UI and queries, but Soroban state and events are authoritative for the score.
+- Contract upgrades, updater rotation, and policy changes require multisig or timelocked governance plus an audit event.
+
+#### Reputation event lifecycle
+
+```mermaid
+sequenceDiagram
+  participant Reporter
+  participant App as MERCATO
+  participant Reviewer
+  participant Oracle as Authorized updater
+  participant Rep as Reputation contract
+  participant Gate as DeFindex policy gate
+
+  Reporter->>App: Submit fulfillment or repayment flag
+  App->>App: Store evidence and open review case
+  Reviewer->>App: Resolve case against published policy
+  alt Flag rejected or unsubstantiated
+    App-->>Reporter: Close with no score change
+  else Violation finalized
+    App->>Oracle: Signed finalized event and evidence hash
+    Oracle->>Rep: apply_event with unique event ID
+    Rep-->>App: Emit score-changed event
+    App->>Gate: Refresh role-based eligibility
+  end
+```
+
+Automated supplier late-delivery evidence can propose a case from the locked promised date and confirmed delivery timestamp. It must account for approved extensions, carrier exceptions, timezone normalization, and disputed delivery records before finalization. Product misuse or quality allegations require human review and an appeal window because they are not objectively derivable from a ledger transaction alone.
+
+PyME repayment evidence is derived from the locked repayment schedule, Trustless Work escrow funding/release state, Stellar transaction confirmations, approved extensions, and grace periods. A scheduled job may propose `late_repayment`, `missed_milestone`, or `incomplete_repayment`, but it must reconcile authoritative on-chain state before finalization. A delayed indexer, pending transaction, disputed milestone, or admin release delay must never be attributed to the PyME. One repayment failure can produce only one active penalty event per deal milestone, preventing duplicate deductions during repeated reconciliation.
+
+#### PyME and supplier DeFindex eligibility
+
+Before building and again before submitting a PyME or supplier deposit, MERCATO checks:
+
+```text
+required_score = role == supplier
+               ? MIN_SUPPLIER_DEFINDEX_SCORE
+               : MIN_PYME_DEFINDEX_SCORE
+
+eligible = verified_participant
+        && role in [supplier, pyme]
+        && onchain_role_score >= required_score
+        && no_unresolved_critical_restriction
+        && wallet_is_authorized_for_participant
+        && wallet_network_matches_vault
+```
+
+- Qualified suppliers and PyMEs may deposit their own eligible assets and withdraw their vault shares through the same non-custodial signing flow used by investors.
+- Falling below the threshold disables **new deposits** and other risk-increasing actions. It must never trap funds: withdrawals and emergency exits remain available.
+- Eligibility is rechecked at transaction submission to prevent a stale browser score from bypassing policy.
+- If the DeFindex vault is permissionless, an application-only check can be bypassed by direct contract invocation. Enforceable reputation gating therefore requires a permissioned vault/adapter or an allowlist checked on-chain. The UI and API gate alone is only a product-access control.
+- The reputation contract does not custody user funds, choose DeFindex strategies, promise yield, or use vault balances to alter reputation.
+- Supplier and PyME positions remain separate from invoice payments, funding escrows, and repayment escrows. DeFindex capital cannot satisfy a repayment obligation unless the user explicitly withdraws and funds the repayment transaction.
+- Because PyMEs currently have vault access, rollout requires a published activation date and migration policy. Existing PyME positions retain withdrawal access; new deposits become subject to the on-chain score only after reconciliation and user notice.
+
+Planned persistence should add `reputation_events` and `reputation_cases` for indexed contract history, private evidence workflow, appeals, transaction hashes, and reconciliation. The existing `reputations` row may cache the latest on-chain score and eligibility, but must include contract address, network, policy version, and last reconciled ledger so cached values cannot be mistaken for authoritative state.
 
 ---
 
@@ -715,9 +962,11 @@ flowchart LR
     SupplierCompanies["supplier_companies\n(owner_id, name, country, sector)"]
     SupplierProducts["supplier_products"]
     Reputations["reputations\n(trust scores, stake signals)"]
+    ReputationCases["reputation_cases + events\n(planned evidence and projections)"]
     Leads["leads\n(event form submissions)"]
     ProfileWallets["profile_wallets\n(planned multi-provider wallets)"]
     RampTransactions["ramp_transactions\n(planned MoneyGram state)"]
+    DealInvestments["deal_investments\n(planned dual-investor allocations)"]
   end
 
   subgraph Stellar["Stellar Network"]
@@ -725,6 +974,7 @@ flowchart LR
     EscrowState["Repayment multi-release escrow"]
     Balances["USDC / asset balances"]
     TxHistory["Transaction history"]
+    ReputationState["PyME + supplier reputation contract\nrole scores + event commitments · planned"]
   end
 
   App["MERCATO App"] --> Supabase
@@ -733,10 +983,10 @@ flowchart LR
 
 | Store | Owns | Source of truth for |
 |-------|------|-------------------|
-| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputations, leads, notifications; planned wallet and ramp records | Who created what, funding tx hash, repayment lifecycle, supplier catalog, wallet metadata, and MoneyGram transaction recovery state |
-| **Stellar** | Direct funding payments, repayment escrow contracts, USDC balances | Funds movement, on-chain escrow milestones, payment receipts |
+| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputation evidence/cases and score projections, leads, notifications; planned wallet, ramp, and investment records | Who created what, private evidence and review workflow, funding transaction hashes, investor allocations, repayment lifecycle, supplier catalog, wallet metadata, and MoneyGram transaction recovery state |
+| **Stellar** | Direct funding payments, repayment escrow contracts, USDC balances, planned PyME/supplier reputation scores and event commitments | Funds movement, on-chain escrow milestones, payment receipts, and authoritative role-specific reputation state |
 
-The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update. In the target architecture, `profile_wallets` supports SWK, Pollar, and Privy coexistence, while `ramp_transactions` caches MoneyGram state; Stellar and the MoneyGram SEP-24 endpoint remain authoritative for settlement and ramp status respectively.
+The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update. In the target architecture, `profile_wallets` supports SWK, Pollar, and Privy coexistence, while `ramp_transactions` caches MoneyGram state. Stellar remains authoritative for settlement and PyME/supplier reputation; the MoneyGram SEP-24 endpoint remains authoritative for ramp status.
 
 ### 7.1 In-App Notifications
 
@@ -793,6 +1043,9 @@ sequenceDiagram
 | `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` | Public | DeFindex vault contract address |
 | `MERCATO_DEFINDEX_VAULT_ADDRESS` | Server | Server override for vault address |
 | `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` | Public | Vault asset decimals (default 7) |
+| Reputation contract address | Public/server | Planned PyME/supplier Soroban contract; both scopes must resolve the same network address |
+| PyME and supplier DeFindex minimum scores | Server policy | Planned role-specific eligibility thresholds; must match the active on-chain policy |
+| Reputation updater credentials | Managed signer/KMS | Planned authorized event publisher; never exposed to the browser |
 | `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | Public | Pollar publishable key |
 | `POLLAR_PUBLISHABLE_KEY` | Server | Duplicate for server routes (optional) |
 | `POLLAR_SECRET_KEY` | Server | Pollar secret key |
@@ -816,18 +1069,19 @@ Etherfuse remains opt-in through its server credentials. MoneyGram availability 
 ```mermaid
 flowchart TB
   subgraph What["What MERCATO does"]
-    D1["PyMEs get working capital\nvia investor direct funding"]
-    D2["Investors fund supplier invoices\nin USDC for short-term yield"]
+    D1["PyMEs get working capital\nvia single or dual-investor funding"]
+    D2["Investors fund full or partial invoices\nin USDC for proportional yield"]
     D3["Suppliers receive full payment\nup front fee-free"]
     D4["Users ramp fiat ↔ USDC\nvia Etherfuse or MoneyGram"]
     D5["Admins create and release\nmulti-release repayment escrows"]
+    D6["Reliable suppliers and repaying PyMEs\nunlock DeFindex access"]
   end
 
   subgraph How["How it's built"]
     T1["Next.js 16 + React 19\nTailwind + shadcn/ui"]
     T2["Supabase\nAuth + Postgres"]
-    T3["Trustless Work\nmulti-release repayment escrow"]
-    T3c["DeFindex\nSoroban yield vaults"]
+    T3["Trustless Work\nfunding + repayment escrow models"]
+    T3c["DeFindex + reputation contract\nSoroban yield and role eligibility"]
     T4["Wallet providers\nSWK · Pollar · Privy planned"]
     T5["Ramps\nEtherfuse · MoneyGram planned"]
     T6["MoneyGram protocols\nSEP-1 · SEP-10 · SEP-24"]
