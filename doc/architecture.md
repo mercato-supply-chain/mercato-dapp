@@ -38,7 +38,6 @@ flowchart TB
   end
 
   subgraph Ramps["Fiat On/Off Ramps"]
-    Etherfuse[Etherfuse]
     MoneyGram[MoneyGram Ramps\nSEP-10 · SEP-24]
   end
 
@@ -67,7 +66,6 @@ flowchart TB
   Next --> Trustless
   Next --> DeFindex
   DeFindex --> StellarNet
-  API --> Etherfuse
   API --> MoneyGram
   Trustless --> StellarNet
   ReputationContract --> StellarNet
@@ -77,7 +75,7 @@ flowchart TB
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned dual-investor model aggregates two proportional contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for dual-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. Users move fiat to/from Stellar assets through **Etherfuse** and the planned **MoneyGram Ramps** integration. MoneyGram uses SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`; planned supplier and PyME access is gated by role-specific on-chain reputation, based on fulfillment and repayment behavior respectively. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned dual-investor model aggregates two proportional contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for dual-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. **MoneyGram Ramps is the sole planned fiat ramp**, using SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out for the Costa Rica and Argentina customer focus. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`; planned supplier and PyME access is gated by role-specific on-chain reputation, based on fulfillment and repayment behavior respectively. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
 
 ---
 
@@ -311,7 +309,7 @@ flowchart TB
 
   subgraph RampLib["Ramp Integration"]
     AnchorFactory["anchor-factory.ts"]
-    Anchors["Ramp adapters\n(Etherfuse, MoneyGram planned)"]
+    Anchors["MoneyGram SEP adapter\nplanned"]
     SEP["SEP protocol modules\n(1, 6, 10, 12, 24, 31, 38)"]
   end
 
@@ -396,7 +394,7 @@ mercato-dapp/
 │   ├── trustless/                # TW config, wallet-kit, trustlines
 │   ├── defindex/                 # Vault config, monitor, math, route helpers
 │   ├── anchor-factory.ts, ramp-api.ts
-│   ├── anchors/                  # Etherfuse + SEP modules; MoneyGram target adapter
+│   ├── anchors/                  # Legacy provider POC code + SEP modules; MoneyGram target adapter
 │   ├── admin/, dashboard/, investments/
 │   ├── i18n/                     # en/es dictionaries, locale
 │   └── supabase/                 # Client, server, service, proxy
@@ -803,11 +801,13 @@ Planned persistence should add `reputation_events` and `reputation_cases` for in
 
 ---
 
-## 6. Ramp Providers (Fiat On/Off)
+## 6. MoneyGram Ramp (Fiat On/Off)
 
-The target ramp architecture supports **Etherfuse** and **MoneyGram Ramps**. MoneyGram replaces the other planned providers and must be implemented as a Stellar protocol integration, not forced into Etherfuse's quote and bank-account API model. Its hosted flow uses **SEP-10** for wallet authentication and **SEP-24** for interactive USDC deposit and withdrawal; MoneyGram owns KYC, compliance, cash collection/payout, and settlement.
+**MoneyGram Ramps is the only fiat ramp in the target architecture.** Its hosted flow uses **SEP-10** for wallet authentication and **SEP-24** for interactive USDC deposit and withdrawal; MoneyGram owns KYC, compliance, cash collection/payout, and settlement.
 
 MoneyGram is **planned, not implemented in the current repository**. Partner allowlisting, sandbox certification, KYB, and legal agreements are launch prerequisites.
+
+**Etherfuse status:** discontinued proof of concept. It was evaluated for a Mexico expansion, but MERCATO's current customer focus is Costa Rica and Argentina, so no further Etherfuse integration, maintenance, rollout, or production enablement is planned. Legacy code may remain temporarily for removal/migration work, but it is not part of the target architecture and must not be presented as an available provider.
 
 ### 6.1 Target Architecture
 
@@ -815,29 +815,24 @@ MoneyGram is **planned, not implemented in the current repository**. Partner all
 flowchart TB
   subgraph UI["Ramp UI"]
     Page["/dashboard/ramp"]
-    Provider["RampProvider\nShared orchestration"]
-    EtherfuseUI["Etherfuse forms"]
+    Provider["MoneyGram ramp orchestration"]
     MoneyGramUI["MoneyGram interactive UI\nwebview or in-app browser"]
     Status["Transaction status\nrecovery link · pickup reference"]
   end
 
   subgraph Server["MERCATO server"]
-    ExistingAPI["Existing /api/ramp/*"]
     MoneyGramAPI["/api/ramp/moneygram/*\nplanned"]
-    EtherfuseAdapter["Etherfuse adapter"]
     SEPAdapter["MoneyGram SEP adapter\nSEP-1 · SEP-10 · SEP-24"]
     RampTransactions["ramp_transactions\nplanned"]
   end
 
   subgraph External["External services"]
-    Etherfuse["Etherfuse"]
     TOML["MoneyGram stellar.toml\nendpoint discovery"]
     MoneyGram["MoneyGram anchor + hosted UI"]
     Stellar["Stellar\nclassic USDC"]
   end
 
   Page --> Provider
-  Provider --> EtherfuseUI --> ExistingAPI --> EtherfuseAdapter --> Etherfuse
   Provider --> MoneyGramUI
   Provider --> Status
   MoneyGramUI --> MoneyGramAPI --> SEPAdapter
@@ -845,17 +840,15 @@ flowchart TB
   SEPAdapter --> MoneyGram
   MoneyGramAPI --> RampTransactions
   MoneyGram --> Stellar
-  Etherfuse --> Stellar
 ```
 
 The server binds each MoneyGram transaction ID to the authenticated MERCATO user, selected wallet address, network, and on-chain transaction hash. SEP-10 JWTs must remain short-lived and server protected; raw tokens and SEP-9/KYC fields must not appear in analytics or general logs.
 
-### 6.2 Provider Capabilities
+### 6.2 MoneyGram Capability
 
-| Provider | Availability | Fiat rail | Stellar asset | KYC flow | Settlement model |
-|----------|--------------|-----------|---------------|----------|------------------|
-| **Etherfuse** | Current, when configured | SPEI | USDC, CETES | Provider iframe | Existing custom adapter |
-| **MoneyGram Ramps** | Planned after partner onboarding | Cash at MoneyGram agent locations | USDC | SEP-24 hosted UI | Cash-in sends USDC to the wallet; cash-out receives USDC then issues a pickup reference |
+| Provider | Product status | Customer fit | Stellar asset | KYC flow | Settlement model |
+|----------|----------------|--------------|---------------|----------|------------------|
+| **MoneyGram Ramps** | Sole planned ramp; pending partner onboarding | Costa Rica and Argentina focus, subject to confirmed MoneyGram corridors | USDC | SEP-24 hosted UI | Cash-in sends USDC to the wallet; cash-out receives USDC then issues a pickup reference |
 
 MoneyGram endpoints must be discovered from the environment's `stellar.toml` rather than hardcoded. The supplied integration guide identifies `extmgxanchor.moneygram.com` for sandbox/testnet and `mgxanchor.moneygram.com` for production. The wallet network, home domain, USDC issuer, and published signing key must agree before a transaction begins.
 
@@ -1054,13 +1047,11 @@ sequenceDiagram
 | Privy app/client identifier | Public where required | Planned; exact name follows the capability spike |
 | Privy app secret / webhook secret | Server | Planned; never expose through `NEXT_PUBLIC_*` |
 | `NEXT_PUBLIC_APP_URL` | Public | Canonical site URL (QR codes, links) |
-| `ETHERFUSE_API_KEY` | Server | Etherfuse API key |
-| `ETHERFUSE_BASE_URL` | Server | Etherfuse API base URL |
 | MoneyGram home domain | Server-controlled config | Planned; sandbox or production SEP-1 discovery domain |
 | MoneyGram enabled flag | Server-controlled config | Planned; expose availability only after onboarding checks pass |
 | SEP-10 client-domain signing secret | Server/KMS | Planned; corresponds to the public key in MERCATO's `stellar.toml` |
 
-Etherfuse remains opt-in through its server credentials. MoneyGram availability depends on an allowlisted domain, a coherent network configuration, published client-domain signing metadata, and completed partner onboarding; SEP-10/SEP-24 do not imply a public MoneyGram API key. Exact Privy and MoneyGram variable names should be finalized during implementation rather than invented in advance.
+MoneyGram availability depends on an allowlisted domain, a coherent network configuration, published client-domain signing metadata, completed partner onboarding, and confirmed support for the intended Costa Rica and Argentina corridors. SEP-10/SEP-24 do not imply a public MoneyGram API key. Exact Privy and MoneyGram variable names should be finalized during implementation rather than invented in advance. Legacy credentials for discontinued ramp proofs of concept must not enable a provider in production and should be removed during implementation cleanup.
 
 ---
 
@@ -1072,7 +1063,7 @@ flowchart TB
     D1["PyMEs get working capital\nvia single or dual-investor funding"]
     D2["Investors fund full or partial invoices\nin USDC for proportional yield"]
     D3["Suppliers receive full payment\nup front fee-free"]
-    D4["Users ramp fiat ↔ USDC\nvia Etherfuse or MoneyGram"]
+    D4["Users ramp fiat ↔ USDC\nvia MoneyGram"]
     D5["Admins create and release\nmulti-release repayment escrows"]
     D6["Reliable suppliers and repaying PyMEs\nunlock DeFindex access"]
   end
@@ -1083,7 +1074,7 @@ flowchart TB
     T3["Trustless Work\nfunding + repayment escrow models"]
     T3c["DeFindex + reputation contract\nSoroban yield and role eligibility"]
     T4["Wallet providers\nSWK · Pollar · Privy planned"]
-    T5["Ramps\nEtherfuse · MoneyGram planned"]
+    T5["Fiat ramp\nMoneyGram planned"]
     T6["MoneyGram protocols\nSEP-1 · SEP-10 · SEP-24"]
   end
 
@@ -1101,6 +1092,6 @@ flowchart TB
 - [SEP-10](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md) and [SEP-24](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md) — Authentication and hosted deposit/withdrawal standards
 - [Privy](https://docs.privy.io/) — Planned embedded-wallet provider; Stellar signing capabilities require validation
 - [Supabase](https://supabase.com) — Auth and database
-- [lib/anchors/README.md](../lib/anchors/README.md) — Current custom anchor interface and Etherfuse details
+- [lib/anchors/README.md](../lib/anchors/README.md) — Legacy ramp POC interface; not the target MoneyGram architecture
 - [AGENTS.md](../AGENTS.md) — AI-oriented index: lifecycles, routes, signing matrix, file map
 - [DeFindex](https://docs.defindex.io) — Soroban yield vaults, strategies, SDKs, and operations
