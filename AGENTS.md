@@ -24,6 +24,7 @@ Read documents in this order depending on your task:
 | **[AGENTS.md](AGENTS.md)** (this file) | Orientation, lifecycles, file index, signing rules, what is / isn't implemented |
 | **[README.md](README.md)** | Product summary, stakeholder value, setup overview, feature list |
 | **[doc/architecture.md](doc/architecture.md)** | Deep architecture, Mermaid diagrams, ramp/escrow flows, env reference |
+| **[doc/technical-architecture.md](doc/technical-architecture.md)** | Reviewer-grade current/target architecture, including MoneyGram and Privy coexistence plans |
 | **[SETUP.md](SETUP.md)** | Step-by-step local setup checklist |
 | **[env.sample](env.sample)** | Complete environment variable list |
 | **[lib/anchors/README.md](lib/anchors/README.md)** | Fiat ramp anchor interface and provider clients |

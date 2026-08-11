@@ -6,6 +6,8 @@ This document describes the MERCATO application architecture: what it does, whic
 
 > **AI agents:** For a concise, machine-oriented index (lifecycles, routes, signing matrix, implementation status), start with **[AGENTS.md](../AGENTS.md)**. This document provides deeper diagrams and integration detail.
 
+> **Architecture reviewers:** See **[Technical Architecture](technical-architecture.md)** for the current-versus-target system design, security boundaries, and the planned MoneyGram and Privy integrations.
+
 ---
 
 ## 1. High-Level System Overview
