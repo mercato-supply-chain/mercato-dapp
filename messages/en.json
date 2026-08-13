@@ -1396,6 +1396,38 @@
       "previewAlt": "QR code for {event}"
     }
   },
+  "tractionPage": {
+    "title": "Platform traction",
+    "subtitle": "Registered Mercato users and event leads in one place for SCF review.",
+    "usersTitle": "Registered users",
+    "usersSubtitle": "Real accounts on Mercato across Latin America.",
+    "leadsTitle": "Event leads",
+    "leadsSubtitle": "prospects not yet registered waiting for mainnet launch.",
+    "searchPlaceholder": "Search by email, name or location…",
+    "leadsSearchPlaceholder": "Search leads…",
+    "filterRole": "Role",
+    "filterAll": "All roles",
+    "leadsFilterEvent": "Event",
+    "leadsFilterAll": "All events",
+    "leadsRoleOther": "Other",
+    "empty": "No users match your filters.",
+    "leadsEmpty": "No leads match your filters.",
+    "showing": "Showing {shown} of {total} users",
+    "leadsShowing": "Showing {shown} of {total} leads",
+    "columns": {
+      "email": "Email",
+      "name": "Name / company",
+      "role": "Role",
+      "location": "Location"
+    },
+    "leadsColumns": {
+      "name": "Name",
+      "company": "Company",
+      "role": "Role",
+      "event": "Event",
+      "address": "Address"
+    }
+  },
   "adminVaultMonitor": {
     "title": "Vault monitor",
     "subtitle": "Live view of TVL, strategy allocations, roles, and operational alerts. Refreshes every 30 seconds.",

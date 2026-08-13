@@ -1396,6 +1396,38 @@
       "previewAlt": "Código QR para {event}"
     }
   },
+  "tractionPage": {
+    "title": "Tracción de la plataforma",
+    "subtitle": "Usuarios registrados en Mercato y leads de eventos en un solo lugar para revisión del SCF.",
+    "usersTitle": "Usuarios registrados",
+    "usersSubtitle": "Cuentas reales en Mercato en toda Latinoamérica.",
+    "leadsTitle": "Leads de eventos",
+    "leadsSubtitle": "prospectos aún no registrados esperando lanzamiento a mainnet.",
+    "searchPlaceholder": "Buscar por email, nombre o ubicación…",
+    "leadsSearchPlaceholder": "Buscar leads…",
+    "filterRole": "Rol",
+    "filterAll": "Todos los roles",
+    "leadsFilterEvent": "Evento",
+    "leadsFilterAll": "Todos los eventos",
+    "leadsRoleOther": "Otro",
+    "empty": "Ningún usuario coincide con los filtros.",
+    "leadsEmpty": "Ningún lead coincide con los filtros.",
+    "showing": "Mostrando {shown} de {total} usuarios",
+    "leadsShowing": "Mostrando {shown} de {total} leads",
+    "columns": {
+      "email": "Email",
+      "name": "Nombre / empresa",
+      "role": "Rol",
+      "location": "Ubicación"
+    },
+    "leadsColumns": {
+      "name": "Nombre",
+      "company": "Empresa",
+      "role": "Rol",
+      "event": "Evento",
+      "address": "Dirección"
+    }
+  },
   "adminVaultMonitor": {
     "title": "Monitor de bóveda",
     "subtitle": "Vista en vivo de TVL, asignaciones por estrategia, roles y alertas operativas. Se actualiza cada 30 segundos.",
