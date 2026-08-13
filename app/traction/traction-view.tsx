@@ -159,6 +159,16 @@ export function TractionView({ users, leads, eventSlugs, summary }: TractionView
             <div>
               <CardTitle>{t('tractionPage.leadsTitle')}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">{t('tractionPage.leadsSubtitle')}</p>
+              <p className="mt-2 text-sm">
+                <a
+                  href="https://drive.google.com/drive/folders/1omPjpRVGFazpQzKgSIe0smAOeV8MW3rg?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {t('tractionPage.leadsLoiLink')}
+                </a>
+              </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="relative">
