@@ -19,6 +19,7 @@ export type LeadRow = {
   utm_medium: string | null
   utm_campaign: string | null
   referrer: string | null
+  metadata: Record<string, unknown> | null
   created_at: string
 }
 

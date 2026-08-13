@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { getLeads } from '@/lib/admin/get-leads'
+import { getLeadDisplayAddress } from '@/lib/leads/lead-address'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export type TractionUser = {
@@ -71,7 +72,7 @@ async function fetchTractionData(): Promise<TractionData> {
     name: lead.name,
     company: lead.company,
     role: lead.role,
-    address: lead.country,
+    address: getLeadDisplayAddress(lead),
     event_slug: lead.event_slug,
   }))
 
