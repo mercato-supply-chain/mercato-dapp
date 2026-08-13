@@ -75,7 +75,7 @@ flowchart TB
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned dual-investor model aggregates two proportional contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for dual-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. **MoneyGram Ramps is the sole planned fiat ramp**, using SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out for the Costa Rica and Argentina customer focus. **DeFindex** ([documentation](https://docs.defindex.io)) supplies **Soroban yield vaults** at `/dashboard/vault`, with admin monitoring at `/dashboard/admin/vault`; planned supplier and PyME access is gated by role-specific on-chain reputation, based on fulfillment and repayment behavior respectively. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned multi-investor model aggregates independently tracked contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for multi-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. **MoneyGram Ramps is the sole planned fiat ramp**, using SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out for the Costa Rica and Argentina customer focus. **DeFindex** ([documentation](https://docs.defindex.io)) is MERCATO's planned capital-management layer: investors, PyMEs, and suppliers manage supported vault positions inside MERCATO, and investors can withdraw idle vault liquidity into direct or multi-investor financing transactions. Investors are never reputation-gated; PyME and supplier access is controlled by role-specific Soroban reputation based on repayment and fulfillment behavior. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
 
 ---
 
@@ -122,7 +122,7 @@ sequenceDiagram
 | Role | Main actions |
 |------|-------------|
 | **PyME (Buyer)** | Create deals, choose suppliers, confirm arrival, and micro-fund repayment escrows. Planned: retain DeFindex access by maintaining a qualifying on-chain repayment reputation. |
-| **Investor** | Browse marketplace and fund a full deal directly, or join the planned dual-investor escrow with a partial contribution. Receives contributed principal plus proportional yield from repayment milestones. Optional DeFindex vault for idle capital. |
+| **Investor** | Manage idle capital in DeFindex, then allocate a user-authorized withdrawal to fully fund a deal or make a tracked multi-investor contribution. Receives contributed principal plus proportional yield from repayment milestones. DeFindex access is not reputation-gated. |
 | **Supplier** | Manage company profile and product catalog, fulfill orders, and receive the full invoice payment up front (fee-free). Planned: use DeFindex when the supplier's on-chain reputation satisfies policy. |
 | **Admin** | Create multi-release repayment escrows, approve/release milestones, add subsequent milestones, resolve disputes. |
 
@@ -201,7 +201,7 @@ flowchart LR
 | `/auth/callback` | API | OAuth / magic-link callback |
 | `/dashboard` | Auth | Role-based overview (stats, quick actions, recent deals) |
 | `/dashboard/wallets` | Auth | Connect SWK or Pollar; Privy support planned |
-| `/dashboard/vault` | Auth | DeFindex user vault (investor; reputation-qualified PyMEs and suppliers in the target model) |
+| `/dashboard/vault` | Auth | DeFindex capital management: supported vaults, positions, deposit/withdraw, and investor financing allocation; PyME/supplier access is reputation-gated in the target model |
 | `/dashboard/admin/approvals` | Admin | Create repayment escrows for order-confirmed deals |
 | `/dashboard/admin/releases` | Admin | Release funded repayment milestones |
 | `/dashboard/admin/vault` | Admin | DeFindex vault monitor (TVL, strategies, rebalance) |
@@ -222,7 +222,7 @@ flowchart LR
 | `/settings` | Auth | User profile and Stellar address |
 | `/api/catalog` | API | Supplier product catalog |
 | `/api/ramp/*` | API | Ramp provider proxy (14 routes) |
-| `/api/defindex/*` | API | DeFindex vault (10 routes) |
+| `/api/defindex/*` | API | DeFindex vault reads and user-authorized deposit/withdraw construction/submission; allocation uses the financing APIs after withdrawal |
 | `/api/stellar/*` | API | Tx submit, SAC balance, trustline, vault activity |
 | `/api/auth/pollar-sync` | API | Sync Pollar session to Supabase |
 | `/api/pollar/activate` | API | Activate Pollar embedded wallet |
@@ -352,7 +352,7 @@ mercato-dapp/
 │   ├── dashboard/
 │   │   ├── page.tsx              # Role-based overview
 │   │   ├── wallets/              # SWK + Pollar; Privy target integration
-│   │   ├── vault/                # DeFindex user vault
+│   │   ├── vault/                # DeFindex positions and capital management
 │   │   ├── admin/
 │   │   │   ├── approvals/        # Create repayment escrows
 │   │   │   ├── releases/         # Release funded milestones
@@ -374,6 +374,7 @@ mercato-dapp/
 │
 ├── components/
 │   ├── deals/                    # Funding, repayment, delivery panels
+│   ├── vault-to-deal-allocator.tsx # Investor vault withdrawal → financing intent
 │   ├── ramp/                     # Ramp UI (provider + variant composition)
 │   ├── wallet/                   # Wallet status card
 │   ├── dashboard/, admin/
@@ -643,11 +644,13 @@ Pollar sync: `POST /api/auth/pollar-sync`. Activation: `POST /api/pollar/activat
 
 Privy is additive: it must not replace existing SWK or Pollar accounts. Before enabling a Privy capability, test account creation/recovery, Stellar address validation, classic transaction XDR signing, SEP-10 challenge signing, and Soroban authorization on the configured network. Persisting multiple wallets per user will require a normalized wallet record (for example, `profile_wallets`) rather than overloading the current Pollar-oriented profile columns.
 
-### 5.7 DeFindex Yield Vaults and Reputation-Gated Access
+### 5.7 DeFindex Capital Management and Financing Allocation
 
-DeFindex provides Soroban tokenized yield vaults for idle capital, separate from deal funding and repayment escrow. Investors and PyMEs use the current vault flow. In the target model, investors retain access while both **suppliers and PyMEs** qualify through role-specific on-chain reputation. Reliable fulfillment unlocks the feature for suppliers; correct repayment behavior preserves access for PyMEs.
+DeFindex is MERCATO's capital-management layer on Stellar. Supported users can deposit eligible assets into supported vaults, view balances and positions, and withdraw through user-authorized transactions without leaving MERCATO. Vault contracts and financing transactions remain separate settlement domains, but MERCATO connects them through an explicit allocation workflow: investor capital can remain productive while idle, then be withdrawn and committed to a selected purchase-order opportunity.
 
-The current `reputations` table and `/api/reputation/*` routes remain an off-chain application score. The role-specific scores described here are a new Soroban-backed model and must not be presented as implemented until the contract, event pipelines, migration policy, and access enforcement are deployed.
+Investors have direct access to supported DeFindex functionality and are **not reputation-gated**. In the target model, suppliers and PyMEs qualify through role-specific on-chain reputation. Reliable fulfillment unlocks access for suppliers; correct repayment behavior preserves access for PyMEs.
+
+The current `reputations` table and `/api/reputation/*` routes remain an off-chain application score. This DeFindex phase assumes the Soroban reputation infrastructure designed in **Tranche 1** is deployed and activates it as the eligibility source for PyMEs and suppliers. Until the contract, event pipelines, migration policy, and access enforcement are live, the role-specific on-chain score must not be presented as implemented.
 
 ```mermaid
 flowchart TB
@@ -655,8 +658,16 @@ flowchart TB
     VaultDash["/dashboard/vault"]
     Hook["useDefindex.ts"]
     Submit["POST /api/defindex/submit"]
+    Investor["Investor wallet\nnot reputation-gated"]
     Supplier["Supplier wallet"]
     PyME["PyME wallet"]
+  end
+
+  subgraph Financing["MERCATO financing engine"]
+    Allocator["vault-to-deal-allocator"]
+    Intent["Capital allocation intent"]
+    Direct["Direct funding\nfull order"]
+    Multi["Multi-investor funding escrow\ntracked contribution"]
   end
 
   subgraph Admin["Admin flows"]
@@ -680,6 +691,11 @@ flowchart TB
   end
 
   VaultDash --> Hook --> Submit --> SDK --> Contract
+  Investor --> VaultDash
+  Investor --> Allocator
+  Contract --> Allocator --> Intent
+  Intent --> Direct
+  Intent --> Multi
   Supplier --> Policy
   PyME --> Policy
   Evidence --> Oracle --> Score
@@ -698,7 +714,92 @@ flowchart TB
 | `MERCATO_DEFINDEX_VAULT_ADDRESS` | Server override for vault address |
 | `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` | Asset decimals (default 7) |
 
-Users sign deposit/withdraw XDR client-side; the server submits through `api/defindex/submit`. Admins can create vaults, deposit, rebalance, and monitor TVL/strategies. Blend testnet SAC helpers in `lib/stellar/vault-asset-trustline.ts` support vault asset trustline setup only.
+Users sign deposit/withdraw XDR client-side; the server submits through `api/defindex/submit`. The wallet architecture established for SWK, Pollar, and planned Privy remains the signing boundary: MERCATO constructs and validates transactions but does not custody keys or silently move vault capital. Admins can create vaults, deposit, rebalance, and monitor TVL/strategies. Blend testnet SAC helpers in `lib/stellar/vault-asset-trustline.ts` support vault asset trustline setup only.
+
+#### Implementation status and plan
+
+| Area | Status | Architecture path |
+|------|--------|-------------------|
+| Vault discovery, balance/position views, deposit, withdraw, and signed submission | Existing foundation | `hooks/useDefindex.ts`, `lib/defindex/`, `app/api/defindex/`, `/dashboard/vault` |
+| Admin vault creation, activation, monitoring, deposit, and rebalance | Existing foundation | `/dashboard/admin/vault`, `app/api/defindex/admin/` |
+| Investor vault-to-deal withdrawal UI | Existing foundation | `components/vault-to-deal-allocator.tsx` |
+| Durable allocation intent linking withdrawal to financing | Planned expansion | `capital_allocation_intents`, reconciliation, retry/redeposit UX |
+| Direct-funding allocation | Planned expansion | Confirm withdrawal, rebuild current full-order payment, record both hashes |
+| Multi-investor allocation | Planned expansion | Confirm withdrawal, create/update `deal_investments`, fund target-gated escrow contribution |
+| PyME/supplier eligibility | Planned expansion | Tranche 1 Soroban reputation contract plus role-specific policy guard |
+| Embedded-wallet coverage | Capability-gated | Enable each provider only after DeFindex Soroban signing and recovery tests pass |
+
+#### Supported capital-management capabilities
+
+| Capability | Investor | PyME | Supplier |
+|------------|----------|------|----------|
+| View supported vaults, positions, balances, and activity | Direct access | Reputation-qualified | Reputation-qualified |
+| Deposit eligible assets | Direct access | Reputation-qualified | Reputation-qualified |
+| Withdraw owned vault shares | Always allowed | Always allowed | Always allowed |
+| Allocate vault liquidity to finance a purchase order | Direct or multi-investor contribution | Not applicable | Not applicable |
+
+Supported vaults, assets, strategies, fees, and network addresses are configuration—not assumptions. MERCATO must display the selected vault, asset/SAC, share balance, estimated withdrawal amount, fees, and financing destination before requesting signatures.
+
+#### Investor vault-to-financing allocation
+
+The allocation is a coordinated sequence of user-authorized transactions, not an internal balance transfer and not collateralization of a vault position:
+
+```mermaid
+sequenceDiagram
+  participant Investor
+  participant App as MERCATO
+  participant Vault as DeFindex vault
+  participant Wallet
+  participant Stellar
+  participant Finance as Financing destination
+
+  Investor->>App: Select deal and amount to allocate
+  App->>Vault: Read shares, withdrawable amount, asset, and state
+  App->>App: Validate deal terms and create allocation intent
+  App->>Wallet: Request DeFindex withdrawal signature
+  Investor->>Wallet: Approve withdrawal
+  Wallet->>Stellar: Submit vault withdrawal
+  App->>Stellar: Confirm asset received by investor wallet
+  App->>App: Revalidate deal remaining amount and intent
+  alt Direct funding
+    App->>Wallet: Request full-order funding signature
+    Wallet->>Finance: Pay supplier and platform fee
+  else Multi-investor funding
+    App->>Wallet: Request contribution signature
+    Wallet->>Finance: Fund investor's escrow contribution
+  end
+  App->>Stellar: Confirm financing transaction
+  App->>App: Link withdrawal and funding hashes to allocation intent
+```
+
+The withdrawal and financing commitment are normally separate on-chain transactions. A confirmed vault withdrawal does **not** imply that the deal was funded. If the second transaction is rejected, expires, or the remaining deal amount changes, capital stays in the investor's wallet and the UI offers retry, another opportunity, or redeposit. MERCATO must never automatically redirect those funds.
+
+Each allocation intent records the user, wallet, vault, asset, requested amount, withdrawn amount, deal, financing mode, optional investment/contribution ID, withdrawal transaction hash, funding transaction hash, state, expiration, and idempotency key. Suggested states:
+
+```text
+created
+  -> withdrawal_pending
+  -> withdrawn
+  -> funding_pending
+  -> allocated
+
+recoverable alternatives: withdrawal_failed, funding_failed, expired, cancelled
+```
+
+#### Connection to MERCATO financing models
+
+**Direct Funding:** one investor selects the full remaining principal. After the DeFindex withdrawal confirms, MERCATO rebuilds the current classic USDC funding transaction from fresh deal data. The supplier receives the full invoice principal and the platform receives its fee only after the investor reviews and signs.
+
+**Multi-Investor Funding:** an investor selects a partial contribution. After withdrawal confirms, the investor signs a contribution to the Stellar funding escrow. Each contribution is independently stored in `deal_investments` and reconciled on-chain. The supplier cannot be paid until confirmed contributions reach the locked financing target. The initial product design may cap participation at two investors (the dual-investor release), while the data and allocation model should avoid assuming that every future multi-investor order has exactly two participants.
+
+For both models:
+
+- Vault liquidity counts toward financing only after the financing transaction—not merely the withdrawal—is confirmed.
+- Asset code, issuer/SAC, network, decimals, amount, destination, memo, and deal status are revalidated before each signature.
+- A vault asset that differs from the financing asset requires an explicit, separately reviewed conversion path; MERCATO must not imply automatic conversion.
+- The investment record snapshots contributed principal, ownership share, investor wallet, and locked return terms for later repayment calculation.
+- In multi-investor mode, supplier settlement remains target-gated and every investor's participation feeds the per-investor repayment milestones described in section 5.5.
+- Timeouts and ambiguous submissions are resolved by querying Stellar RPC/Horizon and DeFindex before rebuilding, preventing duplicate withdrawals or contributions.
 
 #### Role-specific reputation scores
 
@@ -732,7 +833,7 @@ ParticipantReputation
 
 - A stable participant identity and role map to one or more authorized wallets; changing wallets must not reset reputation, and changing roles must not merge unrelated supplier and PyME scores.
 - Only a governed updater role or approved oracle can apply finalized events. The updater uses objective application and ledger evidence, while the contract independently enforces authorization, bounds, event uniqueness, and policy version and derives the permitted deduction from event type and severity.
-- Store only an opaque supplier identifier, event type, numeric delta, timestamp/ledger, policy version, and evidence hash on-chain. Tracking details, complaints, personal information, and review notes remain access-controlled off-chain.
+- Store only an opaque participant identifier and role, event type, numeric delta, timestamp/ledger, policy version, and evidence hash on-chain. Tracking details, complaints, personal information, and review notes remain access-controlled off-chain.
 - Every event ID is unique to prevent replay or duplicate penalties. Supabase indexes contract events for UI and queries, but Soroban state and events are authoritative for the score.
 - Contract upgrades, updater rotation, and policy changes require multisig or timelocked governance plus an audit event.
 
@@ -952,6 +1053,7 @@ flowchart LR
     ProfileWallets["profile_wallets\n(planned multi-provider wallets)"]
     RampTransactions["ramp_transactions\n(planned MoneyGram state)"]
     DealInvestments["deal_investments\n(planned dual-investor allocations)"]
+    CapitalAllocations["capital_allocation_intents\n(vault withdrawal → financing)"]
   end
 
   subgraph Stellar["Stellar Network"]
@@ -960,6 +1062,7 @@ flowchart LR
     Balances["USDC / asset balances"]
     TxHistory["Transaction history"]
     ReputationState["PyME + supplier reputation contract\nrole scores + event commitments · planned"]
+    VaultState["DeFindex vaults\nshares + underlying assets"]
   end
 
   App["MERCATO App"] --> Supabase
@@ -968,10 +1071,10 @@ flowchart LR
 
 | Store | Owns | Source of truth for |
 |-------|------|-------------------|
-| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputation evidence/cases and score projections, leads, notifications; planned wallet, ramp, and investment records | Who created what, private evidence and review workflow, funding transaction hashes, investor allocations, repayment lifecycle, supplier catalog, wallet metadata, and MoneyGram transaction recovery state |
-| **Stellar** | Direct funding payments, repayment escrow contracts, USDC balances, planned PyME/supplier reputation scores and event commitments | Funds movement, on-chain escrow milestones, payment receipts, and authoritative role-specific reputation state |
+| **Supabase** | Users, profiles, roles, deal metadata, repayment status cache, supplier companies/products, reputation evidence/cases and score projections, leads, notifications; wallet, ramp, investment, and capital-allocation records | Workflow intent and recovery state, private evidence, linked vault-withdrawal/funding hashes, investor allocations, repayment lifecycle, supplier catalog, and wallet metadata |
+| **Stellar** | Direct funding payments, funding/repayment escrows, DeFindex vault shares and assets, USDC balances, planned PyME/supplier reputation scores and event commitments | Funds movement, vault ownership, on-chain escrow milestones, payment receipts, and authoritative role-specific reputation state |
 
-The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update. In the target architecture, `profile_wallets` supports SWK, Pollar, and Privy coexistence, while `ramp_transactions` caches MoneyGram state. Stellar remains authoritative for settlement and PyME/supplier reputation; the MoneyGram SEP-24 endpoint remains authoritative for ramp status.
+The app reads both stores and reconciles: `repayment_status` / `repayment_milestones` in Supabase mirror Trustless Work indexer state after fund / release / update. `capital_allocation_intents` links—but never conflates—the DeFindex withdrawal and financing transactions. In the target architecture, `profile_wallets` supports SWK, Pollar, and Privy coexistence, while `ramp_transactions` caches MoneyGram state. Stellar remains authoritative for settlement, vault ownership, and PyME/supplier reputation; the MoneyGram SEP-24 endpoint remains authoritative for ramp status.
 
 ### 7.1 In-App Notifications
 
@@ -1053,7 +1156,7 @@ MoneyGram availability depends on an allowlisted domain, a coherent network conf
 flowchart TB
   subgraph What["What MERCATO does"]
     D1["PyMEs get working capital\nvia single or dual-investor funding"]
-    D2["Investors fund full or partial invoices\nin USDC for proportional yield"]
+    D2["Investor capital earns in DeFindex\nthen funds full or partial invoices"]
     D3["Suppliers receive full payment\nup front fee-free"]
     D4["Users ramp fiat ↔ USDC\nvia MoneyGram"]
     D5["Admins create and release\nmulti-release repayment escrows"]
