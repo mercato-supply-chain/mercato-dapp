@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { Copy, Check, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/provider'
 
 type Props = {
@@ -13,20 +13,8 @@ type Props = {
 export function SupplierReferralCard({ companyId }: Props) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
-  const [referredCount, setReferredCount] = useState<number | null>(null)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-
-  useEffect(() => {
-    if (!companyId) return
-    const supabase = createClient()
-    supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('referred_by_supplier_id', companyId)
-      .then(({ count }) => setReferredCount(count ?? 0))
-  }, [companyId])
-
   const inviteLink = `${origin}/auth/sign-up?ref=${companyId}`
 
   const handleCopy = async () => {
@@ -40,13 +28,6 @@ export function SupplierReferralCard({ companyId }: Props) {
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
         <p className="text-sm font-semibold">{t('supplierReferral.title')}</p>
-        {referredCount !== null && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {referredCount === 1
-              ? t('supplierReferral.referredCount', { count: referredCount })
-              : t('supplierReferral.referredCountPlural', { count: referredCount })}
-          </span>
-        )}
       </div>
       <p className="text-xs text-muted-foreground">{t('supplierReferral.description')}</p>
       <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2">
@@ -65,6 +46,9 @@ export function SupplierReferralCard({ companyId }: Props) {
           )}
         </Button>
       </div>
+      <Button type="button" size="sm" variant="outline" className="w-full" asChild>
+        <Link href="/dashboard/referrals">{t('supplierReferral.manageReferrals')}</Link>
+      </Button>
     </div>
   )
 }

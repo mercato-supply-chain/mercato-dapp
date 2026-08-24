@@ -12,6 +12,7 @@ import {
   Sprout,
   TrendingUp,
   Unlock,
+  UserPlus,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -134,6 +135,11 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               href: '/dashboard/supplier-profile',
               labelKey: 'dashboardNav.companies',
               icon: Building2,
+            },
+            {
+              href: '/dashboard/referrals',
+              labelKey: 'dashboardNav.referrals',
+              icon: UserPlus,
             },
           ],
         },

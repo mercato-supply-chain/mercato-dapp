@@ -358,6 +358,7 @@
     "browseInvestors": "Ver inversionistas",
     "deliveries": "Entregas",
     "companies": "Empresas y catálogo",
+    "referrals": "Referidos",
     "approvals": "Ops de escrow",
     "leads": "Leads de eventos",
     "releaseQueue": "Cola de liberación",
@@ -454,6 +455,8 @@
       "manageCompaniesDescription": "Actualiza el perfil y catálogo de tu empresa",
       "viewActiveDeals": "Ver órdenes activas",
       "viewActiveDealsDescription": "Consulta órdenes asignadas a tus empresas",
+      "manageReferrals": "Gestionar referidos",
+      "manageReferralsDescription": "Seguimiento de PyMEs invitados, conversión y métricas de red",
       "confirmDeliveries": "Confirmar entregas",
       "confirmDeliveriesDescription": "Acepta órdenes y confirma hitos de entrega",
       "milestoneApprovalsDescription": "Libera fondos para hitos completados",
@@ -2650,7 +2653,104 @@
     "copyLink": "Copiar link",
     "copied": "¡Copiado!",
     "referredCount": "{count} PyME referido",
-    "referredCountPlural": "{count} PyMEs referidos"
+    "referredCountPlural": "{count} PyMEs referidos",
+    "manageReferrals": "Gestionar referidos"
+  },
+  "referrals": {
+    "page": {
+      "title": "Referidos y red",
+      "description": "Seguimiento de invitaciones, ciclo de vida de PyMEs referidos y resultados de financiamiento en tus empresas supplier.",
+      "privacyNote": "Solo se muestran campos públicos del directorio — sin emails, teléfonos ni direcciones de wallet."
+    },
+    "filters": {
+      "company": "Empresa",
+      "allCompanies": "Todas las empresas",
+      "status": "Estado PyME",
+      "allStatuses": "Todos los estados",
+      "from": "Desde",
+      "to": "Hasta",
+      "apply": "Aplicar filtros",
+      "clear": "Limpiar"
+    },
+    "summary": {
+      "acquisitionTitle": "Adquisición",
+      "financingTitle": "Financiamiento",
+      "invitationsCreated": "Invitaciones creadas",
+      "validInvitations": "Invitaciones válidas",
+      "linkOpens": "Aperturas de link",
+      "accountsCreated": "Cuentas creadas",
+      "onboardedPymes": "PyMEs onboarded",
+      "conversionRate": "Tasa de conversión",
+      "referredPymes": "PyMEs referidos",
+      "activeReferred": "PyMEs referidos activos",
+      "requestedVolume": "Volumen solicitado",
+      "fundedVolume": "Volumen financiado"
+    },
+    "status": {
+      "invited": "Invitado",
+      "accountCreated": "Cuenta creada",
+      "onboardingIncomplete": "Onboarding incompleto",
+      "inactive": "Inactivo",
+      "active": "Activo"
+    },
+    "invitationStatus": {
+      "active": "Activa",
+      "revoked": "Revocada",
+      "expired": "Expirada",
+      "converted": "Convertida"
+    },
+    "network": {
+      "title": "Desglose de red",
+      "country": "País",
+      "sector": "Sector",
+      "count": "Cantidad"
+    },
+    "invitations": {
+      "title": "Invitaciones",
+      "empty": "Aún no hay invitaciones. Crea una para compartir un link de registro rastreado.",
+      "company": "Empresa",
+      "label": "Etiqueta",
+      "recipient": "Email del destinatario",
+      "status": "Estado",
+      "opens": "Aperturas",
+      "created": "Creada",
+      "create": "Crear invitación",
+      "createTitle": "Nueva invitación de referido",
+      "createDescription": "Genera un link de registro de un solo uso. Cópialo de inmediato — los tokens no se almacenan.",
+      "labelPlaceholder": "ej. outreach Q1",
+      "emailPlaceholder": "opcional@email.com",
+      "copyLink": "Copiar link",
+      "copied": "¡Copiado!",
+      "revoke": "Revocar",
+      "regenerate": "Regenerar link",
+      "confirmRevoke": "¿Revocar esta invitación? El link dejará de funcionar.",
+      "directReferral": "Referido directo"
+    },
+    "referredPymes": {
+      "title": "PyMEs referidos",
+      "empty": "Aún no hay PyMEs referidos.",
+      "company": "PyME",
+      "status": "Estado",
+      "deals": "Deals",
+      "requested": "Solicitado",
+      "funded": "Financiado",
+      "source": "Origen",
+      "directReferral": "Referido directo",
+      "viewProfile": "Ver perfil"
+    },
+    "activity": {
+      "title": "Línea de actividad",
+      "empty": "Aún no hay actividad de referidos.",
+      "openedTimes": "Abierto {count} veces",
+      "events": {
+        "invitation_created": "Invitación creada",
+        "link_opened": "Link abierto",
+        "account_created": "Cuenta creada",
+        "onboarding_completed": "Onboarding completado",
+        "deal_created": "Deal creado",
+        "deal_funded": "Deal financiado"
+      }
+    }
   },
   "referral": {
     "onboarding": {
