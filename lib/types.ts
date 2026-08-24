@@ -48,6 +48,8 @@ export interface Milestone {
 
 export interface Deal {
   id: string
+  /** Catalog product FK when deal was created from supplier catalog. */
+  productId?: string
   productName: string
   quantity: number
   /** Supplier invoice / principal (what supplier receives; yield base). */
