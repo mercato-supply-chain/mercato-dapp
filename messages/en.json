@@ -357,6 +357,7 @@
     "createDeal": "Create deal",
     "browseInvestors": "Browse investors",
     "deliveries": "Deliveries",
+    "supplierActivity": "Commercial activity",
     "companies": "Companies & catalog",
     "approvals": "Escrow ops",
     "leads": "Event leads",
@@ -456,6 +457,8 @@
       "viewActiveDealsDescription": "See deals assigned to your companies",
       "confirmDeliveries": "Confirm Deliveries",
       "confirmDeliveriesDescription": "Accept orders and confirm delivery milestones",
+      "viewCommercialActivity": "Commercial activity",
+      "viewCommercialActivityDescription": "Financing demand, sales, and product performance",
       "milestoneApprovalsDescription": "Release funds for completed milestones",
       "browseAllDeals": "Browse All Deals",
       "browseAllDealsDescription": "View the full platform deal history"
@@ -860,6 +863,77 @@
     "shipPendingHint": "Confirm shipment and add a tracking ID",
     "statusFunded": "Funded",
     "openDealUpload": "Confirm shipment"
+  },
+  "supplierActivity": {
+    "title": "Commercial activity",
+    "description": "Track financing requests, financed sales, fulfillment, and product performance across your companies.",
+    "loadError": "Unable to load commercial activity. Please try again later.",
+    "activityTitle": "Activity",
+    "activityEmpty": "No activity matches your filters.",
+    "productPerformanceTitle": "Product performance",
+    "productPerformanceEmpty": "No catalog-linked product metrics for the current filters.",
+    "customerActivityTitle": "Customer financing activity",
+    "customerActivityEmpty": "No customer activity for the current filters.",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pagination": "Page {page} of {total}",
+    "summary": {
+      "openRequests": "Open financing requests",
+      "activeFinanced": "Active financed sales",
+      "completedFinanced": "Completed financed sales",
+      "pendingShipments": "Pending shipments",
+      "totalVolume": "Total financed volume"
+    },
+    "filters": {
+      "company": "Company",
+      "product": "Product",
+      "category": "Category",
+      "status": "Commercial status",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "all": "All",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "states": {
+      "financing_request": "Awaiting financing",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "financed_sale": "Financed sale",
+      "needs_shipment": "Needs shipment",
+      "in_fulfillment": "In fulfillment",
+      "completed_sale": "Completed"
+    },
+    "table": {
+      "product": "Product",
+      "customer": "PyME / customer",
+      "company": "Company",
+      "amount": "Amount",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "status": "Status",
+      "investor": "Investor",
+      "created": "Created",
+      "funded": "Funded",
+      "shipped": "Shipped",
+      "viewDeal": "View deal",
+      "category": "Category"
+    },
+    "productPerformance": {
+      "requests": "Financing requests",
+      "funded": "Funded requests",
+      "conversion": "Conversion",
+      "financedVolume": "Financed volume",
+      "completedVolume": "Completed volume"
+    },
+    "customerActivity": {
+      "products": "Products requested",
+      "requests": "Requests",
+      "requestValue": "Request value",
+      "funded": "Funded",
+      "awaiting": "Awaiting funding",
+      "lastActivity": "Last activity"
+    }
   },
   "investments": {
     "hubLabel": "Portfolio",

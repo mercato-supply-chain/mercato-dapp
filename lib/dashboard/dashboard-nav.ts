@@ -131,6 +131,11 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               icon: CheckCircle2,
             },
             {
+              href: '/dashboard/supplier-activity',
+              labelKey: 'dashboardNav.supplierActivity',
+              icon: LineChart,
+            },
+            {
               href: '/dashboard/supplier-profile',
               labelKey: 'dashboardNav.companies',
               icon: Building2,

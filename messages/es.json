@@ -357,6 +357,7 @@
     "createDeal": "Crear orden",
     "browseInvestors": "Ver inversionistas",
     "deliveries": "Entregas",
+    "supplierActivity": "Actividad comercial",
     "companies": "Empresas y catálogo",
     "approvals": "Ops de escrow",
     "leads": "Leads de eventos",
@@ -456,6 +457,8 @@
       "viewActiveDealsDescription": "Consulta órdenes asignadas a tus empresas",
       "confirmDeliveries": "Confirmar entregas",
       "confirmDeliveriesDescription": "Acepta órdenes y confirma hitos de entrega",
+      "viewCommercialActivity": "Actividad comercial",
+      "viewCommercialActivityDescription": "Demanda de financiamiento, ventas y rendimiento por producto",
       "milestoneApprovalsDescription": "Libera fondos para hitos completados",
       "browseAllDeals": "Ver todas las órdenes",
       "browseAllDealsDescription": "Consulta el historial completo de órdenes de la plataforma"
@@ -860,6 +863,77 @@
     "shipPendingHint": "Confirma el envío y agrega un ID de rastreo",
     "statusFunded": "Financiada",
     "openDealUpload": "Confirmar envío"
+  },
+  "supplierActivity": {
+    "title": "Actividad comercial",
+    "description": "Sigue solicitudes de financiamiento, ventas financiadas, cumplimiento y rendimiento por producto.",
+    "loadError": "No se pudo cargar la actividad comercial. Intenta más tarde.",
+    "activityTitle": "Actividad",
+    "activityEmpty": "No hay actividad que coincida con los filtros.",
+    "productPerformanceTitle": "Rendimiento por producto",
+    "productPerformanceEmpty": "No hay métricas de productos vinculados al catálogo para los filtros actuales.",
+    "customerActivityTitle": "Actividad de clientes (PyMEs)",
+    "customerActivityEmpty": "No hay actividad de clientes para los filtros actuales.",
+    "prevPage": "Anterior",
+    "nextPage": "Siguiente",
+    "pagination": "Página {page} de {total}",
+    "summary": {
+      "openRequests": "Solicitudes abiertas",
+      "activeFinanced": "Ventas financiadas activas",
+      "completedFinanced": "Ventas financiadas completadas",
+      "pendingShipments": "Envíos pendientes",
+      "totalVolume": "Volumen financiado total"
+    },
+    "filters": {
+      "company": "Empresa",
+      "product": "Producto",
+      "category": "Categoría",
+      "status": "Estado comercial",
+      "dateFrom": "Desde",
+      "dateTo": "Hasta",
+      "all": "Todos",
+      "apply": "Aplicar filtros",
+      "clear": "Limpiar"
+    },
+    "states": {
+      "financing_request": "Esperando financiamiento",
+      "expired": "Expirada",
+      "cancelled": "Cancelada",
+      "financed_sale": "Venta financiada",
+      "needs_shipment": "Requiere envío",
+      "in_fulfillment": "En cumplimiento",
+      "completed_sale": "Completada"
+    },
+    "table": {
+      "product": "Producto",
+      "customer": "PyME / cliente",
+      "company": "Empresa",
+      "amount": "Monto",
+      "quantity": "Cant.",
+      "unitPrice": "Precio unitario",
+      "status": "Estado",
+      "investor": "Inversionista",
+      "created": "Creada",
+      "funded": "Financiada",
+      "shipped": "Enviada",
+      "viewDeal": "Ver orden",
+      "category": "Categoría"
+    },
+    "productPerformance": {
+      "requests": "Solicitudes",
+      "funded": "Financiadas",
+      "conversion": "Conversión",
+      "financedVolume": "Volumen financiado",
+      "completedVolume": "Volumen completado"
+    },
+    "customerActivity": {
+      "products": "Productos solicitados",
+      "requests": "Solicitudes",
+      "requestValue": "Valor solicitado",
+      "funded": "Financiadas",
+      "awaiting": "Esperando financiamiento",
+      "lastActivity": "Última actividad"
+    }
   },
   "investments": {
     "hubLabel": "Portafolio",

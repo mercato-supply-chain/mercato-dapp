@@ -160,6 +160,12 @@ export function buildDashboardViewModel(
           primary: true,
         },
         {
+          label: t.dashboard.actions.viewCommercialActivity,
+          description: t.dashboard.actions.viewCommercialActivityDescription,
+          href: '/dashboard/supplier-activity',
+          icon: TrendingUp,
+        },
+        {
           label: t.dashboard.actions.manageCompanies,
           description: t.dashboard.actions.manageCompaniesDescription,
           href: '/dashboard/supplier-profile',
