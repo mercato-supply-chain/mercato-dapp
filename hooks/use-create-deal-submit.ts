@@ -104,6 +104,12 @@ export function useCreateDealSubmit() {
 
       if (dealError) throw dealError
 
+      fetch('/api/referral/milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ milestone: 'deal_created' }),
+      }).catch(() => {})
+
       return { ok: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
