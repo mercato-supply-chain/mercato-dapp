@@ -65,19 +65,15 @@ export default function EditDealContent() {
       dealId: deal.id,
       userId,
       isAdmin,
+      productId: form.formData.productId,
       supplierId: form.formData.supplierId,
-      productName: form.selectedProduct.name,
       description:
         form.formData.description ||
         form.selectedProduct.description ||
         t('createDeal.missingDescription'),
       productQuantity: Number(form.formData.quantity),
-      productUnitPrice: Number(form.selectedProduct.price_per_unit),
-      totalAmount: form.totalAmount,
       termDays: Number(form.formData.term),
-      effectiveAPR: form.yieldAPR,
       yieldBonusApr: deal.yieldBonusApr ?? 0,
-      category: form.formData.category || form.selectedProduct.category || 'other',
       supplierName: form.formData.supplierName,
       supplierContact: form.formData.supplierContact || null,
       fundingWindowDays: form.fundingWindowDays,
