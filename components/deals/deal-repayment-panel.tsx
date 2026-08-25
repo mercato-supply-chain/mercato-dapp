@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, RefreshCw } from 'lucide-react'
+import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,6 +21,7 @@ import {
   canRelease as canReleaseCheck,
   canAddMilestone as canAddMilestoneCheck,
 } from '@/lib/deals/repayment-eligibility'
+import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 import { stellarExpertContractUrl } from '@/lib/stellar/explorer'
 import { Badge } from '@/components/ui/badge'
 
@@ -26,6 +29,8 @@ interface DealRepaymentPanelProps {
   deal: Deal
   isPyme: boolean
   isAdmin: boolean
+  isInvestor?: boolean
+  indexerEscrow?: GetEscrowsFromIndexerResponse | null
   fetchDeal: () => Promise<Deal | null>
   onDealUpdate: (deal: Deal) => void
 }
@@ -34,6 +39,8 @@ export function DealRepaymentPanel({
   deal,
   isPyme,
   isAdmin,
+  isInvestor = false,
+  indexerEscrow = null,
   fetchDeal,
   onDealUpdate,
 }: DealRepaymentPanelProps) {
@@ -44,16 +51,20 @@ export function DealRepaymentPanel({
     fundRepaymentEscrow,
     approveAndReleaseMilestone,
     addRepaymentMilestone,
+    syncDealFromIndexer,
   } = useRepaymentEscrow()
   const [busy, setBusy] = useState(false)
   const [fundAmount, setFundAmount] = useState('')
   const [addAmount, setAddAmount] = useState('')
+  const backgroundSyncDone = useRef(false)
 
   const {
     status,
+    displayStatus,
     milestones,
     currentMilestone,
     escrowAmount,
+    openAmount,
     remainingToSchedule,
     defaultFundAmount,
     breakdown,
@@ -67,19 +78,50 @@ export function DealRepaymentPanel({
     walletInfo?.address,
     deal.escrowAddress,
     currentMilestone,
-    status
+    status,
   )
   const canAddMilestone = canAddMilestoneCheck(
     isAdmin,
     walletInfo?.address,
     deal.escrowAddress,
     remainingToSchedule,
-    status
+    status,
   )
 
   const refresh = async () => {
     const updated = await fetchDeal()
     if (updated) onDealUpdate(updated)
+  }
+
+  useEffect(() => {
+    if (!deal.escrowAddress || backgroundSyncDone.current) return
+    backgroundSyncDone.current = true
+    void syncDealFromIndexer(deal.id, deal.escrowAddress, undefined, {
+      retryOnEmptyMilestones: false,
+    })
+      .then(() => refresh())
+      .catch(() => {
+        // Non-blocking; user can refresh manually
+      })
+  }, [deal.id, deal.escrowAddress, syncDealFromIndexer])
+
+  const handleRefreshStatus = async () => {
+    if (!deal.escrowAddress) return
+    setBusy(true)
+    try {
+      await syncDealFromIndexer(deal.id, deal.escrowAddress, undefined, {
+        retryOnEmptyMilestones: true,
+      })
+      await refresh()
+      toast.success(t('dealDetail.repaymentRefreshSuccess'))
+    } catch (err) {
+      console.error(err)
+      toast.error(
+        err instanceof Error ? err.message : t('dealDetail.repaymentRefreshFail'),
+      )
+    } finally {
+      setBusy(false)
+    }
   }
 
   const handleFund = async () => {
@@ -165,14 +207,45 @@ export function DealRepaymentPanel({
 
   const working = busy || isWorking
   const duePending = !deal.repaymentDueAt && !deal.deliveredAt
+  const liveBalance = Number(indexerEscrow?.balance ?? 0)
+  const progressTarget =
+    openAmount > 0 ? openAmount : currentMilestone?.amount ?? defaultFundAmount
+  const progressPct =
+    progressTarget > 0 ? Math.min(100, (liveBalance / progressTarget) * 100) : 0
+  const showEscrowProgress =
+    Boolean(deal.escrowAddress) &&
+    status !== 'none' &&
+    status !== 'order_confirmed'
+  const showInvestorProgress = isInvestor && showEscrowProgress
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t('dealDetail.repaymentTitle')}</CardTitle>
-        <CardDescription>{t('dealDetail.repaymentDescription')}</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div>
+          <CardTitle>{t('dealDetail.repaymentTitle')}</CardTitle>
+          <CardDescription>{t('dealDetail.repaymentDescription')}</CardDescription>
+        </div>
+        {deal.escrowAddress ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={handleRefreshStatus}
+            disabled={working}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${working ? 'animate-spin' : ''}`} aria-hidden />
+            {working ? t('dealDetail.repaymentRefreshing') : t('dealDetail.repaymentRefreshStatus')}
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
+        {showInvestorProgress ? (
+          <p className="text-sm text-muted-foreground">
+            {t('dealDetail.repaymentInvestorReadOnlyHint')}
+          </p>
+        ) : null}
+
         <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t('dealDetail.repaymentBreakdownTitle')}
@@ -205,6 +278,47 @@ export function DealRepaymentPanel({
           </ul>
         </div>
 
+        {showEscrowProgress ? (
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {t('dealDetail.repaymentEscrowBalance')}
+              </p>
+              <p className="tabular-nums font-semibold">
+                {formatCurrency(liveBalance)} USDC
+              </p>
+            </div>
+            {progressTarget > 0 ? (
+              <div className="mt-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>{t('dealDetail.repaymentFundingProgress')}</span>
+                  <span className="tabular-nums">
+                    {formatCurrency(liveBalance)} / {formatCurrency(progressTarget)} USDC
+                  </span>
+                </div>
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-valuenow={Math.round(progressPct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={t('dealDetail.repaymentFundingProgress')}
+                >
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('dealDetail.repaymentFundingProgressHint', {
+                    percent: Math.round(progressPct),
+                  })}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           {deal.repaymentDueAt ? (
             <div>
@@ -223,7 +337,7 @@ export function DealRepaymentPanel({
           )}
           <div>
             <p className="text-muted-foreground">{t('dealDetail.repaymentStatusLabel')}</p>
-            <p className="font-medium capitalize">{status.replaceAll('_', ' ')}</p>
+            <p className="font-medium capitalize">{displayStatus.replaceAll('_', ' ')}</p>
           </div>
           {currentMilestone ? (
             <div>
@@ -278,9 +392,16 @@ export function DealRepaymentPanel({
         ) : null}
 
         {status === 'order_confirmed' && isAdmin ? (
-          <p className="text-sm text-muted-foreground">
-            {t('dealDetail.repaymentAdminCreateHint')}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {t('dealDetail.repaymentAdminCreateHint')}
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/admin/approvals">
+                {t('dealDetail.repaymentAdminApprovalsLink')}
+              </Link>
+            </Button>
+          </div>
         ) : null}
 
         {canFund ? (
