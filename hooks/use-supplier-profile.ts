@@ -17,6 +17,7 @@ export function useSupplierProfile() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState<StockFilter>('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [sort, setSort] = useState('name_asc')
   const [page, setPage] = useState(0)
 
@@ -65,6 +66,7 @@ export function useSupplierProfile() {
     search,
     categoryFilter,
     stockFilter,
+    statusFilter,
     sort,
     page,
   )
@@ -73,6 +75,7 @@ export function useSupplierProfile() {
     setSearch('')
     setCategoryFilter('all')
     setStockFilter('all')
+    setStatusFilter('all')
     setPage(0)
   }, [])
 
@@ -95,6 +98,8 @@ export function useSupplierProfile() {
     setCategoryFilter,
     stockFilter,
     setStockFilter,
+    statusFilter,
+    setStatusFilter,
     inventoryStats: inventory.inventoryStats,
     stockAdjustingId: product.stockAdjustingId,
     adjustStock: product.adjustStock,
@@ -127,6 +132,7 @@ export function useSupplierProfile() {
     handleAddProduct: product.handleAddProduct,
     handleUpdateProduct: product.handleUpdateProduct,
     handleDeleteProduct: product.handleDeleteProduct,
+    handleStatusChange: product.handleStatusChange,
     clearFilters,
   }
 }

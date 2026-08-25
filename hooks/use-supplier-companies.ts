@@ -11,7 +11,7 @@ import { useI18n } from '@/lib/i18n/provider'
 import { toast } from 'sonner'
 
 const SUPPLIER_COMPANY_SELECT =
-  'id, company_name, bio, country, sector, phone, logo_url' as const
+  'id, company_name, bio, country, sector, phone, logo_url, website, address, categories' as const
 
 function logSupabaseError(label: string, err: unknown) {
   const e = err as { message?: string; details?: string; hint?: string; code?: string }
@@ -38,6 +38,9 @@ export function useSupplierCompanies() {
     sector: '',
     phone: '',
     logo_url: '',
+    website: '',
+    address: '',
+    categories: [],
   })
 
   useEffect(() => {
@@ -87,6 +90,9 @@ export function useSupplierCompanies() {
       sector: company?.sector ?? '',
       phone: company?.phone ?? '',
       logo_url: company?.logo_url ?? '',
+      website: company?.website ?? '',
+      address: company?.address ?? '',
+      categories: company?.categories ?? [],
     })
   }, [selectedCompanyId, companies])
 
@@ -108,6 +114,9 @@ export function useSupplierCompanies() {
           sector: companyForm.sector || null,
           phone: companyForm.phone.trim() || null,
           logo_url: companyForm.logo_url || null,
+          website: companyForm.website.trim() || null,
+          address: companyForm.address.trim() || null,
+          categories: companyForm.categories.length > 0 ? companyForm.categories : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', selectedCompanyId)
@@ -123,6 +132,9 @@ export function useSupplierCompanies() {
                 sector: companyForm.sector || null,
                 phone: companyForm.phone.trim() || null,
                 logo_url: companyForm.logo_url || null,
+                website: companyForm.website.trim() || null,
+                address: companyForm.address.trim() || null,
+                categories: companyForm.categories.length > 0 ? companyForm.categories : null,
               }
             : c,
         ),

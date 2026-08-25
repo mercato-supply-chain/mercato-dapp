@@ -4,6 +4,8 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { PRODUCT_CATEGORIES, getLocalizedCategoryLabel } from '@/lib/categories'
 import {
   Select,
   SelectContent,
@@ -82,6 +84,50 @@ export function SupplierCompanyDetails({
             </SelectContent>
           </Select>
         </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="company-website">{t('supplierProfile.website') || 'Website'}</Label>
+          <Input
+            id="company-website"
+            type="url"
+            value={form.website}
+            onChange={(e) => onChange({ website: e.target.value })}
+            placeholder="https://example.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="company-address">{t('supplierProfile.address') || 'Stellar Payment Address'}</Label>
+          <Input
+            id="company-address"
+            value={form.address}
+            onChange={(e) => onChange({ address: e.target.value })}
+            placeholder="G..."
+          />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label>{t('supplierProfile.productCategories') || 'Product Categories'}</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+            {PRODUCT_CATEGORIES.map((cat) => (
+              <div key={cat.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`cat-${cat.value}`}
+                  checked={form.categories.includes(cat.value)}
+                  onCheckedChange={(checked) => {
+                    const newCategories = checked
+                      ? [...form.categories, cat.value]
+                      : form.categories.filter((c) => c !== cat.value)
+                    onChange({ categories: newCategories })
+                  }}
+                />
+                <Label htmlFor={`cat-${cat.value}`} className="text-sm font-normal cursor-pointer">
+                  {/* Note: we would need messages from useI18n, but since they are not directly available, we can just use t or label */}
+                  {cat.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-2 sm:col-span-2 sm:max-w-md">
           <Label htmlFor="company-sector">{t('supplierProfile.sector')}</Label>
           <Select value={form.sector || undefined} onValueChange={(v) => onChange({ sector: v })}>

@@ -15,6 +15,7 @@ export function useInventoryStats(
   search: string,
   categoryFilter: string,
   stockFilter: StockFilter,
+  statusFilter: string,
   sort: string,
   page: number,
 ) {
@@ -59,6 +60,9 @@ export function useInventoryStats(
     if (stockFilter !== 'all') {
       list = list.filter((p) => productMatchesStockFilter(p, stockFilter))
     }
+    if (statusFilter !== 'all') {
+      list = list.filter((p) => p.status === statusFilter)
+    }
     const [field, dir] = sort.includes('_') ? sort.split('_') : ['name', 'asc']
     list.sort((a, b) => {
       if (field === 'name') {
@@ -80,7 +84,7 @@ export function useInventoryStats(
       return 0
     })
     return list
-  }, [products, search, categoryFilter, stockFilter, sort])
+  }, [products, search, categoryFilter, stockFilter, statusFilter, sort])
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages - 1)

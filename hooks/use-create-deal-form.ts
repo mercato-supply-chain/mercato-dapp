@@ -58,7 +58,10 @@ export function useCreateDealForm(
   const combinedProducts = [
     ...supplierProducts,
     ...fetchedProducts.filter(p => !supplierProducts.some(sp => sp.id === p.id))
-  ]
+  ].filter(p => {
+    if (p.id === formData.productId) return true
+    return (p.stock_quantity ?? 0) - (p.reserved_quantity ?? 0) > 0
+  })
 
   const availableCategories = PRODUCT_CATEGORIES.map(c => c.value).sort()
 

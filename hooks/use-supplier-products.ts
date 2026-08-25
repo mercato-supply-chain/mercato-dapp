@@ -117,6 +117,7 @@ export function useSupplierProducts(
       unit: p.unit || 'unit',
       stock_quantity: String(p.stock_quantity ?? 0),
       reorder_point: String(p.reorder_point ?? 0),
+      status: p.status || 'active',
       imageFile: null,
       imagePreview: p.image_url ?? null,
     })
@@ -133,7 +134,25 @@ export function useSupplierProducts(
     const unit = formProduct.unit.trim() || 'unit'
     const stockQty = Math.max(0, Math.floor(Number.parseInt(formProduct.stock_quantity, 10) || 0))
     const reorderPoint = Math.max(0, Math.floor(Number.parseInt(formProduct.reorder_point, 10) || 0))
-    return { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint }
+    const status = formProduct.status || 'active'
+    const handleStatusChange = useCallback(async (product: SupplierProduct, newStatus: 'active' | 'paused' | 'discontinued') => {
+    try {
+      const { error } = await supabase
+        .from('supplier_products')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', product.id)
+      if (error) throw error
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, status: newStatus } : p)),
+      )
+      toast.success(t('supplierProfile.toastStatusUpdated') || 'Status updated')
+    } catch (err) {
+      console.error(err)
+      toast.error(t('supplierProfile.toastStatusUpdateFail') || 'Failed to update status')
+    }
+  }, [supabase, t])
+
+  return { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint, status }
   }, [formProduct])
 
   const adjustStock = useCallback(async (product: SupplierProduct, delta: number) => {
@@ -163,7 +182,7 @@ export function useSupplierProducts(
 
   const handleAddProduct = useCallback(async () => {
     if (!user || !selectedCompanyId) return
-    const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint } =
+    const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint, status } =
       parseProductForm()
     if (!name || !category || Number.isNaN(price) || price <= 0) {
       toast.error(t('supplierProfile.toastProductFields'))
@@ -185,6 +204,7 @@ export function useSupplierProducts(
           unit,
           stock_quantity: stockQty,
           reorder_point: reorderPoint,
+          status,
         })
         .select()
         .single()
@@ -228,7 +248,7 @@ export function useSupplierProducts(
 
   const handleUpdateProduct = useCallback(async () => {
     if (!editingProduct || !user || !selectedCompanyId) return
-    const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint } =
+    const { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint, status } =
       parseProductForm()
     if (!name || !category || Number.isNaN(price) || price <= 0) {
       toast.error(t('supplierProfile.toastProductFields'))
@@ -273,6 +293,7 @@ export function useSupplierProducts(
           unit,
           stock_quantity: stockQty,
           reorder_point: reorderPoint,
+          status,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingProduct.id)
@@ -294,6 +315,7 @@ export function useSupplierProducts(
                 unit,
                 stock_quantity: stockQty,
                 reorder_point: reorderPoint,
+                status,
               }
             : p,
         ),
@@ -343,6 +365,7 @@ export function useSupplierProducts(
     handleAddProduct,
     handleUpdateProduct,
     handleDeleteProduct,
+    handleStatusChange,
     adjustStock,
     hasMore,
     isLoading,

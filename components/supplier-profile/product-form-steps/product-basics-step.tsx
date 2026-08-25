@@ -68,6 +68,20 @@ export function ProductBasicsStep({
             </SelectContent>
           </Select>
         </div>
+
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="form-status">{t('supplierProfile.formStatus') || 'Publication Status'}</Label>
+          <Select value={formProduct.status || 'active'} onValueChange={(v) => onChange({ status: v })}>
+            <SelectTrigger id="form-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">{t('supplierProfile.statusActive') || 'Active - Available for deals'}</SelectItem>
+              <SelectItem value="paused">{t('supplierProfile.statusPaused') || 'Paused - Temporarily hidden'}</SelectItem>
+              <SelectItem value="discontinued">{t('supplierProfile.statusDiscontinued') || 'Discontinued - No longer offered'}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
