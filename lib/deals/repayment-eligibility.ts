@@ -6,7 +6,9 @@ import {
   repaymentRemainingAmount,
 } from '@/lib/deals/fees'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
+import { normalizeRepaymentDisplayStatus } from '@/lib/deals/repayment-escrow-helpers'
 
+/** Legacy `funded` kept in DB for single-release rows; included in fundable set. */
 export const FUNDABLE_STATUSES: ReadonlySet<RepaymentStatus> = new Set([
   'escrow_initialized',
   'funding',
@@ -17,6 +19,8 @@ export const FUNDABLE_STATUSES: ReadonlySet<RepaymentStatus> = new Set([
 
 export interface RepaymentState {
   status: RepaymentStatus
+  /** UI label status (`funded` → `ready_to_release`). */
+  displayStatus: RepaymentStatus
   milestones: RepaymentMilestoneCache[]
   openMilestones: RepaymentMilestoneCache[]
   currentMilestone: RepaymentMilestoneCache | undefined
@@ -36,6 +40,7 @@ export function computeRepaymentState(deal: Deal): RepaymentState {
       ? deal.repaymentTotalAmount
       : repaymentEscrowAmount(deal.priceUSDC, profit)
   const status = deal.repaymentStatus ?? 'none'
+  const displayStatus = normalizeRepaymentDisplayStatus(status)
   const milestones = deal.repaymentMilestones ?? []
   const openMilestones = milestones.filter((m) => !m.released)
   const openAmount = openMilestones.reduce((sum, m) => sum + m.amount, 0)
@@ -47,6 +52,7 @@ export function computeRepaymentState(deal: Deal): RepaymentState {
 
   return {
     status,
+    displayStatus,
     milestones,
     openMilestones,
     currentMilestone,
