@@ -61,6 +61,7 @@ export default function DealDetailPage() {
   const { deal, setDeal, isLoading, userId, userType, isSupplier, isPyme, isAdmin,
     indexerEscrow, pymeReputation, supplierReputation, partyReputationsLoading,
     fetchDeal, supabase, walletInfo, isConnected, handleConnect } = ctx
+  const isInvestor = userType === 'investor'
 
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
@@ -214,6 +215,8 @@ export default function DealDetailPage() {
             deal={deal}
             isPyme={isPyme}
             isAdmin={isAdmin}
+            isInvestor={isInvestor}
+            indexerEscrow={indexerEscrow}
             fetchDeal={fetchDeal}
             onDealUpdate={setDeal}
           />

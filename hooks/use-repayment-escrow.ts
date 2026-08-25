@@ -50,8 +50,8 @@ import type { RepaymentMilestoneCache, RepaymentStatus } from '@/lib/types'
 import {
   repaymentEngagementId,
   roundUsdc,
+  reconcileRepaymentFromIndexer,
   cacheMilestonesFromIndexer,
-  deriveRepaymentStatusFromMilestones,
 } from '@/lib/deals/repayment-escrow-helpers'
 import { fetchInvestorWalletForDeal } from '@/lib/deals/investor-wallet'
 import type {
@@ -112,12 +112,21 @@ export function useRepaymentEscrow() {
       dealId: string,
       contractId: string,
       extras?: Record<string, unknown>,
+      options?: { retryOnEmptyMilestones?: boolean },
     ): Promise<{
       milestones: RepaymentMilestoneCache[]
       status: RepaymentStatus
       balance: number
     }> => {
+      const retryOnEmpty = options?.retryOnEmptyMilestones ?? true
       let escrow = await fetchIndexerEscrow(contractId)
+      if (retryOnEmpty && !escrow?.milestones?.length) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000))
+          escrow = await fetchIndexerEscrow(contractId)
+          if (escrow?.milestones?.length) break
+        }
+      }
       let balance = Number(escrow?.balance ?? 0)
       try {
         const balances = await getMultipleBalances({ addresses: [contractId] })
@@ -128,15 +137,14 @@ export function useRepaymentEscrow() {
       } catch {
         // Indexer balance is fine as fallback
       }
-      const milestones = cacheMilestonesFromIndexer(escrow)
       const { data: dealRow } = await supabase
         .from('deals')
         .select('repayment_total_amount')
         .eq('id', dealId)
         .single()
       const totalGrossed = Number(dealRow?.repayment_total_amount ?? 0)
-      const status = deriveRepaymentStatusFromMilestones(
-        milestones,
+      const { milestones, status } = reconcileRepaymentFromIndexer(
+        escrow,
         balance,
         totalGrossed,
       )
