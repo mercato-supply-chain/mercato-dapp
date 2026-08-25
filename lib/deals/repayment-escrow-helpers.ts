@@ -37,6 +37,22 @@ export function cacheMilestonesFromIndexer(
   })
 }
 
+/** Map legacy single-release DB status for display only (no migration). */
+export function normalizeRepaymentDisplayStatus(status: RepaymentStatus): RepaymentStatus {
+  return status === 'funded' ? 'ready_to_release' : status
+}
+
+/** Derive cached milestone rows + status from indexer snapshot (conservative rules). */
+export function reconcileRepaymentFromIndexer(
+  escrow: GetEscrowsFromIndexerResponse | null | undefined,
+  balance: number,
+  totalGrossed: number,
+): { milestones: RepaymentMilestoneCache[]; status: RepaymentStatus } {
+  const milestones = cacheMilestonesFromIndexer(escrow)
+  const status = deriveRepaymentStatusFromMilestones(milestones, balance, totalGrossed)
+  return { milestones, status }
+}
+
 export function deriveRepaymentStatusFromMilestones(
   milestones: RepaymentMilestoneCache[],
   balance: number,
