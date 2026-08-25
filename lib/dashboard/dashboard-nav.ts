@@ -1,9 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BarChart3,
   Building2,
   CheckCircle2,
   FileCheck,
   HandCoins,
+  History,
   Landmark,
   LayoutDashboard,
   LineChart,
@@ -132,6 +134,11 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               icon: CheckCircle2,
             },
             {
+              href: '/dashboard/supplier-activity',
+              labelKey: 'dashboardNav.supplierActivity',
+              icon: LineChart,
+            },
+            {
               href: '/dashboard/supplier-profile',
               labelKey: 'dashboardNav.companies',
               icon: Building2,
@@ -154,6 +161,17 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
           titleKey: 'dashboardNav.sectionOperations',
           items: [
             {
+              href: '/dashboard/admin',
+              labelKey: 'dashboardNav.adminOverview',
+              icon: LayoutDashboard,
+              matchPrefix: false,
+            },
+            {
+              href: '/dashboard/admin/users',
+              labelKey: 'dashboardNav.adminUsers',
+              icon: UserCog,
+            },
+            {
               href: '/dashboard/admin/approvals',
               labelKey: 'dashboardNav.approvals',
               icon: FileCheck,
@@ -167,6 +185,16 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               href: '/dashboard/admin/vault',
               labelKey: 'dashboardNav.vaultMonitor',
               icon: Landmark,
+            },
+            {
+              href: '/dashboard/admin/analytics',
+              labelKey: 'dashboardNav.analytics',
+              icon: BarChart3,
+            },
+            {
+              href: '/dashboard/admin/activity',
+              labelKey: 'dashboardNav.activity',
+              icon: History,
             },
             {
               href: '/dashboard/admin/leads',

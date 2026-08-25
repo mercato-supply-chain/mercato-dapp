@@ -23,7 +23,7 @@ export function AdminSubnav({ pendingCount = 0, releaseCount = 0, vaultConfigure
       aria-label={t('adminPage.opsNavLabel')}
     >
       {ADMIN_OPS_NAV.map((item) => {
-        const active = isAdminOpsNavActive(pathname, item.href)
+        const active = isAdminOpsNavActive(pathname, item.href, item.exact)
         const Icon = item.icon
         const showPending = item.href.includes('/approvals') && pendingCount > 0
         const showRelease = item.href.includes('/releases') && releaseCount > 0
