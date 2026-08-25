@@ -18,6 +18,7 @@ export interface DealRow {
   title: string
   description: string
   category: string
+  product_id?: string | null
   product_name: string
   product_quantity: number
   product_unit_price: number
@@ -227,6 +228,7 @@ export function mapDealFromDb(row: DealRow): Deal {
 
   return {
     id: row.id,
+    productId: row.product_id ?? undefined,
     productName: row.product_name || row.title,
     quantity: row.product_quantity ?? 0,
     priceUSDC: principal,
