@@ -10,6 +10,17 @@ export type SupplierCommercialState =
   | 'in_fulfillment'
   | 'completed_sale'
 
+/** All supplier commercial states, in lifecycle display order. */
+export const SUPPLIER_COMMERCIAL_STATES: SupplierCommercialState[] = [
+  'financing_request',
+  'expired',
+  'cancelled',
+  'financed_sale',
+  'needs_shipment',
+  'in_fulfillment',
+  'completed_sale',
+]
+
 export type SupplierCommercialDealRow = Pick<
   DealRow,
   | 'status'
