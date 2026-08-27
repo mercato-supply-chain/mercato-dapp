@@ -12,6 +12,7 @@ import { SupplierProductCatalog } from './supplier-product-catalog'
 import { SupplierFirstCompany } from './supplier-first-company'
 import { SupplierProfileDialogs } from './supplier-profile-dialogs'
 import { SupplierReferralCard } from './supplier-referral-card'
+import { SupplierInventoryImportDialog } from './supplier-inventory-import-dialog'
 import type { CompanyFieldsValues } from './supplier-company-fields'
 
 export function SupplierProfilePage() {
@@ -130,6 +131,7 @@ export function SupplierProfilePage() {
                     stockAdjustingId={sp.stockAdjustingId}
                     onAdjustStock={sp.adjustStock}
                     onAddProduct={sp.openAddDialog}
+                    onImportProducts={() => sp.setImportDialogOpen(true)}
                     onEditProduct={sp.openEditDialog}
                     onDeleteProduct={sp.setDeleteProduct}
                     onClearFilters={sp.clearFilters}
@@ -165,6 +167,12 @@ export function SupplierProfilePage() {
       onAddProduct={sp.handleAddProduct}
       onUpdateProduct={sp.handleUpdateProduct}
       onConfirmDelete={sp.handleDeleteProduct}
+    />
+    <SupplierInventoryImportDialog
+      open={sp.importDialogOpen}
+      onOpenChange={sp.setImportDialogOpen}
+      products={sp.products}
+      onImport={sp.importProducts}
     />
   </>
   )

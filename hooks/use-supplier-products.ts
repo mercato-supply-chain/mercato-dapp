@@ -12,6 +12,7 @@ import {
 import { deleteStorageFile } from '@/lib/supplier-profile/storage'
 import { useI18n } from '@/lib/i18n/provider'
 import { toast } from 'sonner'
+import type { NormalizedProduct } from '@/lib/supplier-profile/product-validation'
 
 export function useSupplierProducts(
   selectedCompanyId: string | null,
@@ -32,6 +33,23 @@ export function useSupplierProducts(
   const [formProduct, setFormProduct] = useState<ProductFormState>(EMPTY_PRODUCT_FORM)
   const [formSaving, setFormSaving] = useState(false)
   const [stockAdjustingId, setStockAdjustingId] = useState<string | null>(null)
+
+  const importProducts = useCallback(async (rows: NormalizedProduct[]) => {
+    if (!selectedCompanyId || rows.length === 0) return false
+    const response = await fetch('/api/supplier/import-products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ companyId: selectedCompanyId, rows }),
+    })
+    const payload = (await response.json()) as {
+      products?: SupplierProduct[]
+      error?: string
+    }
+    if (!response.ok) throw new Error(payload.error ?? 'import.failed')
+    setProducts((prev) => [...prev, ...(payload.products ?? [])])
+    return true
+  }, [selectedCompanyId])
 
   useEffect(() => {
     if (!selectedCompanyId || !user) {
@@ -347,5 +365,6 @@ export function useSupplierProducts(
     hasMore,
     isLoading,
     loadMore,
+    importProducts,
   }
 }
