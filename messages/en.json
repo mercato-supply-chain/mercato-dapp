@@ -1545,6 +1545,21 @@
     "startTooltip": "Platform opens disputes as service provider. Requires a dispute resolver address different from the platform wallet.",
     "cannotOpenAsResolver": "The dispute resolver cannot open a dispute. Set NEXT_PUBLIC_MERCATO_DISPUTE_RESOLVER_ADDRESS to a different wallet, or connect the platform wallet when it is not the resolver."
   },
+  "adminOverview": {
+    "disputesChecking": "Checking escrows for live disputes…",
+    "disputesLive": "Live dispute check from the escrow indexer",
+    "disputesUnavailable": "Dispute queue unavailable. Please try again later.",
+    "disputedTitle": "Disputed repayment on {deal}",
+    "priority": {
+      "critical": "Critical"
+    },
+    "states": {
+      "disputed": "Disputed"
+    },
+    "actions": {
+      "resolveDispute": "Resolve dispute"
+    }
+  },
   "adminCreateEscrow": {
     "cardTitle": "Create repayment escrows",
     "cardDescription": "PyME confirmed order arrival. Deploy a multi-release escrow with the first milestone (default 50%), then they micro-fund.",

@@ -1545,6 +1545,21 @@
     "startTooltip": "La plataforma abre disputas como service provider. Requiere un árbitro distinto de la billetera de la plataforma.",
     "cannotOpenAsResolver": "El árbitro no puede abrir una disputa. Configura NEXT_PUBLIC_MERCATO_DISPUTE_RESOLVER_ADDRESS con otra billetera, o conecta la plataforma cuando no sea el árbitro."
   },
+  "adminOverview": {
+    "disputesChecking": "Buscando disputas en vivo en los escrows…",
+    "disputesLive": "Chequeo de disputas en vivo desde el indexer de escrows",
+    "disputesUnavailable": "Cola de disputas no disponible. Inténtalo de nuevo más tarde.",
+    "disputedTitle": "Reembolso en disputa en {deal}",
+    "priority": {
+      "critical": "Crítica"
+    },
+    "states": {
+      "disputed": "En disputa"
+    },
+    "actions": {
+      "resolveDispute": "Resolver disputa"
+    }
+  },
   "adminCreateEscrow": {
     "cardTitle": "Crear escrows de reembolso",
     "cardDescription": "La PyME confirmó la llegada del pedido. Despliega un escrow multi-release con el primer hito (50% por defecto); luego fondean en micro-pagos.",
