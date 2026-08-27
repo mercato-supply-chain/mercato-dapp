@@ -8,6 +8,7 @@ type EditableDeal = Pick<
   | 'investorId'
   | 'fundedAt'
   | 'pymeId'
+  | 'productId'
   | 'productName'
   | 'quantity'
   | 'description'
@@ -52,7 +53,10 @@ export function dealToFormData(
   deal: EditableDeal,
   products: SupplierProductRow[],
 ): CreateDealFormData {
-  const matched = findCatalogProductForDeal(deal, products)
+  const byId = deal.productId
+    ? products.find((p) => p.id === deal.productId)
+    : undefined
+  const matched = byId ?? findCatalogProductForDeal(deal, products)
   const supplierProduct = products.find((p) => p.supplier_id === deal.supplierId)
   const supplierContact = ''
 

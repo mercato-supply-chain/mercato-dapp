@@ -5,6 +5,8 @@ import {
   isMilestoneReleased,
   cacheMilestonesFromIndexer,
   deriveRepaymentStatusFromMilestones,
+  reconcileRepaymentFromIndexer,
+  normalizeRepaymentDisplayStatus,
 } from '@/lib/deals/repayment-escrow-helpers'
 
 describe('repayment escrow helpers', () => {
@@ -97,5 +99,27 @@ describe('repayment escrow helpers', () => {
         0,
       ),
     ).toBe('partially_released')
+  })
+
+  test('normalizeRepaymentDisplayStatus maps legacy funded', () => {
+    expect(normalizeRepaymentDisplayStatus('funded')).toBe('ready_to_release')
+    expect(normalizeRepaymentDisplayStatus('funding')).toBe('funding')
+  })
+
+  test('reconcileRepaymentFromIndexer stays conservative on indexer lag', () => {
+    const { status, milestones } = reconcileRepaymentFromIndexer(
+      { milestones: [] } as never,
+      50,
+      100,
+    )
+    expect(milestones).toEqual([])
+    expect(status).toBe('escrow_initialized')
+    expect(status).not.toBe('released')
+  })
+
+  test('indexer lag: balance present but empty milestones does not mark released', () => {
+    expect(
+      deriveRepaymentStatusFromMilestones([], 75, 100),
+    ).toBe('escrow_initialized')
   })
 })
