@@ -42,18 +42,26 @@ import {
   MERCATO_PLATFORM_ADDRESS,
   MERCATO_DISPUTE_RESOLVER_ADDRESS,
 } from '@/lib/trustless/config'
+import {
+  useRepaymentCommandRefresh,
+  type AfterRepaymentCommand,
+} from '@/hooks/use-repayment-command-refresh'
 
 interface PendingApprovalsProps {
   items: PendingApprovalItem[]
   /** When provided (from AdminEscrowsProvider), skip internal fetch to avoid duplicate API calls */
   escrowsByContractId?: Map<string, GetEscrowsFromIndexerResponse>
+  onAfterCommand?: AfterRepaymentCommand
 }
 
 export function PendingApprovals({
   items,
   escrowsByContractId: escrowsFromParent,
+  onAfterCommand,
 }: PendingApprovalsProps) {
   const { t, locale } = useI18n()
+  const { refreshAfterCommand } = useRepaymentCommandRefresh()
+  const completeCommand = onAfterCommand ?? refreshAfterCommand
   const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [releasingId, setReleasingId] = useState<string | null>(null)
@@ -134,7 +142,7 @@ export function PendingApprovals({
         provider,
       })
       toast.success(t('adminPending.approveSuccess', { title: item.milestoneTitle }))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.approveFail')
       console.error('Approve milestone error:', err)
@@ -163,7 +171,7 @@ export function PendingApprovals({
         provider,
       })
       toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.releaseFail')
       console.error('Release funds error:', err)
@@ -179,7 +187,7 @@ export function PendingApprovals({
     try {
       await syncDealFromIndexer(item.dealId, item.escrowContractAddress)
       toast.success(t('adminPending.resyncSuccess'))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       console.error(err)
       toast.error(
@@ -225,7 +233,7 @@ export function PendingApprovals({
       toast.success(
         t('adminDispute.startSuccess', { title: item.milestoneTitle }),
       )
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       console.error(err)
       toast.error(
@@ -256,7 +264,7 @@ export function PendingApprovals({
         provider,
       })
       toast.success(t('dealDetail.repaymentMilestoneAdded'))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       console.error(err)
       toast.error(
@@ -286,6 +294,7 @@ export function PendingApprovals({
         onOpenChange={(next) => {
           if (!next) setDisputeTarget(null)
         }}
+        onAfterCommand={completeCommand}
       />
       {items.map((item) => {
         const escrow = escrowsByContractId.get(item.escrowContractAddress)

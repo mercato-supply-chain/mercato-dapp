@@ -6,6 +6,7 @@ import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hoo
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
+import { useRepaymentCommandRefresh } from '@/hooks/use-repayment-command-refresh'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,13 +30,17 @@ interface ReleaseFundsFallbackProps {
   items: ReleaseFallbackItem[]
   /** When provided (from AdminEscrowsProvider), skip internal fetch to avoid duplicate API calls */
   escrowsByContractId?: Map<string, GetEscrowsFromIndexerResponse>
+  onAfterCommand?: () => void | Promise<void>
 }
 
 export function ReleaseFundsFallback({
   items,
   escrowsByContractId: escrowsFromParent,
+  onAfterCommand,
 }: ReleaseFundsFallbackProps) {
   const { t, locale } = useI18n()
+  const { epoch, refreshAfterCommand } = useRepaymentCommandRefresh()
+  const completeCommand = onAfterCommand ?? refreshAfterCommand
   const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [releasingId, setReleasingId] = useState<string | null>(null)
@@ -90,7 +95,7 @@ export function ReleaseFundsFallback({
     return () => {
       cancelled = true
     }
-  }, [contractIdsKey, escrowsFromParent])
+  }, [contractIdsKey, escrowsFromParent, epoch])
 
   const handleApproveOnly = async (item: ReleaseFallbackItem) => {
     if (!walletInfo?.address) {
@@ -111,7 +116,7 @@ export function ReleaseFundsFallback({
         provider,
       })
       toast.success(t('adminPending.approveSuccessShort', { title: item.milestoneTitle }))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.approveFail')
       console.error('Approve milestone error:', err)
@@ -145,7 +150,7 @@ export function ReleaseFundsFallback({
         provider,
       })
       toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.releaseFail')
       console.error('Release funds error:', err)
@@ -161,7 +166,7 @@ export function ReleaseFundsFallback({
     try {
       await syncDealFromIndexer(item.dealId, item.escrowContractAddress)
       toast.success(t('adminPending.resyncSuccess'))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       console.error(err)
       toast.error(
@@ -186,6 +191,7 @@ export function ReleaseFundsFallback({
         onOpenChange={(next) => {
           if (!next) setDisputeTarget(null)
         }}
+        onAfterCommand={completeCommand}
       />
       {items.map((item) => {
         const escrow = escrowsByContractId.get(item.escrowContractAddress)

@@ -14,6 +14,7 @@ import type {
   ReleaseFallbackItem,
 } from '@/lib/admin/types'
 import { useI18n } from '@/lib/i18n/provider'
+import { useRepaymentCommandRefresh } from '@/hooks/use-repayment-command-refresh'
 
 interface AdminEscrowsProviderProps {
   items: PendingApprovalItem[]
@@ -31,6 +32,7 @@ export function AdminEscrowsProvider({
   releaseFallbackItems,
 }: AdminEscrowsProviderProps) {
   const { t } = useI18n()
+  const { epoch, refreshAfterCommand } = useRepaymentCommandRefresh()
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const getEscrowRef = useRef(getEscrowByContractIds)
   getEscrowRef.current = getEscrowByContractIds
@@ -78,7 +80,7 @@ export function AdminEscrowsProvider({
     return () => {
       cancelled = true
     }
-  }, [contractIdsKey])
+  }, [contractIdsKey, epoch])
 
   // Release-ready items already appear in the manage queue — only surface a
   // compact release strip when Approvals has no manage items but Releases does.
@@ -97,7 +99,10 @@ export function AdminEscrowsProvider({
             <CardDescription>{t('adminCreateEscrow.cardDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateRepaymentEscrows items={createEscrowItems} />
+            <CreateRepaymentEscrows
+              items={createEscrowItems}
+              onAfterCommand={refreshAfterCommand}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -111,7 +116,11 @@ export function AdminEscrowsProvider({
           <CardDescription>{t('adminEscrows.pendingCardDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <PendingApprovals items={items} escrowsByContractId={escrowsByContractId} />
+          <PendingApprovals
+            items={items}
+            escrowsByContractId={escrowsByContractId}
+            onAfterCommand={refreshAfterCommand}
+          />
         </CardContent>
       </Card>
 
@@ -128,6 +137,7 @@ export function AdminEscrowsProvider({
             <ReleaseFundsFallback
               items={releaseFallbackItems}
               escrowsByContractId={escrowsByContractId}
+              onAfterCommand={refreshAfterCommand}
             />
           </CardContent>
         </Card>

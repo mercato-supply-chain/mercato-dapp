@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Wallet, ExternalLink, Building2, Rocket } from 'lucide-react'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
+import { useRepaymentCommandRefresh } from '@/hooks/use-repayment-command-refresh'
 import { useI18n } from '@/lib/i18n/provider'
 import { formatCurrency } from '@/lib/format'
 import {
@@ -21,13 +22,19 @@ import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 
 interface CreateRepaymentEscrowsProps {
   items: CreateEscrowItem[]
+  onAfterCommand?: () => void | Promise<void>
 }
 
-export function CreateRepaymentEscrows({ items }: CreateRepaymentEscrowsProps) {
+export function CreateRepaymentEscrows({
+  items,
+  onAfterCommand,
+}: CreateRepaymentEscrowsProps) {
   const { t, locale } = useI18n()
   const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
   const { isWorking, deployRepaymentEscrow } = useRepaymentEscrow()
+  const { refreshAfterCommand } = useRepaymentCommandRefresh()
+  const completeCommand = onAfterCommand ?? refreshAfterCommand
   const [deployingId, setDeployingId] = useState<string | null>(null)
   const [percents, setPercents] = useState<Record<string, string>>({})
 
@@ -70,7 +77,7 @@ export function CreateRepaymentEscrows({ items }: CreateRepaymentEscrowsProps) {
         provider,
       })
       toast.success(t('adminCreateEscrow.deploySuccess'))
-      window.location.reload()
+      await completeCommand()
     } catch (err) {
       console.error(err)
       toast.error(

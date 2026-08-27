@@ -2,7 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AdminAuditEvent, AdminAuditFilters, AdminAuditResult } from './types'
 
 /** Actions written by the admin mutation RPCs. Single source for filters/labels. */
-export const AUDIT_ACTIONS = ['verify', 'unverify', 'update_profile'] as const
+export const AUDIT_ACTIONS = [
+  'verify',
+  'unverify',
+  'update_profile',
+  'set_user_type',
+] as const
 
 export const AUDIT_PAGE_SIZE = 25
 

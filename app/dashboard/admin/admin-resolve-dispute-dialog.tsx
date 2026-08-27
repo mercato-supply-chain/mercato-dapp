@@ -41,12 +41,14 @@ interface AdminResolveDisputeDialogProps {
   target: ResolveDisputeTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterCommand?: () => void | Promise<void>
 }
 
 export function AdminResolveDisputeDialog({
   target,
   open,
   onOpenChange,
+  onAfterCommand,
 }: AdminResolveDisputeDialogProps) {
   const { t } = useI18n()
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
@@ -143,7 +145,7 @@ export function AdminResolveDisputeDialog({
         t('adminDispute.resolveSuccess', { title: target.milestoneTitle }),
       )
       onOpenChange(false)
-      window.location.reload()
+      await onAfterCommand?.()
     } catch (err) {
       console.error(err)
       toast.error(
