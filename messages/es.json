@@ -448,8 +448,6 @@
       "adminTagline": "Supervisa operaciones y aprobaciones de hitos"
     },
     "actions": {
-      "ramp": "Agregar fondos / Retirar",
-      "rampDescription": "Mueve dinero entrando y saliendo mediante proveedores on-ramp",
       "create": "Crear nueva orden",
       "createDescription": "Solicita financiamiento de cadena de suministro para una compra",
       "browseInvestorsDescription": "Ve órdenes financiadas e inversionistas activos",
@@ -695,18 +693,6 @@
       "secondaryCta": "Cómo funciona",
       "tertiaryCta": "Ver órdenes"
     }
-  },
-  "ramp": {
-    "loadingProviders": "Cargando proveedores de rampa…",
-    "backToDashboard": "Volver al panel",
-    "disabledTitle": "Agregar fondos / Retirar",
-    "disabledDescription": "No hay proveedores de rampa configurados. Define variables de entorno para al menos un proveedor (Etherfuse, AlfredPay, BlindPay). Ver env.sample.",
-    "dashboardLink": "Panel",
-    "pageTitle": "Agregar fondos y retirar",
-    "pageDescription": "Convierte entre moneda local y USDC en Stellar. Elige un proveedor, ingresa un monto y sigue los pasos.",
-    "tabOnRamp": "Agregar fondos",
-    "tabOffRamp": "Retirar",
-    "fallbackLoading": "Cargando…"
   },
   "walletStatus": {
     "addressCopiedToast": "Dirección copiada",

@@ -47,10 +47,7 @@ These come from your Supabase project dashboard.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_APP_URL` — canonical site URL (default `https://mercatocapital.xyz`)
 - **DeFindex (Mercato vault)** — `DEFINDEX_API_KEY` (server), `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` (vault `C…` contract), optional `DEFINDEX_API_URL`, `MERCATO_DEFINDEX_VAULT_ADDRESS`, `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default `7`)
-- `ETHERFUSE_API_KEY`, `ETHERFUSE_BASE_URL`
-- `ALFREDPAY_API_KEY`, `ALFREDPAY_API_SECRET`, `ALFREDPAY_BASE_URL`
-- `BLINDPAY_API_KEY`, `BLINDPAY_INSTANCE_ID`, `BLINDPAY_BASE_URL`
-
+- `- `- `
 ## 3. Bootstrap Supabase schema
 
 All schema changes now live in `supabase/migrations/`. If you need a new migration, create it with `supabase migration new <name>`. Do not add SQL files under `scripts/`.

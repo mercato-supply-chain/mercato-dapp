@@ -87,14 +87,7 @@ export function buildDashboardViewModel(
     ? t.dashboard.atCompany.replace('{company}', profile.companyName)
     : null
 
-  const rampAction: DashboardAction = {
-    label: t.dashboard.actions.ramp,
-    description: t.dashboard.actions.rampDescription,
-    href: '/dashboard/ramp',
-    icon: Wallet,
-  }
-
-  let actions: DashboardAction[] = [rampAction]
+  let actions: DashboardAction[] = []
   let primaryAction: DashboardViewModel['primaryAction']
   let dealsViewAllHref = '/dashboard/deals'
   let dealsTitle = t.dashboard.recentDeals
@@ -119,7 +112,6 @@ export function buildDashboardViewModel(
           href: '/deals?filter=funded',
           icon: TrendingUp,
         },
-        rampAction,
       ]
       primaryAction = { label: t.dashboard.newDeal, href: '/create-deal', icon: Plus }
       emptyBody = t.dashboard.noDealsPyme
@@ -141,7 +133,6 @@ export function buildDashboardViewModel(
           href: '/dashboard/investments',
           icon: DollarSign,
         },
-        rampAction,
       ]
       primaryAction = { label: t.nav.browseDeals, href: '/deals', icon: TrendingUp }
       dealsViewAllHref = '/deals'
@@ -177,7 +168,6 @@ export function buildDashboardViewModel(
           href: '/dashboard/deals',
           icon: TrendingUp,
         },
-        rampAction,
       ]
       dealsColumns = { showCompany: true, showSmb: true }
       emptyBody =
@@ -203,7 +193,6 @@ export function buildDashboardViewModel(
           href: '/deals',
           icon: Package,
         },
-        rampAction,
       ]
       primaryAction = {
         label: t.dashboard.goApprovals,

@@ -55,33 +55,8 @@ export function getSectorLabel(value: string | null | undefined): string {
   return found ? found.label : value
 }
 
-/**
- * Ramp integration constants
- *
- * Configure these values based on your target region and ramp provider.
- */
-
-// Countries available in KYC and customer registration forms. Each entry maps a country code to its currency and payment rail.
-export const SUPPORTED_COUNTRIES = [
-  { code: 'MX', name: 'Mexico', currency: 'MXN', paymentMethod: 'SPEI' },
-  { code: 'AR', name: 'Argentina', currency: 'ARS', paymentMethod: 'COELSA' },
-  { code: 'BR', name: 'Brazil', currency: 'BRL', paymentMethod: 'PIX' },
-  { code: 'CO', name: 'Colombia', currency: 'COP', paymentMethod: 'ACH' },
-  { code: 'CL', name: 'Chile', currency: 'CLP', paymentMethod: 'ACH_CHL' },
-  { code: 'BO', name: 'Bolivia', currency: 'BOB', paymentMethod: 'ACH_BOL' },
-  { code: 'DO', name: 'Dominican Republic', currency: 'DOP', paymentMethod: 'ACH_DOM' },
-  { code: 'US', name: 'United States', currency: 'USD', paymentMethod: 'BANK_USA' },
-] as const;
-
 // Default country code
 export const DEFAULT_COUNTRY = 'MX';
-
-// Provider names
-export const PROVIDER = {
-  ETHERFUSE: 'etherfuse',
-  ALFREDPAY: 'alfredpay',
-  BLINDPAY: 'blindpay',
-} as const;
 
 // KYC statuses (internal)
 export const KYC_STATUS = {
@@ -100,13 +75,4 @@ export const TX_STATUS = {
   FAILED: 'failed',
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
-} as const;
-
-// AlfredPay KYC submission statuses (from API)
-export const ALFREDPAY_KYC_STATUS = {
-  CREATED: 'CREATED',
-  IN_REVIEW: 'IN_REVIEW',
-  UPDATE_REQUIRED: 'UPDATE_REQUIRED',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
 } as const;

@@ -129,7 +129,7 @@ Wallet UI: `/dashboard/wallets` (`app/dashboard/wallets/page.tsx`).
 | **Stellar Wallets Kit** | ✅ | `lib/trustless/wallet-kit.ts` |
 | **Pollar embedded wallet** | ✅ | `providers/pollar-provider.tsx`, `api/auth/pollar-sync`, `api/pollar/activate` |
 | **DeFindex vault** | ✅ | `lib/defindex/`, `app/api/defindex/`, `/dashboard/vault`, `/dashboard/admin/vault` |
-| **Fiat ramps** (Etherfuse, AlfredPay, BlindPay) | ✅ Opt-in via env | `lib/anchors/`, `app/api/ramp/`, `/dashboard/ramp` |
+| **Fiat ramps** (MoneyGram) | ✅ Opt-in via env | `lib/anchors/`, `app/api/ramp/`, `/dashboard/ramp` |
 | **Blend** | ⚠️ Indirect only | Testnet SAC/trustline helpers for DeFindex vault setup (`lib/stellar/vault-asset-trustline.ts`) — **no Blend SDK or pool calls** |
 | **MoneyGram** | ❌ Not implemented | Mentioned in early docs only; no code references |
 
@@ -179,7 +179,7 @@ Wallet UI: `/dashboard/wallets` (`app/dashboard/wallets/page.tsx`).
 
 | Prefix | Count | Purpose |
 |--------|-------|---------|
-| `/api/ramp/*` | 14 | Fiat ramp proxy (Etherfuse, AlfredPay, BlindPay) |
+| `/api/ramp/*` | 14 | Fiat ramp proxy (MoneyGram) |
 | `/api/defindex/*` | 10 | Vault read/deposit/withdraw + admin create/monitor/rebalance |
 | `/api/stellar/*` | 6 | Submit tx, SAC balance, trustline, vault activity cache |
 | `/api/auth/pollar-sync` | 1 | Sync Pollar session to Supabase profile |
@@ -252,8 +252,7 @@ Optional feature flags:
 
 - **Pollar:** `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY`, `POLLAR_SECRET_KEY`, `NEXT_PUBLIC_POLLAR_NETWORK`
 - **DeFindex:** `DEFINDEX_API_KEY`, `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS`, `MERCATO_DEFINDEX_VAULT_ADDRESS`
-- **Ramps:** `ETHERFUSE_*`, `ALFREDPAY_*`, `BLINDPAY_*` — providers appear in UI only when fully configured
-
+- **Ramps:** `
 Full list: [env.sample](env.sample). Architecture reference: [doc/architecture.md § Environment](doc/architecture.md#9-environment-variables).
 
 ## Verification commands
