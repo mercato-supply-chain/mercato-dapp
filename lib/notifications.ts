@@ -10,6 +10,9 @@ export type NotificationType =
   | 'repayment_escrow_created'
   | 'goods_shipped'
   | 'pyme_referred'
+  | 'pyme_referral_onboarded'
+  | 'pyme_referral_first_deal'
+  | 'pyme_referral_first_funded'
 
 export interface Notification {
   id: string

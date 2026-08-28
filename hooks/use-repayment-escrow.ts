@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Deploy and manage Trustless Work multi-release repayment escrows.
- * Platform wallet holds all TW roles; investor is milestone receiver only.
- * Admin deploys / updates / releases; PyME micro-funds.
+ * Wire Trustless Work hooks, wallet transport, and UI busy state into the
+ * repayment command layer. Persistence, indexer retries, and payload
+ * construction live in `lib/deals/`.
  */
 
 import { useCallback, useMemo, useState } from 'react'
@@ -20,16 +20,6 @@ import {
   useGetEscrowFromIndexerByContractIds,
   useGetMultipleEscrowBalances,
 } from '@trustless-work/escrow/hooks'
-import type {
-  InitializeMultiReleaseEscrowPayload,
-  FundEscrowPayload,
-  MultiReleaseReleaseFundsPayload,
-  UpdateMultiReleaseEscrowPayload,
-  MultiReleaseMilestone,
-  MultiReleaseStartDisputePayload,
-  MultiReleaseResolveDisputePayload,
-  GetEscrowsFromIndexerResponse,
-} from '@trustless-work/escrow'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { usePollarSession } from '@/providers/pollar-provider'
 import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
@@ -37,31 +27,26 @@ import {
   MERCATO_PLATFORM_ADDRESS,
   repaymentEscrowRoles,
 } from '@/lib/trustless/config'
-import {
-  PLATFORM_FEE_PERCENT,
-  DEFAULT_FIRST_MILESTONE_PERCENT,
-  repaymentEscrowAmount,
-  repaymentMilestoneAmount,
-  repaymentRemainingAmount,
-} from '@/lib/deals/fees'
-import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import { createClient } from '@/lib/supabase/client'
-import type { RepaymentMilestoneCache, RepaymentStatus } from '@/lib/types'
-import {
-  repaymentEngagementId,
-  roundUsdc,
-  reconcileRepaymentFromIndexer,
-  cacheMilestonesFromIndexer,
-} from '@/lib/deals/repayment-escrow-helpers'
-import { fetchInvestorWalletForDeal } from '@/lib/deals/investor-wallet'
+import { cacheMilestonesFromIndexer } from '@/lib/deals/repayment-escrow-helpers'
+import { createRepaymentEscrowCommands } from '@/lib/deals/repayment-escrow-commands'
+import { createSupabaseDealRepository } from '@/lib/deals/repayment-escrow-reconcile'
 import type {
-  DeployRepaymentParams,
-  FundRepaymentParams,
-  ReleaseMilestoneParams,
   AddMilestoneParams,
+  DeployRepaymentParams,
   DisputeMilestoneParams,
+  FundRepaymentParams,
+  IndexerPort,
+  ReleaseMilestoneParams,
   ResolveDisputeParams,
+  SendTxResult,
+  SyncDealFromIndexerOptions,
+  TxTransport,
 } from '@/lib/deals/repayment-escrow-types'
+import {
+  DEFAULT_REPAYMENT_RETRY_POLICY,
+  defaultWait,
+} from '@/lib/deals/repayment-retry'
 
 export function useRepaymentEscrow() {
   const supabase = useMemo(() => createClient(), [])
@@ -79,564 +64,163 @@ export function useRepaymentEscrow() {
   const pollar = usePollarSession()
   const [isWorking, setIsWorking] = useState(false)
 
-  const signAndSend = useCallback(
-    async (unsignedTransaction: string, address: string, provider: string | null) => {
-      if (provider === 'pollar') {
-        return pollar.signAndSubmitTx(unsignedTransaction)
-      }
-      const signedXdr = await signTransaction({ unsignedTransaction, address })
-      if (!signedXdr) throw new Error('Failed to sign transaction')
-      const txResult = await sendTransaction(signedXdr)
-      if (txResult.status !== 'SUCCESS') {
-        throw new Error(
-          'message' in txResult
-            ? (txResult as { message: string }).message
-            : 'Transaction submission failed',
-        )
-      }
-      return undefined
-    },
+  const transport: TxTransport = useMemo(
+    () => ({
+      async signAndSend(unsignedTransaction, address, provider) {
+        if (provider === 'pollar') {
+          await pollar.signAndSubmitTx(unsignedTransaction)
+          return undefined
+        }
+        const signedXdr = await signTransaction({
+          unsignedTransaction,
+          address,
+        })
+        if (!signedXdr) throw new Error('Failed to sign transaction')
+        const txResult = await sendTransaction(signedXdr)
+        if (txResult.status !== 'SUCCESS') {
+          throw new Error(
+            'message' in txResult
+              ? (txResult as { message: string }).message
+              : 'Transaction submission failed',
+          )
+        }
+        return txResult as SendTxResult
+      },
+    }),
     [pollar, sendTransaction],
   )
 
-  const fetchIndexerEscrow = useCallback(
-    async (contractId: string): Promise<GetEscrowsFromIndexerResponse | null> => {
-      const escrows = await getEscrowByContractIds({ contractIds: [contractId] })
-      return escrows?.[0] ?? null
-    },
-    [getEscrowByContractIds],
-  )
-
-  const syncDealFromIndexer = useCallback(
-    async (
-      dealId: string,
-      contractId: string,
-      extras?: Record<string, unknown>,
-      options?: { retryOnEmptyMilestones?: boolean },
-    ): Promise<{
-      milestones: RepaymentMilestoneCache[]
-      status: RepaymentStatus
-      balance: number
-    }> => {
-      const retryOnEmpty = options?.retryOnEmptyMilestones ?? true
-      let escrow = await fetchIndexerEscrow(contractId)
-      if (retryOnEmpty && !escrow?.milestones?.length) {
-        for (let attempt = 0; attempt < 2; attempt++) {
-          await new Promise((r) => setTimeout(r, 2000))
-          escrow = await fetchIndexerEscrow(contractId)
-          if (escrow?.milestones?.length) break
-        }
-      }
-      let balance = Number(escrow?.balance ?? 0)
-      try {
-        const balances = await getMultipleBalances({ addresses: [contractId] })
-        const bal = balances?.[0]?.balance
-        if (bal != null && Number.isFinite(Number(bal))) {
-          balance = Number(bal)
-        }
-      } catch {
-        // Indexer balance is fine as fallback
-      }
-      const { data: dealRow } = await supabase
-        .from('deals')
-        .select('repayment_total_amount')
-        .eq('id', dealId)
-        .single()
-      const totalGrossed = Number(dealRow?.repayment_total_amount ?? 0)
-      const { milestones, status } = reconcileRepaymentFromIndexer(
-        escrow,
-        balance,
-        totalGrossed,
-      )
-      const { error } = await supabase
-        .from('deals')
-        .update({
-          repayment_milestones: milestones,
-          repayment_status: status,
-          escrow_status:
-            status === 'released'
-              ? 'completed'
-              : status === 'escrow_initialized'
-                ? 'initialized'
-                : 'active',
-          ...(status === 'released'
-            ? {
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-              }
-            : {}),
-          ...extras,
+  const indexer: IndexerPort = useMemo(
+    () => ({
+      async getByContractId(contractId) {
+        const escrows = await getEscrowByContractIds({
+          contractIds: [contractId],
         })
-        .eq('id', dealId)
-      if (error) throw error
-      return { milestones, status, balance }
-    },
-    [fetchIndexerEscrow, getMultipleBalances, supabase],
+        return escrows?.[0] ?? null
+      },
+      getBySigner(signer) {
+        return getEscrowsBySigner({ signer })
+      },
+      async getBalance(contractId) {
+        try {
+          const balances = await getMultipleBalances({
+            addresses: [contractId],
+          })
+          const bal = balances?.[0]?.balance
+          if (bal != null && Number.isFinite(Number(bal))) {
+            return Number(bal)
+          }
+        } catch {
+          // Indexer balance is fine as fallback
+        }
+        return null
+      },
+    }),
+    [getEscrowByContractIds, getEscrowsBySigner, getMultipleBalances],
   )
 
-  const deployRepaymentEscrow = useCallback(
-    async (params: DeployRepaymentParams): Promise<{ contractId: string }> => {
-      if (!MERCATO_PLATFORM_ADDRESS) {
-        throw new Error('Platform address not configured')
-      }
-      if (!USDC_TRUSTLINE.address) {
-        throw new Error('USDC trustline not configured')
-      }
+  const deals = useMemo(
+    () => createSupabaseDealRepository(supabase),
+    [supabase],
+  )
 
-      const investor =
-        params.investorAddress?.trim() ||
-        (await fetchInvestorWalletForDeal(supabase, params.dealId))
-      if (!investor) {
-        throw new Error('Investor wallet address is required')
-      }
-
-      setIsWorking(true)
-      try {
-        const { profit } = computeInvestorReturns(
-          params.principal,
-          params.aprPercent,
-          params.termDays,
-        )
-        const totalGrossed = repaymentEscrowAmount(params.principal, profit)
-        const firstPercent =
-          params.firstMilestonePercent ?? DEFAULT_FIRST_MILESTONE_PERCENT
-        const firstAmount = repaymentMilestoneAmount(totalGrossed, firstPercent)
-        if (firstAmount <= 0) {
-          throw new Error('First milestone amount must be positive')
-        }
-
-        const engagementId = repaymentEngagementId(params.dealId)
-        // Platform holds every TW role; investor is milestone receiver only.
-        const roles = repaymentEscrowRoles()
-
-        const payload: InitializeMultiReleaseEscrowPayload = {
-          signer: params.adminAddress,
-          engagementId,
-          title: `Repayment · ${params.productName}`,
-          description: `SMB multi-release repayment for deal ${params.dealId}`,
-          roles,
-          platformFee: PLATFORM_FEE_PERCENT,
+  const commands = useMemo(
+    () =>
+      createRepaymentEscrowCommands({
+        builder: {
+          initialize: deployEscrow,
+          fund: fundEscrow,
+          approveMilestone,
+          releaseFunds,
+          updateEscrow,
+          startDispute,
+          resolveDispute,
+        },
+        transport,
+        indexer,
+        deals,
+        config: {
+          platformAddress: MERCATO_PLATFORM_ADDRESS,
           trustline: {
             address: USDC_TRUSTLINE.address,
             symbol: USDC_TRUSTLINE.symbol,
           },
-          milestones: [
-            {
-              description: `Repayment milestone 1 (${firstPercent}%)`,
-              amount: firstAmount,
-              receiver: investor,
-            },
-          ],
-        }
-
-        const deployResponse = await deployEscrow(payload, 'multi-release')
-        if (deployResponse.status !== 'SUCCESS' || !deployResponse.unsignedTransaction) {
-          throw new Error('Failed to create repayment escrow transaction')
-        }
-
-        let contractId: string | undefined
-
-        if (params.provider === 'pollar') {
-          await pollar.signAndSubmitTx(deployResponse.unsignedTransaction)
-          for (let attempt = 0; attempt < 5; attempt++) {
-            if (attempt > 0) await new Promise((r) => setTimeout(r, 3000))
-            try {
-              const escrows = await getEscrowsBySigner({
-                signer: params.adminAddress,
-              })
-              const match = escrows.find((e) => e.engagementId === engagementId)
-              if (match?.contractId) {
-                contractId = match.contractId
-                break
-              }
-            } catch {
-              // Indexer lag — retry
-            }
-          }
-        } else {
-          const signedXdr = await signTransaction({
-            unsignedTransaction: deployResponse.unsignedTransaction,
-            address: params.adminAddress,
-          })
-          if (!signedXdr) throw new Error('Failed to sign transaction')
-          const txResult = await sendTransaction(signedXdr)
-          if (txResult.status !== 'SUCCESS') {
-            throw new Error(
-              'message' in txResult
-                ? (txResult as { message: string }).message
-                : 'Transaction submission failed',
-            )
-          }
-          const escrowResponse = txResult as {
-            contractId?: string
-            escrow?: { contractId?: string }
-          }
-          contractId =
-            escrowResponse.contractId ?? escrowResponse.escrow?.contractId
-        }
-
-        if (!contractId) {
-          throw new Error('Repayment escrow contract ID was not confirmed')
-        }
-
-        const initialMilestones: RepaymentMilestoneCache[] = [
-          {
-            index: 0,
-            description: `Repayment milestone 1 (${firstPercent}%)`,
-            amount: firstAmount,
-            released: false,
-          },
-        ]
-
-        // Keep repayment_due_at from delivery confirmation; only backfill if missing
-        const { data: existingDeal } = await supabase
-          .from('deals')
-          .select('repayment_due_at')
-          .eq('id', params.dealId)
-          .single()
-
-        const updates: Record<string, unknown> = {
-          escrow_id: engagementId,
-          escrow_contract_address: contractId,
-          escrow_status: 'initialized',
-          repayment_status: 'escrow_initialized',
-          repayment_total_amount: totalGrossed,
-          repayment_milestones: initialMilestones,
-        }
-
-        if (!existingDeal?.repayment_due_at) {
-          const dueAt = new Date()
-          dueAt.setDate(dueAt.getDate() + Math.max(1, params.termDays))
-          updates.repayment_due_at = dueAt.toISOString()
-        }
-
-        const { error } = await supabase
-          .from('deals')
-          .update(updates)
-          .eq('id', params.dealId)
-
-        if (error) throw error
-
-        return { contractId }
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [deployEscrow, getEscrowsBySigner, pollar, sendTransaction, supabase],
+          roles: repaymentEscrowRoles,
+        },
+        wait: defaultWait,
+        retry: DEFAULT_REPAYMENT_RETRY_POLICY,
+      }),
+    [
+      approveMilestone,
+      deals,
+      deployEscrow,
+      fundEscrow,
+      indexer,
+      releaseFunds,
+      resolveDispute,
+      startDispute,
+      transport,
+      updateEscrow,
+    ],
   )
 
+  const run = useCallback(async <T>(op: () => Promise<T>) => {
+    setIsWorking(true)
+    try {
+      return await op()
+    } finally {
+      setIsWorking(false)
+    }
+  }, [])
+
+  const deployRepaymentEscrow = useCallback(
+    (params: DeployRepaymentParams) =>
+      run(() => commands.deployRepaymentEscrow(params)),
+    [commands, run],
+  )
   const fundRepaymentEscrow = useCallback(
-    async (params: FundRepaymentParams) => {
-      setIsWorking(true)
-      try {
-        const amount = roundUsdc(params.amount)
-        if (amount <= 0) throw new Error('Fund amount must be positive')
-
-        const payload: FundEscrowPayload = {
-          contractId: params.contractId,
-          signer: params.pymeAddress,
-          amount,
-        }
-        const fundResponse = await fundEscrow(payload, 'multi-release')
-        if (fundResponse.status !== 'SUCCESS' || !fundResponse.unsignedTransaction) {
-          throw new Error('Failed to build repayment fund transaction')
-        }
-        await signAndSend(
-          fundResponse.unsignedTransaction,
-          params.pymeAddress,
-          params.provider,
-        )
-
-        // Brief indexer lag allowance
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [fundEscrow, signAndSend, syncDealFromIndexer],
+    (params: FundRepaymentParams) =>
+      run(() => commands.fundRepaymentEscrow(params)),
+    [commands, run],
   )
-
   const approveRepaymentMilestone = useCallback(
-    async (params: ReleaseMilestoneParams) => {
-      setIsWorking(true)
-      try {
-        const approveResponse = await approveMilestone(
-          {
-            contractId: params.contractId,
-            milestoneIndex: String(params.milestoneIndex),
-            approver: params.releaseSigner,
-          },
-          'multi-release',
-        )
-        if (
-          approveResponse.status !== 'SUCCESS' ||
-          !approveResponse.unsignedTransaction
-        ) {
-          throw new Error('Failed to build approve transaction')
-        }
-        await signAndSend(
-          approveResponse.unsignedTransaction,
-          params.releaseSigner,
-          params.provider,
-        )
-        await new Promise((r) => setTimeout(r, 1000))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [approveMilestone, signAndSend, syncDealFromIndexer],
+    (params: ReleaseMilestoneParams) =>
+      run(() => commands.approveRepaymentMilestone(params)),
+    [commands, run],
   )
-
   const releaseRepaymentMilestone = useCallback(
-    async (params: ReleaseMilestoneParams) => {
-      setIsWorking(true)
-      try {
-        const releasePayload: MultiReleaseReleaseFundsPayload = {
-          contractId: params.contractId,
-          releaseSigner: params.releaseSigner,
-          milestoneIndex: String(params.milestoneIndex),
-        }
-        const releaseResponse = await releaseFunds(releasePayload, 'multi-release')
-        if (
-          releaseResponse.status !== 'SUCCESS' ||
-          !releaseResponse.unsignedTransaction
-        ) {
-          throw new Error('Failed to build release transaction')
-        }
-        await signAndSend(
-          releaseResponse.unsignedTransaction,
-          params.releaseSigner,
-          params.provider,
-        )
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [releaseFunds, signAndSend, syncDealFromIndexer],
+    (params: ReleaseMilestoneParams) =>
+      run(() => commands.releaseRepaymentMilestone(params)),
+    [commands, run],
   )
-
   const approveAndReleaseMilestone = useCallback(
-    async (params: ReleaseMilestoneParams) => {
-      setIsWorking(true)
-      try {
-        const indexStr = String(params.milestoneIndex)
-        const approveResponse = await approveMilestone(
-          {
-            contractId: params.contractId,
-            milestoneIndex: indexStr,
-            approver: params.releaseSigner,
-          },
-          'multi-release',
-        )
-        if (
-          approveResponse.status !== 'SUCCESS' ||
-          !approveResponse.unsignedTransaction
-        ) {
-          throw new Error('Failed to build approve transaction')
-        }
-        await signAndSend(
-          approveResponse.unsignedTransaction,
-          params.releaseSigner,
-          params.provider,
-        )
-
-        const releasePayload: MultiReleaseReleaseFundsPayload = {
-          contractId: params.contractId,
-          releaseSigner: params.releaseSigner,
-          milestoneIndex: indexStr,
-        }
-        const releaseResponse = await releaseFunds(releasePayload, 'multi-release')
-        if (
-          releaseResponse.status !== 'SUCCESS' ||
-          !releaseResponse.unsignedTransaction
-        ) {
-          throw new Error('Failed to build release transaction')
-        }
-        await signAndSend(
-          releaseResponse.unsignedTransaction,
-          params.releaseSigner,
-          params.provider,
-        )
-
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [approveMilestone, releaseFunds, signAndSend, syncDealFromIndexer],
+    (params: ReleaseMilestoneParams) =>
+      run(() => commands.approveAndReleaseMilestone(params)),
+    [commands, run],
   )
-
   const addRepaymentMilestone = useCallback(
-    async (params: AddMilestoneParams) => {
-      if (!MERCATO_PLATFORM_ADDRESS) {
-        throw new Error('Platform address not configured')
-      }
-      setIsWorking(true)
-      try {
-        const escrow = await fetchIndexerEscrow(params.contractId)
-        if (!escrow) throw new Error('Escrow not found in indexer')
-
-        const existing = cacheMilestonesFromIndexer(escrow)
-        const { data: dealRow } = await supabase
-          .from('deals')
-          .select('repayment_total_amount')
-          .eq('id', params.dealId)
-          .single()
-
-        const totalGrossed = Number(dealRow?.repayment_total_amount ?? 0)
-        const scheduled = existing.map((m) => m.amount)
-        const remaining = repaymentRemainingAmount(totalGrossed, scheduled)
-        const amount = roundUsdc(params.amount ?? remaining)
-        if (amount <= 0) {
-          throw new Error('No remaining repayment amount to schedule')
-        }
-        if (totalGrossed > 0 && amount > remaining + 0.01) {
-          throw new Error(
-            `Milestone amount exceeds remaining (${remaining} USDC)`,
-          )
-        }
-
-        const investor =
-          params.investorAddress?.trim() ||
-          (await fetchInvestorWalletForDeal(supabase, params.dealId))
-        if (!investor) {
-          throw new Error('Investor wallet address is required')
-        }
-
-        const nextIndex = existing.length
-        const newMilestone = {
-          description:
-            params.description?.trim() ||
-            `Repayment milestone ${nextIndex + 1}`,
-          amount,
-          receiver: investor,
-        }
-
-        // Keep investor as receiver only; normalize operational roles to platform.
-        const roles = repaymentEscrowRoles()
-
-        const updatePayload: UpdateMultiReleaseEscrowPayload = {
-          contractId: params.contractId,
-          signer: params.adminAddress,
-          escrow: {
-            engagementId: escrow.engagementId,
-            title: escrow.title,
-            description: escrow.description,
-            roles,
-            platformFee: escrow.platformFee,
-            trustline: escrow.trustline,
-            milestones: [
-              ...escrow.milestones.map((m) => {
-                const multi = m as MultiReleaseMilestone
-                return {
-                  description: multi.description,
-                  amount: Number(multi.amount ?? 0),
-                  receiver: multi.receiver || investor,
-                  status: multi.status,
-                  flags: multi.flags,
-                }
-              }),
-              newMilestone,
-            ],
-            isActive: escrow.isActive ?? true,
-          },
-        }
-
-        const updateResponse = await updateEscrow(updatePayload, 'multi-release')
-        if (
-          updateResponse.status !== 'SUCCESS' ||
-          !updateResponse.unsignedTransaction
-        ) {
-          throw new Error('Failed to build update escrow transaction')
-        }
-        await signAndSend(
-          updateResponse.unsignedTransaction,
-          params.adminAddress,
-          params.provider,
-        )
-
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [fetchIndexerEscrow, signAndSend, supabase, syncDealFromIndexer, updateEscrow],
+    (params: AddMilestoneParams) =>
+      run(() => commands.addRepaymentMilestone(params)),
+    [commands, run],
   )
-
-  /**
-   * Opens a milestone dispute. Signer must not be the disputeResolver.
-   * With platform as serviceProvider, the platform wallet can open disputes
-   * only when MERCATO_DISPUTE_RESOLVER_ADDRESS is a different address.
-   */
   const startRepaymentDispute = useCallback(
-    async (params: DisputeMilestoneParams) => {
-      setIsWorking(true)
-      try {
-        const payload: MultiReleaseStartDisputePayload = {
-          contractId: params.contractId,
-          signer: params.signer,
-          milestoneIndex: String(params.milestoneIndex),
-        }
-        const response = await startDispute(payload, 'multi-release')
-        if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
-          throw new Error('Failed to build start-dispute transaction')
-        }
-        await signAndSend(
-          response.unsignedTransaction,
-          params.signer,
-          params.provider,
-        )
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [signAndSend, startDispute, syncDealFromIndexer],
+    (params: DisputeMilestoneParams) =>
+      run(() => commands.startRepaymentDispute(params)),
+    [commands, run],
   )
-
   const resolveRepaymentDispute = useCallback(
-    async (params: ResolveDisputeParams) => {
-      setIsWorking(true)
-      try {
-        const cleaned = params.distributions
-          .map((d) => ({
-            address: d.address.trim(),
-            amount: roundUsdc(d.amount),
-          }))
-          .filter((d) => d.address && d.amount > 0)
-        if (cleaned.length === 0) {
-          throw new Error('At least one positive distribution is required')
-        }
-
-        const payload: MultiReleaseResolveDisputePayload = {
-          contractId: params.contractId,
-          disputeResolver: params.disputeResolver,
-          milestoneIndex: String(params.milestoneIndex),
-          distributions: cleaned as MultiReleaseResolveDisputePayload['distributions'],
-        }
-        const response = await resolveDispute(payload, 'multi-release')
-        if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
-          throw new Error('Failed to build resolve-dispute transaction')
-        }
-        await signAndSend(
-          response.unsignedTransaction,
-          params.disputeResolver,
-          params.provider,
-        )
-        await new Promise((r) => setTimeout(r, 1500))
-        await syncDealFromIndexer(params.dealId, params.contractId)
-      } finally {
-        setIsWorking(false)
-      }
-    },
-    [resolveDispute, signAndSend, syncDealFromIndexer],
+    (params: ResolveDisputeParams) =>
+      run(() => commands.resolveRepaymentDispute(params)),
+    [commands, run],
+  )
+  const syncDealFromIndexer = useCallback(
+    (
+      dealId: string,
+      contractId: string,
+      extras?: Record<string, unknown>,
+      options?: SyncDealFromIndexerOptions,
+    ) => commands.syncDealFromIndexer(dealId, contractId, extras, options),
+    [commands],
   )
 
   return {

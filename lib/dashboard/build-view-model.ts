@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Truck,
+  UserPlus,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
