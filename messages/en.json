@@ -359,6 +359,7 @@
     "deliveries": "Deliveries",
     "supplierActivity": "Commercial activity",
     "companies": "Companies & catalog",
+    "referrals": "Referrals",
     "approvals": "Escrow ops",
     "leads": "Event leads",
     "releaseQueue": "Release queue",
@@ -459,6 +460,8 @@
       "manageCompaniesDescription": "Update your company profile and catalog",
       "viewActiveDeals": "View Active Deals",
       "viewActiveDealsDescription": "See deals assigned to your companies",
+      "manageReferrals": "Manage referrals",
+      "manageReferralsDescription": "Track invited PyMEs, conversion, and network metrics",
       "confirmDeliveries": "Confirm Deliveries",
       "confirmDeliveriesDescription": "Accept orders and confirm delivery milestones",
       "viewCommercialActivity": "Commercial activity",
@@ -3032,7 +3035,104 @@
     "copyLink": "Copy link",
     "copied": "Copied!",
     "referredCount": "{count} PyME referred",
-    "referredCountPlural": "{count} PyMEs referred"
+    "referredCountPlural": "{count} PyMEs referred",
+    "manageReferrals": "Manage referrals"
+  },
+  "referrals": {
+    "page": {
+      "title": "Referrals & network",
+      "description": "Track invitation performance, referred PyME lifecycle, and financing outcomes across your supplier companies.",
+      "privacyNote": "Only public directory fields are shown for referred PyMEs — no emails, phone numbers, or wallet addresses."
+    },
+    "filters": {
+      "company": "Company",
+      "allCompanies": "All companies",
+      "status": "PyME status",
+      "allStatuses": "All statuses",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "summary": {
+      "acquisitionTitle": "Acquisition",
+      "financingTitle": "Financing",
+      "invitationsCreated": "Invitations created",
+      "validInvitations": "Valid invitations",
+      "linkOpens": "Link opens",
+      "accountsCreated": "Accounts created",
+      "onboardedPymes": "Onboarded PyMEs",
+      "conversionRate": "Conversion rate",
+      "referredPymes": "Referred PyMEs",
+      "activeReferred": "Active referred PyMEs",
+      "requestedVolume": "Requested volume",
+      "fundedVolume": "Funded volume"
+    },
+    "status": {
+      "invited": "Invited",
+      "accountCreated": "Account created",
+      "onboardingIncomplete": "Onboarding incomplete",
+      "inactive": "Inactive",
+      "active": "Active"
+    },
+    "invitationStatus": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "expired": "Expired",
+      "converted": "Converted"
+    },
+    "network": {
+      "title": "Network breakdown",
+      "country": "Country",
+      "sector": "Sector",
+      "count": "Count"
+    },
+    "invitations": {
+      "title": "Invitations",
+      "empty": "No invitations yet. Create one to share a tracked signup link.",
+      "company": "Company",
+      "label": "Label",
+      "recipient": "Recipient email",
+      "status": "Status",
+      "opens": "Opens",
+      "created": "Created",
+      "create": "Create invitation",
+      "createTitle": "New referral invitation",
+      "createDescription": "Generate a one-time signup link. Copy it immediately — raw tokens are not stored.",
+      "labelPlaceholder": "e.g. Q1 outreach",
+      "emailPlaceholder": "optional@email.com",
+      "copyLink": "Copy link",
+      "copied": "Copied!",
+      "revoke": "Revoke",
+      "regenerate": "Regenerate link",
+      "confirmRevoke": "Revoke this invitation? The link will stop working.",
+      "directReferral": "Direct referral"
+    },
+    "referredPymes": {
+      "title": "Referred PyMEs",
+      "empty": "No referred PyMEs yet.",
+      "company": "PyME",
+      "status": "Status",
+      "deals": "Deals",
+      "requested": "Requested",
+      "funded": "Funded",
+      "source": "Source",
+      "directReferral": "Direct referral",
+      "viewProfile": "View profile"
+    },
+    "activity": {
+      "title": "Activity timeline",
+      "empty": "No referral activity yet.",
+      "openedTimes": "Opened {count} times",
+      "events": {
+        "invitation_created": "Invitation created",
+        "link_opened": "Link opened",
+        "account_created": "Account created",
+        "onboarding_completed": "Onboarding completed",
+        "deal_created": "Deal created",
+        "deal_funded": "Deal funded"
+      }
+    }
   },
   "referral": {
     "onboarding": {

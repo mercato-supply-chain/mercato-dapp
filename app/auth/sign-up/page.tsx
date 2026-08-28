@@ -19,13 +19,16 @@ import { MercatoLogo } from '@/components/mercato-logo'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
 import type { ReferralSupplier } from '@/app/api/referral/route'
+import type { ResolvedInvite } from '@/app/api/referral/invite/route'
 
 function SignUpContent() {
   const { t } = useI18n()
   const searchParams = useSearchParams()
   const refCode = searchParams.get('ref')
+  const inviteToken = searchParams.get('invite')
 
   const [referral, setReferral] = useState<ReferralSupplier | null>(null)
+  const [invite, setInvite] = useState<ResolvedInvite | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
@@ -48,6 +51,22 @@ function SignUpContent() {
       })
       .catch(() => {})
   }, [refCode])
+
+  useEffect(() => {
+    if (!inviteToken) return
+    fetch(`/api/referral/invite?token=${encodeURIComponent(inviteToken)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: ResolvedInvite | null) => {
+        if (data?.supplierCompanyId) {
+          setInvite(data)
+          setReferral({
+            id: data.supplierCompanyId,
+            company_name: data.companyName ?? 'Supplier',
+          })
+        }
+      })
+      .catch(() => {})
+  }, [inviteToken])
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
@@ -78,7 +97,13 @@ function SignUpContent() {
           data: {
             full_name: fullName,
             company_name: companyName,
-            ...(referral ? { referred_by_supplier_id: referral.id } : {}),
+            ...(invite
+              ? {
+                  referred_by_supplier_id: invite.supplierCompanyId,
+                  referral_invitation_id: invite.invitationId,
+                }
+              : {}),
+            ...(referral && !invite ? { referred_by_supplier_id: referral.id } : {}),
           },
         },
       })

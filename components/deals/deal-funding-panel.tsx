@@ -155,6 +155,14 @@ export function DealFundingPanel({
       onDealUpdate(updated)
       toast.success(t('dealDetail.toastFundSuccess'))
       setIsFundingDialogOpen(false)
+
+      if (deal.pyme_id) {
+        fetch('/api/referral/milestone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ milestone: 'deal_funded', dealId: deal.id }),
+        }).catch(() => {})
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : t('dealDetail.toastFundFailDefault')

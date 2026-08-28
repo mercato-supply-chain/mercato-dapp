@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Truck,
+  UserPlus,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -176,6 +177,12 @@ export function buildDashboardViewModel(
           description: t.dashboard.actions.viewActiveDealsDescription,
           href: '/dashboard/deals',
           icon: TrendingUp,
+        },
+        {
+          label: t.dashboard.actions.manageReferrals,
+          description: t.dashboard.actions.manageReferralsDescription,
+          href: '/dashboard/referrals',
+          icon: UserPlus,
         },
         rampAction,
       ]

@@ -39,8 +39,8 @@ export async function POST() {
     type: 'pyme_referred',
     title: 'A new PyME signed up using your referral link',
     body: null,
-    link_url: '/dashboard',
-    link_label: 'Go to dashboard',
+    link_url: `/dashboard/referrals?pyme=${user.id}`,
+    link_label: 'View referrals',
     metadata: { pyme_id: user.id },
   })
 

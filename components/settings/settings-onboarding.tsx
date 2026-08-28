@@ -164,7 +164,11 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     const ok = await saveProfile()
     if (!ok) return
     if (referral && userType === 'pyme') {
-      fetch('/api/referral/notify', { method: 'POST' }).catch(() => {})
+      fetch('/api/referral/milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ milestone: 'onboarding_completed' }),
+      }).catch(() => {})
     }
     setStep('done')
   }
