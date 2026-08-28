@@ -58,7 +58,12 @@ const sampleRow = {
 
 describe('AUDIT_ACTIONS', () => {
   test('covers the actions written by the mutation RPCs', () => {
-    expect([...AUDIT_ACTIONS]).toEqual(['verify', 'unverify', 'update_profile'])
+    expect([...AUDIT_ACTIONS]).toEqual([
+      'verify',
+      'unverify',
+      'update_profile',
+      'set_user_type',
+    ])
   })
 })
 

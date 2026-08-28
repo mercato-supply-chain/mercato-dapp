@@ -11,6 +11,7 @@ import {
   saveStoredWallet,
   type ConnectedWallet,
 } from '@/lib/mercato-wallet'
+import { resolveSignupUserType } from '@/lib/profile/onboarding'
 
 export function useWalletPersistence() {
   const supabase = useMemo(() => createClient(), [])
@@ -112,14 +113,7 @@ export function useWalletPersistence() {
         return
       }
 
-      const metaType = user.user_metadata?.user_type
-      const user_type =
-        metaType === 'pyme' ||
-        metaType === 'investor' ||
-        metaType === 'supplier' ||
-        metaType === 'admin'
-          ? metaType
-          : 'pyme'
+      const user_type = resolveSignupUserType(user.user_metadata?.user_type)
 
       const baseRow = {
         wallet_provider: wallet.provider,

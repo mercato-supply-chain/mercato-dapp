@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ExternalLink, RefreshCw } from 'lucide-react'
@@ -15,6 +15,7 @@ import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
+import { useRepaymentCommandRefresh } from '@/hooks/use-repayment-command-refresh'
 import {
   computeRepaymentState,
   canFund as canFundCheck,
@@ -58,6 +59,12 @@ export function DealRepaymentPanel({
   const [addAmount, setAddAmount] = useState('')
   const backgroundSyncDone = useRef(false)
 
+  const refreshDeal = useCallback(async () => {
+    const updated = await fetchDeal()
+    if (updated) onDealUpdate(updated)
+  }, [fetchDeal, onDealUpdate])
+  const { refreshAfterCommand } = useRepaymentCommandRefresh(refreshDeal)
+
   const {
     status,
     displayStatus,
@@ -69,8 +76,6 @@ export function DealRepaymentPanel({
     defaultFundAmount,
     breakdown,
   } = computeRepaymentState(deal)
-
-  if (deal.status === 'awaiting_funding') return null
 
   const canFund = canFundCheck(isPyme, deal.escrowAddress, status)
   const canRelease = canReleaseCheck(
@@ -88,22 +93,19 @@ export function DealRepaymentPanel({
     status,
   )
 
-  const refresh = async () => {
-    const updated = await fetchDeal()
-    if (updated) onDealUpdate(updated)
-  }
-
   useEffect(() => {
     if (!deal.escrowAddress || backgroundSyncDone.current) return
     backgroundSyncDone.current = true
     void syncDealFromIndexer(deal.id, deal.escrowAddress, undefined, {
       retryOnEmptyMilestones: false,
     })
-      .then(() => refresh())
+      .then(() => refreshAfterCommand())
       .catch(() => {
         // Non-blocking; user can refresh manually
       })
-  }, [deal.id, deal.escrowAddress, syncDealFromIndexer])
+  }, [deal.id, deal.escrowAddress, syncDealFromIndexer, refreshAfterCommand])
+
+  if (deal.status === 'awaiting_funding') return null
 
   const handleRefreshStatus = async () => {
     if (!deal.escrowAddress) return
@@ -112,7 +114,7 @@ export function DealRepaymentPanel({
       await syncDealFromIndexer(deal.id, deal.escrowAddress, undefined, {
         retryOnEmptyMilestones: true,
       })
-      await refresh()
+      await refreshAfterCommand()
       toast.success(t('dealDetail.repaymentRefreshSuccess'))
     } catch (err) {
       console.error(err)
@@ -140,7 +142,7 @@ export function DealRepaymentPanel({
         amount: parsed,
         provider,
       })
-      await refresh()
+      await refreshAfterCommand()
       setFundAmount('')
       toast.success(t('dealDetail.repaymentFunded'))
     } catch (err) {
@@ -166,7 +168,7 @@ export function DealRepaymentPanel({
         milestoneIndex: currentMilestone.index,
         provider,
       })
-      await refresh()
+      await refreshAfterCommand()
       toast.success(t('dealDetail.repaymentReleased'))
     } catch (err) {
       console.error(err)
@@ -192,7 +194,7 @@ export function DealRepaymentPanel({
         amount: parsed,
         provider,
       })
-      await refresh()
+      await refreshAfterCommand()
       setAddAmount('')
       toast.success(t('dealDetail.repaymentMilestoneAdded'))
     } catch (err) {
