@@ -33,6 +33,9 @@ type SupplierProductCatalogProps = {
   onCategoryFilterChange: (v: string) => void
   stockFilter: StockFilter
   onStockFilterChange: (v: StockFilter) => void
+  statusFilter: string
+  onStatusFilterChange: (v: string) => void
+  onStatusChange: (product: SupplierProduct, newStatus: 'active' | 'paused' | 'discontinued') => void
   categoriesFromProducts: string[]
   sort: string
   onSortChange: (v: string) => void
@@ -61,6 +64,9 @@ export function SupplierProductCatalog({
   onCategoryFilterChange,
   stockFilter,
   onStockFilterChange,
+  statusFilter,
+  onStatusFilterChange,
+  onStatusChange,
   categoriesFromProducts,
   sort,
   onSortChange,
@@ -77,7 +83,7 @@ export function SupplierProductCatalog({
 }: SupplierProductCatalogProps) {
   const { t, messages } = useI18n()
   const hasFilters =
-    search.trim() !== '' || categoryFilter !== 'all' || stockFilter !== 'all'
+    search.trim() !== '' || categoryFilter !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
   const from = filteredCount === 0 ? 0 : currentPage * PAGE_SIZE + 1
   const to = Math.min((currentPage + 1) * PAGE_SIZE, filteredCount)
 
@@ -149,6 +155,17 @@ export function SupplierProductCatalog({
             ))}
           </SelectContent>
         </Select>
+        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <SelectTrigger className="w-full sm:w-[160px]" aria-label={t('supplierProfile.statusFilterAria') || 'Status'}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('supplierProfile.statusFilterAll') || 'All Statuses'}</SelectItem>
+            <SelectItem value="active">{t('supplierProfile.statusFilterActive') || 'Active'}</SelectItem>
+            <SelectItem value="paused">{t('supplierProfile.statusFilterPaused') || 'Paused'}</SelectItem>
+            <SelectItem value="discontinued">{t('supplierProfile.statusFilterDiscontinued') || 'Discontinued'}</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={sort} onValueChange={onSortChange}>
           <SelectTrigger className="w-full sm:w-[180px]" aria-label={t('supplierProfile.sortBy')}>
             <SelectValue placeholder={t('supplierProfile.sortBy')} />
@@ -200,6 +217,7 @@ export function SupplierProductCatalog({
             onAdjustStock={onAdjustStock}
             onEdit={onEditProduct}
             onDelete={onDeleteProduct}
+            onStatusChange={onStatusChange}
           />
           {filteredCount > PAGE_SIZE && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4 text-sm">

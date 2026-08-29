@@ -53,6 +53,7 @@ async function fetchSupplierProductRows(
   const { data, error } = await supabase
     .from('supplier_products')
     .select('supplier_id, name, category')
+    .eq('status', 'active')
     .in('supplier_id', companyIds)
 
   if (error) throw error

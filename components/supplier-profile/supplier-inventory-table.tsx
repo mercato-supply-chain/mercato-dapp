@@ -1,6 +1,7 @@
 'use client'
 
-import { Minus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Minus, Pencil, Plus, Trash2, MoreVertical, CheckCircle2, PauseCircle, XCircle } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ProductImage } from '@/components/media/product-image'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
@@ -19,6 +20,7 @@ type SupplierInventoryTableProps = {
   onAdjustStock: (product: SupplierProduct, delta: number) => void
   onEdit: (product: SupplierProduct) => void
   onDelete: (product: SupplierProduct) => void
+  onStatusChange: (product: SupplierProduct, newStatus: 'active' | 'paused' | 'discontinued') => void
 }
 
 export function SupplierInventoryTable({
@@ -27,6 +29,7 @@ export function SupplierInventoryTable({
   onAdjustStock,
   onEdit,
   onDelete,
+  onStatusChange,
 }: SupplierInventoryTableProps) {
   const { t, messages } = useI18n()
 
@@ -42,6 +45,20 @@ export function SupplierInventoryTable({
     return translated === key ? unit : translated
   }
 
+  
+  const publicationBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <span className="inline-flex items-center gap-1 rounded-md bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400"><CheckCircle2 className="h-3 w-3" /> {t('supplierProfile.statusActive') || 'Active'}</span>
+      case 'paused':
+        return <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"><PauseCircle className="h-3 w-3" /> {t('supplierProfile.statusPaused') || 'Paused'}</span>
+      case 'discontinued':
+        return <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400"><XCircle className="h-3 w-3" /> {t('supplierProfile.statusDiscontinued') || 'Discontinued'}</span>
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="overflow-x-auto rounded-xl border border-border/70">
       <table className="w-full min-w-[720px] text-sm">
@@ -53,6 +70,7 @@ export function SupplierInventoryTable({
             <th className="px-3 py-2.5 font-medium text-right">{t('supplierProfile.tablePriceUnit')}</th>
             <th className="px-3 py-2.5 font-medium text-center">{t('supplierProfile.tableOnHand')}</th>
             <th className="px-3 py-2.5 font-medium text-center">{t('supplierProfile.tableAvailable')}</th>
+            <th className="px-3 py-2.5 font-medium text-center">{t('supplierProfile.tablePublication') || 'Publication'}</th>
             <th className="px-3 py-2.5 font-medium">{t('supplierProfile.tableStockStatus')}</th>
             <th className="px-3 py-2.5 font-medium text-right">{t('supplierProfile.tableActions')}</th>
           </tr>
@@ -130,6 +148,10 @@ export function SupplierInventoryTable({
                   ) : null}
                 </td>
                 <td className="px-3 py-3 text-center font-semibold tabular-nums">{available}</td>
+                <td className="px-3 py-3 text-center">
+                  {publicationBadge(product.status)}
+                </td>
+
                 <td className="px-3 py-3">
                   <span
                     className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${STOCK_STATUS_BADGE_CLASS[status]}`}
@@ -157,6 +179,34 @@ export function SupplierInventoryTable({
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
                     </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {product.status !== 'active' && (
+                          <DropdownMenuItem onClick={() => onStatusChange(product, 'active')}>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            {t('supplierProfile.actionActivate') || 'Activate'}
+                          </DropdownMenuItem>
+                        )}
+                        {product.status !== 'paused' && (
+                          <DropdownMenuItem onClick={() => onStatusChange(product, 'paused')}>
+                            <PauseCircle className="mr-2 h-4 w-4" />
+                            {t('supplierProfile.actionPause') || 'Pause'}
+                          </DropdownMenuItem>
+                        )}
+                        {product.status !== 'discontinued' && (
+                          <DropdownMenuItem onClick={() => onStatusChange(product, 'discontinued')} className="text-destructive focus:text-destructive">
+                            <XCircle className="mr-2 h-4 w-4" />
+                            {t('supplierProfile.actionDiscontinue') || 'Discontinue'}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>

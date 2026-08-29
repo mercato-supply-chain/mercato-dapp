@@ -61,6 +61,8 @@ export async function GET(request: Request) {
       query = query.eq('category', category)
     }
 
+    query = query.eq('status', 'active')
+
     const { data: products, error, count } = await query
       .order('category')
       .order('name')

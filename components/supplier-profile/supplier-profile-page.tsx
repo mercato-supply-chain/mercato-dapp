@@ -120,6 +120,11 @@ export function SupplierProfilePage() {
                       sp.setStockFilter(v)
                       sp.setPage(0)
                     }}
+                    statusFilter={sp.statusFilter}
+                    onStatusFilterChange={(v) => {
+                      sp.setStatusFilter(v)
+                      sp.setPage(0)
+                    }}
                     categoriesFromProducts={sp.categoriesFromProducts}
                     sort={sp.sort}
                     onSortChange={sp.setSort}
@@ -132,6 +137,7 @@ export function SupplierProfilePage() {
                     onAddProduct={sp.openAddDialog}
                     onEditProduct={sp.openEditDialog}
                     onDeleteProduct={sp.setDeleteProduct}
+                    onStatusChange={sp.handleStatusChange}
                     onClearFilters={sp.clearFilters}
                   />
                 </TabsContent>
