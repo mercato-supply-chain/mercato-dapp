@@ -1477,6 +1477,7 @@
     "inboxEmptyHint": "Nothing needs your attention right now.",
     "disputesChecking": "Checking escrows for live disputes…",
     "disputesLive": "Live dispute check from the escrow indexer",
+    "disputesUnavailable": "Dispute queue unavailable. Please try again later.",
     "disputedTitle": "Disputed repayment on {deal}",
     "ageMinutes": "{count}m",
     "ageHours": "{count}h",

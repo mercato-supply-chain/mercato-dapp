@@ -1477,6 +1477,7 @@
     "inboxEmptyHint": "Nada requiere tu atención en este momento.",
     "disputesChecking": "Buscando disputas en vivo en los escrows…",
     "disputesLive": "Chequeo de disputas en vivo desde el indexer de escrows",
+    "disputesUnavailable": "Cola de disputas no disponible. Inténtalo de nuevo más tarde.",
     "disputedTitle": "Reembolso en disputa en {deal}",
     "ageMinutes": "{count}m",
     "ageHours": "{count}h",
