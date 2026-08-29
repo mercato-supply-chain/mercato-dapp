@@ -30,7 +30,6 @@ export function AdminOperationsGrid({ t }: AdminOperationsGridProps) {
     { label: m.opDeals, description: m.opDealsDesc, href: '/dashboard/deals', icon: Package },
     { label: m.opMarketplace, description: m.opMarketplaceDesc, href: '/deals', icon: Package },
     { label: m.opSuppliers, description: m.opSuppliersDesc, href: '/suppliers', icon: Building2 },
-    { label: m.opRamp, description: m.opRampDesc, href: '/dashboard/ramp', icon: Wallet },
     {
       label: m.opVaultMonitor,
       description: m.opVaultMonitorDesc,

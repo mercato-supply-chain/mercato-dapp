@@ -64,12 +64,6 @@ const investments: DashboardNavItem = {
   icon: LineChart,
 }
 
-const ramp: DashboardNavItem = {
-  href: '/dashboard/ramp',
-  labelKey: 'dashboardNav.ramp',
-  icon: HandCoins,
-}
-
 const marketplace: DashboardNavItem = {
   href: '/deals',
   labelKey: 'dashboardNav.marketplace',
@@ -88,7 +82,7 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
         },
         {
           titleKey: 'dashboardNav.sectionTreasury',
-          items: [wallets, vault, ramp],
+          items: [wallets, vault],
         },
         {
           titleKey: 'dashboardNav.sectionPortfolio',
@@ -103,7 +97,7 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
         },
         {
           titleKey: 'dashboardNav.sectionTreasury',
-          items: [wallets, vault, ramp],
+          items: [wallets, vault],
         },
         {
           titleKey: 'dashboardNav.sectionDeals',
@@ -122,7 +116,7 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
         },
         {
           titleKey: 'dashboardNav.sectionTreasury',
-          items: [wallets, ramp],
+          items: [wallets],
         },
         {
           titleKey: 'dashboardNav.sectionOperations',
@@ -213,7 +207,6 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               labelKey: 'dashboardNav.suppliers',
               icon: Building2,
             },
-            ramp,
           ],
         },
       ]

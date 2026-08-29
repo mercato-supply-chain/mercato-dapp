@@ -449,8 +449,6 @@
       "adminTagline": "Oversee platform operations and milestone approvals"
     },
     "actions": {
-      "ramp": "Add funds / Cash out",
-      "rampDescription": "Move money in and out via on-ramp providers",
       "create": "Create New Deal",
       "createDescription": "Request supply chain financing for a purchase",
       "browseInvestorsDescription": "See funded deals and active investors",
@@ -698,18 +696,6 @@
       "secondaryCta": "How it works",
       "tertiaryCta": "Browse deals"
     }
-  },
-  "ramp": {
-    "loadingProviders": "Loading ramp providers…",
-    "backToDashboard": "Back to Dashboard",
-    "disabledTitle": "Add funds / Cash out",
-    "disabledDescription": "No ramp providers are configured. Set env vars for at least one provider (Etherfuse, AlfredPay, BlindPay) in your environment. See env.sample.",
-    "dashboardLink": "Dashboard",
-    "pageTitle": "Add funds & Cash out",
-    "pageDescription": "Convert between local currency and USDC on Stellar. Choose a provider, enter an amount, and follow the steps.",
-    "tabOnRamp": "Add funds",
-    "tabOffRamp": "Cash out",
-    "fallbackLoading": "Loading…"
   },
   "walletStatus": {
     "addressCopiedToast": "Wallet address copied",

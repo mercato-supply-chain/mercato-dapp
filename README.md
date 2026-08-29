@@ -94,7 +94,7 @@ Four roles — **pyme**, **investor**, **supplier**, **admin** — map to the fl
 | Soroban reputation (planned) | **Eligibility** — PyME repayment and supplier fulfillment scores govern new DeFindex deposits and gated actions; investors are not gated. |
 | [MoneyGram Ramps](https://developers.stellar.org/docs/tools/ramps/moneygram) (planned) | **Sole target fiat ramp** — SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out. |
 
-MoneyGram requires partner allowlisting, certification, KYB/legal completion, and confirmation of intended Costa Rica and Argentina corridors. Etherfuse, Alfred Pay, and BlindPay are not planned integrations. **Blend** appears only as a testnet asset helper for DeFindex vault setup—there is no direct Blend SDK or pool integration.
+MoneyGram requires partner allowlisting, certification, KYB/legal completion, and confirmation of intended Costa Rica and Argentina corridors. MoneyGram are not planned integrations. **Blend** appears only as a testnet asset helper for DeFindex vault setup—there is no direct Blend SDK or pool integration.
 
 ---
 
