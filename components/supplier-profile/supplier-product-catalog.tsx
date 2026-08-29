@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, ClipboardList, Plus, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, Plus, Search, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -46,6 +46,7 @@ type SupplierProductCatalogProps = {
   stockAdjustingId: string | null
   onAdjustStock: (product: SupplierProduct, delta: number) => void
   onAddProduct: () => void
+  onImportProducts: () => void
   onEditProduct: (p: SupplierProduct) => void
   onDeleteProduct: (p: SupplierProduct) => void
   onClearFilters: () => void
@@ -77,6 +78,7 @@ export function SupplierProductCatalog({
   stockAdjustingId,
   onAdjustStock,
   onAddProduct,
+  onImportProducts,
   onEditProduct,
   onDeleteProduct,
   onClearFilters,
@@ -105,10 +107,16 @@ export function SupplierProductCatalog({
               : t('supplierProfile.inventoryDescription')}
           </p>
         </div>
-        <Button onClick={onAddProduct} className="rounded-full">
-          <Plus className="mr-2 h-4 w-4" aria-hidden />
-          {t('supplierProfile.addProduct')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={onImportProducts} className="rounded-full">
+            <Upload className="mr-2 h-4 w-4" aria-hidden />
+            {t('supplierProfile.importProducts')}
+          </Button>
+          <Button onClick={onAddProduct} className="rounded-full">
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            {t('supplierProfile.addProduct')}
+          </Button>
+        </div>
       </div>
 
       <SupplierInventorySummary stats={inventoryStats} />

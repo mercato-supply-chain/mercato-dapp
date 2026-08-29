@@ -22,6 +22,7 @@ export function useSupplierProfile() {
   const [page, setPage] = useState(0)
 
   const [addCompanyOpen, setAddCompanyOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   const product = useSupplierProducts(company.selectedCompanyId, company.user)
 
@@ -118,6 +119,8 @@ export function useSupplierProfile() {
     formSaving: product.formSaving,
     addCompanyOpen,
     setAddCompanyOpen,
+    importDialogOpen,
+    setImportDialogOpen,
     sortOptions: inventory.sortOptions,
     categoriesFromProducts: inventory.categoriesFromProducts,
     filteredAndSorted: inventory.filteredAndSorted,
@@ -134,5 +137,6 @@ export function useSupplierProfile() {
     handleDeleteProduct: product.handleDeleteProduct,
     handleStatusChange: product.handleStatusChange,
     clearFilters,
+    importProducts: product.importProducts,
   }
 }
