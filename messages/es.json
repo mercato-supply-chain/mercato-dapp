@@ -3144,8 +3144,10 @@
       "events": {
         "invitation_created": "Invitación creada",
         "link_opened": "Link abierto",
+        "signup_started": "Registro iniciado",
         "account_created": "Cuenta creada",
         "onboarding_completed": "Onboarding completado",
+        "invitation_revoked": "Invitación revocada",
         "deal_created": "Deal creado",
         "deal_funded": "Deal financiado"
       }

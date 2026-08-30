@@ -63,6 +63,8 @@ function SignUpContent() {
             id: data.supplierCompanyId,
             company_name: data.companyName ?? 'Supplier',
           })
+          document.cookie = `mercato-invite=${encodeURIComponent(inviteToken)}; path=/; max-age=86400; samesite=lax`
+          document.cookie = `mercato-referral=${data.supplierCompanyId}; path=/; max-age=86400; samesite=lax`
         }
       })
       .catch(() => {})
@@ -87,6 +89,14 @@ function SignUpContent() {
     }
 
     try {
+      if (inviteToken) {
+        void fetch('/api/referral/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: inviteToken, event: 'signup_started' }),
+        }).catch(() => {})
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,

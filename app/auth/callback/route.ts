@@ -20,6 +20,14 @@ export async function GET(request: NextRequest) {
           sameSite: 'lax',
         })
       }
+      const inviteToken = request.cookies.get('mercato-invite')?.value
+      if (inviteToken) {
+        response.cookies.set('mercato-invite', inviteToken, {
+          path: '/',
+          maxAge: 86400,
+          sameSite: 'lax',
+        })
+      }
       return response
     }
   }

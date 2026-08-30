@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Cannot regenerate a converted invitation' }, { status: 400 })
   }
 
-  await supabase
+  const { data: revoked, error: revokeError } = await supabase
     .from('supplier_referral_invitations')
     .update({
       status: 'revoked',
@@ -50,6 +50,34 @@ export async function POST(request: Request, context: RouteContext) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .in('status', ['active', 'expired'])
+    .select('id')
+    .maybeSingle()
+
+  if (revokeError) {
+    return NextResponse.json({ error: 'Failed to regenerate invitation' }, { status: 500 })
+  }
+
+  if (!revoked && existing.status === 'active') {
+    return NextResponse.json({ error: 'Failed to regenerate invitation' }, { status: 409 })
+  }
+
+  let service: ReturnType<typeof createServiceClient> | null = null
+  try {
+    service = createServiceClient()
+  } catch (err) {
+    console.error('[referral] service client unavailable for regenerate events', err)
+  }
+
+  if (revoked && service) {
+    await logReferralEvent(service, {
+      supplierCompanyId: existing.supplier_company_id,
+      invitationId: id,
+      eventType: 'invitation_revoked',
+      profileId: user.id,
+      metadata: { reason: 'regenerated' },
+    })
+  }
 
   const token = generateInviteToken()
   const tokenHash = hashInviteToken(token)
@@ -70,16 +98,17 @@ export async function POST(request: Request, context: RouteContext) {
     .single()
 
   if (error || !invitation) {
-    return NextResponse.json({ error: error?.message ?? 'Failed to regenerate' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to regenerate invitation' }, { status: 500 })
   }
 
-  const service = createServiceClient()
-  await logReferralEvent(service, {
-    supplierCompanyId: existing.supplier_company_id,
-    invitationId: invitation.id,
-    eventType: 'invitation_created',
-    metadata: { regeneratedFrom: id },
-  })
+  if (service) {
+    await logReferralEvent(service, {
+      supplierCompanyId: existing.supplier_company_id,
+      invitationId: invitation.id,
+      eventType: 'invitation_created',
+      metadata: { regeneratedFrom: id },
+    })
+  }
 
   return NextResponse.json({ id: invitation.id, inviteUrl })
 }

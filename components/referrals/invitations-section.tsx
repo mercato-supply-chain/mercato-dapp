@@ -97,13 +97,34 @@ export function ReferralInvitationsSection({
           recipientEmail: recipientEmail.trim() || undefined,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      const raw = await res.text()
+      let data: { error?: string; inviteUrl?: string; id?: string } = {}
+      if (raw.trim()) {
+        try {
+          const parsed: unknown = JSON.parse(raw)
+          if (!parsed || typeof parsed !== 'object') {
+            throw new Error('invalid')
+          }
+          data = parsed as typeof data
+        } catch {
+          throw new Error('Something went wrong. Please try again.')
+        }
+      }
+      if (!res.ok) {
+        throw new Error(
+          typeof data.error === 'string' && data.error.length > 0 && data.error.length < 120
+            ? data.error
+            : 'Could not create invitation. Please try again.',
+        )
+      }
+      if (typeof data.inviteUrl !== 'string' || !data.inviteUrl) {
+        throw new Error('Could not create invitation. Please try again.')
+      }
       setInviteUrl(data.inviteUrl)
       toast.success(labels.create)
       window.location.reload()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error')
+      toast.error(err instanceof Error ? err.message : 'Could not create invitation. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -163,7 +184,10 @@ export function ReferralInvitationsSection({
                 <select
                   value={companyId}
                   onChange={(e) => setCompanyId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="flex h-10 w-full appearance-none rounded-md border border-input bg-background bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat px-3 pr-10 text-sm"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                  }}
                 >
                   {companies.map((c) => (
                     <option key={c.id} value={c.id}>{c.company_name ?? c.id}</option>

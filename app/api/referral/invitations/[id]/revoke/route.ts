@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { logReferralEvent } from '@/lib/referrals/log-event'
 
 export const dynamic = 'force-dynamic'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
-async function getOwnedInvitation(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, id: string) {
+async function getOwnedInvitation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  id: string,
+) {
   const { data: companies } = await supabase
     .from('supplier_companies')
     .select('id')
@@ -24,7 +30,7 @@ async function getOwnedInvitation(supabase: Awaited<ReturnType<typeof createClie
   return data
 }
 
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(_request: Request, context: RouteContext) {
   const { id } = await context.params
   const supabase = await createClient()
   const {
@@ -45,7 +51,11 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Cannot revoke a converted invitation' }, { status: 400 })
   }
 
-  const { error } = await supabase
+  if (invitation.status === 'revoked') {
+    return NextResponse.json({ ok: true, alreadyRevoked: true })
+  }
+
+  const { data: revoked, error } = await supabase
     .from('supplier_referral_invitations')
     .update({
       status: 'revoked',
@@ -53,9 +63,28 @@ export async function POST(request: Request, context: RouteContext) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('status', 'active')
+    .select('id')
+    .maybeSingle()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 })
+  }
+
+  if (!revoked) {
+    return NextResponse.json({ ok: true, alreadyRevoked: true })
+  }
+
+  try {
+    const service = createServiceClient()
+    await logReferralEvent(service, {
+      supplierCompanyId: invitation.supplier_company_id,
+      invitationId: invitation.id,
+      eventType: 'invitation_revoked',
+      profileId: user.id,
+    })
+  } catch (err) {
+    console.error('[referral] invitation_revoked event skipped', err)
   }
 
   return NextResponse.json({ ok: true })
