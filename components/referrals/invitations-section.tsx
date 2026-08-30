@@ -101,7 +101,11 @@ export function ReferralInvitationsSection({
       let data: { error?: string; inviteUrl?: string; id?: string } = {}
       if (raw.trim()) {
         try {
-          data = JSON.parse(raw) as typeof data
+          const parsed: unknown = JSON.parse(raw)
+          if (!parsed || typeof parsed !== 'object') {
+            throw new Error('invalid')
+          }
+          data = parsed as typeof data
         } catch {
           throw new Error('Something went wrong. Please try again.')
         }
@@ -113,7 +117,7 @@ export function ReferralInvitationsSection({
             : 'Could not create invitation. Please try again.',
         )
       }
-      if (!data.inviteUrl) {
+      if (typeof data.inviteUrl !== 'string' || !data.inviteUrl) {
         throw new Error('Could not create invitation. Please try again.')
       }
       setInviteUrl(data.inviteUrl)

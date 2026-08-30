@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid company filter' }, { status: 403 })
   }
 
-  let query = supabase
+  const query = supabase
     .from('supplier_referral_invitations')
     .select(
       'id, supplier_company_id, label, recipient_email, status, expires_at, converted_profile_id, revoked_at, created_at, updated_at, supplier:supplier_companies(company_name)',
@@ -57,22 +57,29 @@ export async function GET(request: Request) {
 
   const invitationIds = (data ?? []).map((row) => row.id)
   const openCounts: Record<string, number> = {}
+  let opensAvailable = true
 
   if (invitationIds.length > 0) {
     try {
       const service = createServiceClient()
-      const { data: events } = await service
+      const { data: events, error: eventsError } = await service
         .from('referral_events')
         .select('invitation_id')
         .in('invitation_id', invitationIds)
         .eq('event_type', 'link_opened')
 
-      for (const ev of events ?? []) {
-        if (ev.invitation_id) {
-          openCounts[ev.invitation_id] = (openCounts[ev.invitation_id] ?? 0) + 1
+      if (eventsError) {
+        opensAvailable = false
+        console.error('[referral] link_opened counts unavailable', eventsError)
+      } else {
+        for (const ev of events ?? []) {
+          if (ev.invitation_id) {
+            openCounts[ev.invitation_id] = (openCounts[ev.invitation_id] ?? 0) + 1
+          }
         }
       }
     } catch (err) {
+      opensAvailable = false
       console.error('[referral] link_opened counts skipped', err)
     }
   }
@@ -90,11 +97,17 @@ export async function GET(request: Request) {
       convertedProfileId: row.converted_profile_id,
       revokedAt: row.revoked_at,
       createdAt: row.created_at,
-      linkOpenCount: openCounts[row.id] ?? 0,
+      linkOpenCount: opensAvailable ? (openCounts[row.id] ?? 0) : null,
     }
   })
 
-  return NextResponse.json({ data: rows, total: count ?? 0, page, pageSize })
+  return NextResponse.json({
+    data: rows,
+    total: count ?? 0,
+    page,
+    pageSize,
+    opensAvailable,
+  })
 }
 
 export async function POST(request: Request) {
