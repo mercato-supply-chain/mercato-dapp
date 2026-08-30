@@ -94,7 +94,7 @@ begin
         from (
           select *
           from combined
-          order by created_at desc nulls last
+          order by created_at desc nulls last, profile_id nulls last, referral_invitation_id nulls last
           limit greatest(p_limit, 1)
           offset greatest(p_offset, 0)
         ) t
@@ -149,7 +149,7 @@ begin
         from (
           select *
           from events
-          order by created_at desc
+          order by created_at desc, id
           limit greatest(p_limit, 1)
           offset greatest(p_offset, 0)
         ) t
