@@ -54,7 +54,33 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     bio: '',
   })
 
+  const [inviteAttribution, setInviteAttribution] = useState<{
+    invitationId: string
+    supplierCompanyId: string
+  } | null>(null)
+
   useEffect(() => {
+    const inviteMatch = document.cookie.match(/(?:^|;\s*)mercato-invite=([^;]+)/)
+    const inviteToken = inviteMatch ? decodeURIComponent(inviteMatch[1]) : null
+    if (inviteToken) {
+      fetch(`/api/referral/invite?token=${encodeURIComponent(inviteToken)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { invitationId?: string; supplierCompanyId?: string; companyName?: string | null } | null) => {
+          if (data?.invitationId && data.supplierCompanyId) {
+            setInviteAttribution({
+              invitationId: data.invitationId,
+              supplierCompanyId: data.supplierCompanyId,
+            })
+            setReferral({
+              id: data.supplierCompanyId,
+              company_name: data.companyName ?? 'Supplier',
+            })
+          }
+        })
+        .catch(() => {})
+      return
+    }
+
     const match = document.cookie.match(/(?:^|;\s*)mercato-referral=([^;]+)/)
     const referralId = match ? decodeURIComponent(match[1]) : null
     if (!referralId) return
@@ -124,6 +150,18 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     if (!userType) return false
     setIsSaving(true)
     try {
+      const attribution =
+        userType === 'pyme'
+          ? inviteAttribution
+            ? {
+                referred_by_supplier_id: inviteAttribution.supplierCompanyId,
+                referral_invitation_id: inviteAttribution.invitationId,
+              }
+            : referral
+              ? { referred_by_supplier_id: referral.id }
+              : {}
+          : {}
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -136,11 +174,17 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
           sector: form.sector || null,
           bio: form.bio.trim() || null,
           updated_at: new Date().toISOString(),
-          ...(referral && userType === 'pyme' ? { referred_by_supplier_id: referral.id } : {}),
+          ...attribution,
         })
         .eq('id', userId)
 
       if (error) throw error
+
+      if (userType === 'pyme' && (inviteAttribution || referral)) {
+        document.cookie = 'mercato-invite=; path=/; max-age=0; samesite=lax'
+        document.cookie = 'mercato-referral=; path=/; max-age=0; samesite=lax'
+      }
+
       return true
     } catch (err) {
       console.error(err)
