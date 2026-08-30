@@ -17,6 +17,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  UserCog,
 } from 'lucide-react'
 import type { DashboardRoleKey } from './role-theme'
 

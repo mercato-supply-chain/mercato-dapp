@@ -28,4 +28,10 @@ __v0_jsx-dev-runtime.ts
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
-yarn-error.log*supabase/.temp/
+yarn-error.log*
+
+# Supabase CLI local state
+supabase/.temp/
+
+# TypeScript incremental build
+tsconfig.tsbuildinfo

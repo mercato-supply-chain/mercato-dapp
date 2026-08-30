@@ -8,6 +8,15 @@ export type CreateEscrowItem = {
   termDays: number
   totalGrossed: number
   defaultFirstMilestoneAmount: number
+  /** Investor profile wallet resolved authoritatively server-side; null while unfunded */
+  investorAddress: string | null
+  investorId: string | null
+  investorName: string | null
+  /** Computed returns carried into the review payload so UI and guard share one source */
+  profit: number
+  netTarget: number
+  engagementId: string
+  escrowType: 'multi-release'
   pymeName: string
   supplierName: string
   supplierLogoUrl: string | null

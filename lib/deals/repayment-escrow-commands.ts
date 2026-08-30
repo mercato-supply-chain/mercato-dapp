@@ -76,6 +76,19 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
   async function deployRepaymentEscrow(
     params: DeployRepaymentParams,
   ): Promise<{ contractId: string }> {
+    if (params.draft) {
+      throw new Error('deployRepaymentEscrow called with draft — use draft-specific flow')
+    }
+    if (
+      params.principal == null ||
+      params.aprPercent == null ||
+      params.termDays == null ||
+      !params.productName
+    ) {
+      throw new Error(
+        'Missing required fields for deploy without draft: principal, aprPercent, termDays, productName',
+      )
+    }
     if (!deps.config.platformAddress) {
       throw new Error('Platform address not configured')
     }
