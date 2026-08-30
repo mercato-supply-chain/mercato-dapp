@@ -55,7 +55,7 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, alreadyRevoked: true })
   }
 
-  const { error } = await supabase
+  const { data: revoked, error } = await supabase
     .from('supplier_referral_invitations')
     .update({
       status: 'revoked',
@@ -64,18 +64,28 @@ export async function POST(_request: Request, context: RouteContext) {
     })
     .eq('id', id)
     .eq('status', 'active')
+    .select('id')
+    .maybeSingle()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 })
   }
 
-  const service = createServiceClient()
-  await logReferralEvent(service, {
-    supplierCompanyId: invitation.supplier_company_id,
-    invitationId: invitation.id,
-    eventType: 'invitation_revoked',
-    profileId: user.id,
-  })
+  if (!revoked) {
+    return NextResponse.json({ ok: true, alreadyRevoked: true })
+  }
+
+  try {
+    const service = createServiceClient()
+    await logReferralEvent(service, {
+      supplierCompanyId: invitation.supplier_company_id,
+      invitationId: invitation.id,
+      eventType: 'invitation_revoked',
+      profileId: user.id,
+    })
+  } catch (err) {
+    console.error('[referral] invitation_revoked event skipped', err)
+  }
 
   return NextResponse.json({ ok: true })
 }
