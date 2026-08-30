@@ -23,6 +23,7 @@ import { useI18n } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { ReferralSupplier } from '@/app/api/referral/route'
+import type { ResolvedInvite } from '@/app/api/referral/invite/route'
 
 const STEPS = ['role', 'profile', 'done'] as const
 type Step = (typeof STEPS)[number]
@@ -54,23 +55,19 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
     bio: '',
   })
 
-  const [inviteAttribution, setInviteAttribution] = useState<{
-    invitationId: string
-    supplierCompanyId: string
-  } | null>(null)
+  const [inviteAttribution, setInviteAttribution] = useState<ResolvedInvite | null>(null)
+  const [inviteResolveState, setInviteResolveState] = useState<'idle' | 'pending' | 'done'>('idle')
 
   useEffect(() => {
     const inviteMatch = document.cookie.match(/(?:^|;\s*)mercato-invite=([^;]+)/)
     const inviteToken = inviteMatch ? decodeURIComponent(inviteMatch[1]) : null
     if (inviteToken) {
+      setInviteResolveState('pending')
       fetch(`/api/referral/invite?token=${encodeURIComponent(inviteToken)}`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((data: { invitationId?: string; supplierCompanyId?: string; companyName?: string | null } | null) => {
+        .then((data: ResolvedInvite | null) => {
           if (data?.invitationId && data.supplierCompanyId) {
-            setInviteAttribution({
-              invitationId: data.invitationId,
-              supplierCompanyId: data.supplierCompanyId,
-            })
+            setInviteAttribution(data)
             setReferral({
               id: data.supplierCompanyId,
               company_name: data.companyName ?? 'Supplier',
@@ -78,8 +75,11 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
           }
         })
         .catch(() => {})
+        .finally(() => setInviteResolveState('done'))
       return
     }
+
+    setInviteResolveState('done')
 
     const match = document.cookie.match(/(?:^|;\s*)mercato-referral=([^;]+)/)
     const referralId = match ? decodeURIComponent(match[1]) : null
@@ -204,6 +204,9 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
   }
 
   const handleFinish = async () => {
+    if (userType === 'pyme' && inviteResolveState === 'pending') {
+      return
+    }
     if (!validateProfile()) return
     const ok = await saveProfile()
     if (!ok) return
@@ -467,7 +470,7 @@ export function SettingsOnboarding({ userId, email, initialFullName = '' }: Sett
               <Button type="button" variant="ghost" className="rounded-full" onClick={() => setStep('role')}>
                 {t('settings.onboarding.back')}
               </Button>
-              <Button className="rounded-full" size="lg" onClick={handleFinish} disabled={isSaving}>
+              <Button className="rounded-full" size="lg" onClick={handleFinish} disabled={isSaving || (userType === 'pyme' && inviteResolveState === 'pending')}>
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
