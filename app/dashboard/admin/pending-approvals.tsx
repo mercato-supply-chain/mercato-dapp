@@ -9,7 +9,6 @@ import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
   Wallet,
@@ -19,7 +18,6 @@ import {
   User,
   DollarSign,
   FileText,
-  Plus,
   RefreshCw,
   Scale,
 } from 'lucide-react'
@@ -38,6 +36,9 @@ import {
   AdminResolveDisputeDialog,
   type ResolveDisputeTarget,
 } from './admin-resolve-dispute-dialog'
+import { AddMilestoneReviewDialog } from '@/components/admin/repayment-escrow/add-milestone-review-dialog'
+import { ApproveMilestoneReviewDialog } from '@/components/admin/repayment-escrow/approve-milestone-review-dialog'
+import { ReleaseMilestoneReviewDialog } from '@/components/admin/repayment-escrow/release-milestone-review-dialog'
 import {
   MERCATO_PLATFORM_ADDRESS,
   MERCATO_DISPUTE_RESOLVER_ADDRESS,
@@ -63,14 +64,10 @@ export function PendingApprovals({
   const { refreshAfterCommand } = useRepaymentCommandRefresh()
   const completeCommand = onAfterCommand ?? refreshAfterCommand
   const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
-  const [approvingId, setApprovingId] = useState<string | null>(null)
-  const [releasingId, setReleasingId] = useState<string | null>(null)
-  const [addingId, setAddingId] = useState<string | null>(null)
   const [resyncingId, setResyncingId] = useState<string | null>(null)
   const [disputeTarget, setDisputeTarget] = useState<ResolveDisputeTarget | null>(
     null,
   )
-  const [addAmounts, setAddAmounts] = useState<Record<string, string>>({})
   const [localEscrows, setLocalEscrows] = useState<
     Map<string, GetEscrowsFromIndexerResponse>
   >(new Map())
@@ -123,65 +120,65 @@ export function PendingApprovals({
     }
   }, [contractIdsKey, escrowsFromParent])
 
-  const handleApproveOnly = async (item: PendingApprovalItem) => {
+  const handleApproveOnly = async (params: { dealId: string; contractId: string; milestoneIndex: number }) => {
     if (!walletInfo?.address) {
       toast.error(t('adminPending.connectWallet'))
       return
     }
-    if (!item.escrowContractAddress) {
+    if (!params.contractId) {
       toast.error(t('adminPending.noEscrow'))
       return
     }
-    setApprovingId(item.milestoneId)
+    const item = items.find((i) => i.dealId === params.dealId && i.escrowContractAddress === params.contractId && i.milestoneIndex === params.milestoneIndex)
     try {
       await approveRepaymentMilestone({
-        dealId: item.dealId,
-        contractId: item.escrowContractAddress,
+        dealId: params.dealId,
+        contractId: params.contractId,
         releaseSigner: walletInfo.address,
-        milestoneIndex: item.milestoneIndex,
+        milestoneIndex: params.milestoneIndex,
         provider,
       })
-      toast.success(t('adminPending.approveSuccess', { title: item.milestoneTitle }))
+      toast.success(t('adminPending.approveSuccess', { title: item?.milestoneTitle ?? '' }))
       await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.approveFail')
       console.error('Approve milestone error:', err)
       toast.error(message)
-    } finally {
-      setApprovingId(null)
     }
   }
 
-  const handleReleaseOnly = async (item: PendingApprovalItem) => {
+  const handleReleaseOnly = async (params: { dealId: string; contractId: string; milestoneIndex: number }) => {
     if (!walletInfo?.address) {
       toast.error(t('adminPending.releaseConnect'))
       return
     }
-    if (!item.escrowContractAddress) {
+    if (!params.contractId) {
       toast.error(t('adminPending.noEscrow'))
       return
     }
-    setReleasingId(item.milestoneId)
+    const item = items.find((i) => i.dealId === params.dealId && i.escrowContractAddress === params.contractId && i.milestoneIndex === params.milestoneIndex)
     try {
       await releaseRepaymentMilestone({
-        dealId: item.dealId,
-        contractId: item.escrowContractAddress,
+        dealId: params.dealId,
+        contractId: params.contractId,
         releaseSigner: walletInfo.address,
-        milestoneIndex: item.milestoneIndex,
+        milestoneIndex: params.milestoneIndex,
         provider,
       })
-      toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
+      toast.success(t('adminPending.releaseSuccess', { title: item?.milestoneTitle ?? '' }))
       await completeCommand()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.releaseFail')
       console.error('Release funds error:', err)
       toast.error(message)
-    } finally {
-      setReleasingId(null)
     }
   }
 
   const handleResync = async (item: PendingApprovalItem) => {
+    // Sync is read-only reconciliation from the indexer; it does not mutate
+    // on-chain state or require signing, so it is intentionally excluded from
+    // the review/audit flow required for add/approve/release actions per
+    // issue #163 §10-13.
     if (!item.escrowContractAddress) return
     setResyncingId(item.dealId)
     try {
@@ -244,34 +241,27 @@ export function PendingApprovals({
     }
   }
 
-  const handleAddMilestone = async (item: PendingApprovalItem) => {
+  const handleAddMilestone = async (
+    item: PendingApprovalItem,
+    params: { description: string; amount: number; receiver: string },
+  ) => {
     if (!walletInfo?.address || !item.escrowContractAddress) return
-    const remaining = item.remainingToSchedule ?? 0
-    const parsed = Number.parseFloat(
-      addAmounts[item.dealId] ?? String(remaining > 0 ? remaining : item.milestoneAmount),
-    )
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      toast.error(t('dealDetail.repaymentAddAmountInvalid'))
-      return
-    }
-    setAddingId(item.dealId)
     try {
       await addRepaymentMilestone({
         dealId: item.dealId,
         contractId: item.escrowContractAddress,
         adminAddress: walletInfo.address,
-        amount: parsed,
+        amount: params.amount,
+        description: params.description,
+        investorAddress: params.receiver,
         provider,
       })
       toast.success(t('dealDetail.repaymentMilestoneAdded'))
       await completeCommand()
     } catch (err) {
       console.error(err)
-      toast.error(
-        err instanceof Error ? err.message : t('dealDetail.repaymentAddMilestoneFail'),
-      )
-    } finally {
-      setAddingId(null)
+      toast.error(err instanceof Error ? err.message : t('dealDetail.repaymentAddMilestoneFail'))
+      throw err
     }
   }
 
@@ -446,43 +436,16 @@ export function PendingApprovals({
                   </>
                 )}
 
-                {showAdd ? (
-                  <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed border-border p-2">
-                    <div className="min-w-[8rem] flex-1 space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        {t('adminPending.addMilestoneHint', {
-                          amount: formatCurrency(item.remainingToSchedule ?? 0),
-                        })}
-                      </p>
-                      <Input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder={String(item.remainingToSchedule ?? '')}
-                        value={addAmounts[item.dealId] ?? ''}
-                        onChange={(e) =>
-                          setAddAmounts((prev) => ({
-                            ...prev,
-                            [item.dealId]: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={
-                        addingId === item.dealId || isWorking || !isConnected
-                      }
-                      onClick={() => handleAddMilestone(item)}
-                    >
-                      <Plus className="mr-1 h-4 w-4" aria-hidden />
-                      {addingId === item.dealId
-                        ? t('dealDetail.repaymentAddingMilestone')
-                        : t('adminPending.addMilestoneBtn')}
-                    </Button>
-                  </div>
+                {showAdd && isConnected && walletInfo?.address ? (
+                  <AddMilestoneReviewDialog
+                    item={item}
+                    escrow={escrow}
+                    signerAddress={walletInfo.address}
+                    onSubmit={(params) => handleAddMilestone(item, params)}
+                    triggerDisabled={isWorking}
+                  />
+                ) : showAdd ? (
+                  <p className="text-xs text-muted-foreground">{t('adminPending.connectWallet')}</p>
                 ) : null}
               </div>
 
@@ -534,46 +497,33 @@ export function PendingApprovals({
                           : t('adminDispute.startCta')}
                       </Button>
                     ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleApproveOnly(item)}
-                      disabled={
-                        approvingId === item.milestoneId ||
-                        alreadyReleased ||
-                        alreadyApproved ||
-                        isDisputed ||
-                        !canReleaseInOrder ||
-                        isWorking
-                      }
-                    >
-                      <FileText className="mr-2 h-4 w-4" aria-hidden />
-                      {approvingId === item.milestoneId
-                        ? t('adminPending.approvingShort')
-                        : alreadyApproved
-                          ? t('adminPending.approvedBadge')
-                          : t('adminPending.approveBtn')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => handleReleaseOnly(item)}
-                      disabled={
-                        releasingId === item.milestoneId ||
-                        alreadyReleased ||
-                        isDisputed ||
-                        !canReleaseInOrder ||
-                        isWorking
-                      }
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                      {releasingId === item.milestoneId
-                        ? t('adminPending.releasingBtn')
-                        : alreadyReleased
-                          ? t('adminPending.releasedState')
-                          : t('adminPending.releaseShort')}
-                    </Button>
+                    {walletInfo?.address ? (
+                      <>
+                        <ApproveMilestoneReviewDialog
+                          item={item}
+                          escrow={escrow}
+                          signerAddress={walletInfo.address}
+                          onApprove={handleApproveOnly}
+                          triggerDisabled={alreadyReleased || alreadyApproved || isDisputed || !canReleaseInOrder || isWorking}
+                        />
+                        <ReleaseMilestoneReviewDialog
+                          item={item}
+                          escrow={escrow}
+                          signerAddress={walletInfo.address}
+                          onRelease={handleReleaseOnly}
+                          triggerDisabled={alreadyReleased || isDisputed || !canReleaseInOrder || isWorking}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Button type="button" size="sm" variant="outline" disabled>
+                          <FileText className="mr-2 h-4 w-4" aria-hidden /> {t('adminPending.approveBtn')}
+                        </Button>
+                        <Button type="button" size="sm" disabled>
+                          <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden /> {t('adminPending.releaseShort')}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-1">

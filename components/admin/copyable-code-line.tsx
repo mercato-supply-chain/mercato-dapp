@@ -2,18 +2,22 @@
 
 import { useState } from 'react'
 import { CheckCircle2, Copy } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n/provider'
 
 type CopyableCodeLineProps = {
   value: string
   label?: string
   className?: string
+  overridden?: boolean
 }
 
-export function CopyableCodeLine({ value, label, className }: CopyableCodeLineProps) {
+export function CopyableCodeLine({ value, label, className, overridden = false }: CopyableCodeLineProps) {
   const [copied, setCopied] = useState(false)
+  const { t } = useI18n()
 
   const onCopy = async () => {
     try {
@@ -35,6 +39,11 @@ export function CopyableCodeLine({ value, label, className }: CopyableCodeLinePr
     >
       <code className="min-w-0 flex-1 break-all font-mono text-[11px] leading-relaxed text-foreground">
         {value}
+        {overridden && (
+          <Badge className="ml-2 border-transparent bg-amber-500/15 align-middle text-[10px] text-amber-700 dark:text-amber-400">
+            {t('repaymentEscrow.common.modified')}
+          </Badge>
+        )}
       </code>
       <Button
         type="button"

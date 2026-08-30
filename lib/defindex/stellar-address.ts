@@ -9,3 +9,8 @@ export function isLikelyStellarAccountId(address: string): boolean {
 export function isLikelyStellarContractId(address: string): boolean {
   return new RegExp(`^C${STRKEY_BODY}`).test(address)
 }
+
+/** Any valid base32 Stellar strkey (account `G…` or contract `C…`). */
+export function isLikelyStellarAddress(address: string): boolean {
+  return isLikelyStellarAccountId(address) || isLikelyStellarContractId(address)
+}

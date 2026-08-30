@@ -25,6 +25,8 @@ import {
   AdminResolveDisputeDialog,
   type ResolveDisputeTarget,
 } from './admin-resolve-dispute-dialog'
+import { ApproveMilestoneReviewDialog } from '@/components/admin/repayment-escrow/approve-milestone-review-dialog'
+import { ReleaseMilestoneReviewDialog } from '@/components/admin/repayment-escrow/release-milestone-review-dialog'
 
 interface ReleaseFundsFallbackProps {
   items: ReleaseFallbackItem[]
@@ -42,8 +44,6 @@ export function ReleaseFundsFallback({
   const { epoch, refreshAfterCommand } = useRepaymentCommandRefresh()
   const completeCommand = onAfterCommand ?? refreshAfterCommand
   const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
-  const [approvingId, setApprovingId] = useState<string | null>(null)
-  const [releasingId, setReleasingId] = useState<string | null>(null)
   const [resyncingId, setResyncingId] = useState<string | null>(null)
   const [disputeTarget, setDisputeTarget] = useState<ResolveDisputeTarget | null>(
     null,
@@ -97,70 +97,70 @@ export function ReleaseFundsFallback({
     }
   }, [contractIdsKey, escrowsFromParent, epoch])
 
-  const handleApproveOnly = async (item: ReleaseFallbackItem) => {
+  const handleApproveOnly = async (params: { dealId: string; contractId: string; milestoneIndex: number }) => {
     if (!walletInfo?.address) {
       toast.error(t('adminPending.connectWallet'))
       return
     }
-    if (!item.escrowContractAddress) {
+    if (!params.contractId) {
       toast.error(t('adminPending.noEscrow'))
       return
     }
-    setApprovingId(item.milestoneId)
+    const item = items.find((i) => i.dealId === params.dealId && i.escrowContractAddress === params.contractId && i.milestoneIndex === params.milestoneIndex)
     try {
       await approveRepaymentMilestone({
-        dealId: item.dealId,
-        contractId: item.escrowContractAddress,
+        dealId: params.dealId,
+        contractId: params.contractId,
         releaseSigner: walletInfo.address,
-        milestoneIndex: item.milestoneIndex,
+        milestoneIndex: params.milestoneIndex,
         provider,
       })
-      toast.success(t('adminPending.approveSuccessShort', { title: item.milestoneTitle }))
-      await completeCommand()
-    } catch (err) {
+        toast.success(t('adminPending.approveSuccessShort', { title: item?.milestoneTitle ?? '' }))
+        await completeCommand()
+      } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.approveFail')
       console.error('Approve milestone error:', err)
       toast.error(message)
-    } finally {
-      setApprovingId(null)
     }
   }
 
-  const handleReleaseOnly = async (item: ReleaseFallbackItem) => {
+  const handleReleaseOnly = async (params: { dealId: string; contractId: string; milestoneIndex: number }) => {
     if (!walletInfo?.address) {
       toast.error(t('adminPending.releaseConnect'))
       return
     }
-    if (!item.escrowContractAddress) {
+    if (!params.contractId) {
       toast.error(t('adminPending.noEscrow'))
       return
     }
-    const escrow = escrowsByContractId.get(item.escrowContractAddress)
-    if (!canReleaseMilestoneInOrder(escrow, item.milestoneIndex)) {
+    const item = items.find((i) => i.dealId === params.dealId && i.escrowContractAddress === params.contractId && i.milestoneIndex === params.milestoneIndex)
+    const escrow = escrowsByContractId.get(params.contractId)
+    if (!canReleaseMilestoneInOrder(escrow, params.milestoneIndex)) {
       toast.error(t('adminPending.releaseBlockedOrder'))
       return
     }
-    setReleasingId(item.milestoneId)
     try {
       await releaseRepaymentMilestone({
-        dealId: item.dealId,
-        contractId: item.escrowContractAddress,
+        dealId: params.dealId,
+        contractId: params.contractId,
         releaseSigner: walletInfo.address,
-        milestoneIndex: item.milestoneIndex,
+        milestoneIndex: params.milestoneIndex,
         provider,
       })
-      toast.success(t('adminPending.releaseSuccess', { title: item.milestoneTitle }))
-      await completeCommand()
-    } catch (err) {
+        toast.success(t('adminPending.releaseSuccess', { title: item?.milestoneTitle ?? '' }))
+        await completeCommand()
+      } catch (err) {
       const message = err instanceof Error ? err.message : t('adminPending.releaseFail')
       console.error('Release funds error:', err)
       toast.error(message)
-    } finally {
-      setReleasingId(null)
     }
   }
 
   const handleResync = async (item: ReleaseFallbackItem) => {
+    // Sync is read-only reconciliation from the indexer; it does not mutate
+    // on-chain state or require signing, so it is intentionally excluded from
+    // the review/audit flow required for add/approve/release actions per
+    // issue #163 §10-13.
     if (!item.escrowContractAddress) return
     setResyncingId(item.dealId)
     try {
@@ -279,50 +279,29 @@ export function ReleaseFundsFallback({
                       {t('adminDispute.resolveCta')}
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleApproveOnly(item)}
-                    disabled={
-                      approvingId === item.milestoneId ||
-                      alreadyReleased ||
-                      alreadyApproved ||
-                      isDisputed ||
-                      isWorking
-                    }
-                  >
-                    {approvingId === item.milestoneId
-                      ? t('adminPending.approvingShort')
-                      : alreadyApproved
-                        ? t('adminPending.approvedBadge')
-                        : t('adminPending.approveBtn')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleReleaseOnly(item)}
-                    disabled={
-                      releasingId === item.milestoneId ||
-                      alreadyReleased ||
-                      isDisputed ||
-                      !canReleaseInOrder ||
-                      isWorking
-                    }
-                    title={
-                      !canReleaseInOrder
-                        ? t('adminPending.releasePreviousTooltip')
-                        : undefined
-                    }
-                  >
-                    <DollarSign className="mr-2 h-4 w-4" aria-hidden />
-                    {releasingId === item.milestoneId
-                      ? t('adminPending.releasingBtn')
-                      : alreadyReleased
-                        ? t('adminPending.releasedState')
-                        : t('adminPending.releaseShort')}
-                  </Button>
+                  {walletInfo?.address ? (
+                    <>
+                      <ApproveMilestoneReviewDialog
+                        item={item}
+                        escrow={escrow}
+                        signerAddress={walletInfo.address}
+                        onApprove={handleApproveOnly}
+                        triggerDisabled={alreadyReleased || alreadyApproved || isDisputed || isWorking}
+                      />
+                      <ReleaseMilestoneReviewDialog
+                        item={item}
+                        escrow={escrow}
+                        signerAddress={walletInfo.address}
+                        onRelease={handleReleaseOnly}
+                        triggerDisabled={alreadyReleased || isDisputed || !canReleaseInOrder || isWorking}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Button type="button" size="sm" variant="outline" disabled>{t('adminPending.approveBtn')}</Button>
+                      <Button type="button" size="sm" variant="outline" disabled>{t('adminPending.releaseShort')}</Button>
+                    </>
+                  )}
                 </>
               )}
               <Button

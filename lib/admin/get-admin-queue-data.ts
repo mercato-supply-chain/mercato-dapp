@@ -12,8 +12,10 @@ import {
   repaymentMilestoneAmount,
   DEFAULT_FIRST_MILESTONE_PERCENT,
 } from '@/lib/deals/fees'
+import { repaymentEngagementId } from '@/lib/deals/repayment-escrow-helpers'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import type { RepaymentMilestoneCache } from '@/lib/types'
+import { REPAYMENT_QUEUE_DEAL_SELECT } from './repayment-queue-select'
 
 type DealRow = {
   id: string
@@ -42,6 +44,12 @@ type DealRow = {
     contact_name?: string
     logo_url?: string | null
   } | null
+  investor?: {
+    address?: string | null
+    full_name?: string
+    company_name?: string
+    contact_name?: string
+  } | null
 }
 
 function companyName(
@@ -49,6 +57,13 @@ function companyName(
   fallback: string,
 ): string {
   return row?.company_name || row?.full_name || row?.contact_name || fallback
+}
+
+/** Investor display name mirrors pyme/supplier fallback ordering. */
+function investorName(
+  investor: DealRow['investor'],
+): string | null {
+  return investor?.full_name || investor?.company_name || investor?.contact_name || null
 }
 
 export async function getAdminQueueData(
@@ -59,9 +74,7 @@ export async function getAdminQueueData(
   const companyFilter = filters.company ?? null
   const sortOrder = filters.sort ?? 'newest'
 
-  const selectCols = `id, title, product_name, amount, interest_rate, term_days, escrow_contract_address, repayment_status, repayment_total_amount, repayment_milestones, created_at, pyme_id, supplier_id, investor_id,
-      pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, address),
-      supplier:supplier_companies(company_name, full_name, contact_name, logo_url)`
+  const selectCols = REPAYMENT_QUEUE_DEAL_SELECT
 
   let createQuery = supabase
     .from('deals')
@@ -112,6 +125,7 @@ export async function getAdminQueueData(
     const apr = Number(deal.interest_rate ?? 0)
     const termDays = Number(deal.term_days ?? 0)
     const { profit } = computeInvestorReturns(principal, apr, termDays)
+    const netTarget = principal + profit
     const totalGrossed = repaymentEscrowAmount(principal, profit)
     const firstAmount = repaymentMilestoneAmount(
       totalGrossed,
@@ -126,6 +140,13 @@ export async function getAdminQueueData(
       termDays,
       totalGrossed,
       defaultFirstMilestoneAmount: firstAmount,
+      investorAddress: deal.investor?.address?.trim() || null,
+      investorId: deal.investor_id ?? null,
+      investorName: investorName(deal.investor),
+      profit,
+      netTarget: Number.isFinite(netTarget) ? netTarget : 0,
+      engagementId: repaymentEngagementId(deal.id),
+      escrowType: 'multi-release',
       pymeName: companyName(deal.pyme, '—'),
       supplierName: companyName(deal.supplier, '—'),
       supplierLogoUrl: deal.supplier?.logo_url ?? null,

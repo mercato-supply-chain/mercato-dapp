@@ -1,3 +1,4 @@
+import type { RepaymentEscrowDeploymentDraft } from '@/lib/trustless/repayment-deployment-draft'
 import type {
   FundEscrowPayload,
   GetEscrowsFromIndexerResponse,
@@ -13,15 +14,28 @@ export interface DeployRepaymentParams {
   dealId: string
   /** Platform / admin wallet that signs deploy. */
   adminAddress: string
+  provider: string | null
+  /**
+   * Reviewed + validated deployment draft; the authoritative source for every
+   * Trustless Work value. Deploy never regenerates editable fields.
+   * When provided, principal/apr/productName are ignored.
+   */
+  draft?: RepaymentEscrowDeploymentDraft
+  /** Fallback (days) when the deal has no repayment_due_at yet. */
+  termDays?: number
+  /** Optional audit context captured at review time (generated vs reviewed). */
+  audit?: {
+    readonly generatedDraft?: RepaymentEscrowDeploymentDraft | null
+    readonly reviewTimestamp?: string | null
+  }
+  // Upstream direct fields (when draft not provided)
   /** Optional — resolved from the deal's investor profile when omitted. */
   investorAddress?: string
-  principal: number
-  aprPercent: number
-  termDays: number
-  productName: string
+  principal?: number
+  aprPercent?: number
+  productName?: string
   /** Percent of total grossed for the first milestone (default 50). */
   firstMilestonePercent?: number
-  provider: string | null
 }
 
 export interface FundRepaymentParams {
@@ -88,6 +102,8 @@ export type SendTxResult = {
   message?: string
   contractId?: string
   escrow?: { contractId?: string }
+  hash?: string
+  transactionHash?: string
 }
 
 export type EscrowTrustline = {

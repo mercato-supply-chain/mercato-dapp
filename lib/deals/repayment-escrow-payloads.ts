@@ -70,6 +70,19 @@ export function planRepaymentDeploy(input: {
   initialMilestones: RepaymentMilestoneCache[]
 } {
   const { params, investorAddress, roles, trustline } = input
+  if (params.draft) {
+    throw new Error('planRepaymentDeploy called with draft — use draft payload directly')
+  }
+  if (
+    params.principal == null ||
+    params.aprPercent == null ||
+    params.termDays == null ||
+    !params.productName
+  ) {
+    throw new Error(
+      'Missing required fields for deploy without draft: principal, aprPercent, termDays, productName',
+    )
+  }
   const { profit } = computeInvestorReturns(
     params.principal,
     params.aprPercent,
