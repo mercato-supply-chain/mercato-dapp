@@ -3,8 +3,10 @@ export type ReferralInvitationStatus = 'active' | 'revoked' | 'expired' | 'conve
 export type ReferralEventType =
   | 'invitation_created'
   | 'link_opened'
+  | 'signup_started'
   | 'account_created'
   | 'onboarding_completed'
+  | 'invitation_revoked'
   | 'deal_created'
   | 'deal_funded'
 

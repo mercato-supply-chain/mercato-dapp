@@ -51,6 +51,15 @@ export async function POST(request: Request, context: RouteContext) {
     })
     .eq('id', id)
 
+  const service = createServiceClient()
+  await logReferralEvent(service, {
+    supplierCompanyId: existing.supplier_company_id,
+    invitationId: id,
+    eventType: 'invitation_revoked',
+    profileId: user.id,
+    metadata: { reason: 'regenerated' },
+  })
+
   const token = generateInviteToken()
   const tokenHash = hashInviteToken(token)
   const origin = new URL(request.url).origin
@@ -73,7 +82,6 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error?.message ?? 'Failed to regenerate' }, { status: 500 })
   }
 
-  const service = createServiceClient()
   await logReferralEvent(service, {
     supplierCompanyId: existing.supplier_company_id,
     invitationId: invitation.id,
