@@ -46,34 +46,38 @@ begin
     resolved_type := null;
   end if;
 
-  -- Opaque invitation path (signup metadata carries invitation id from resolved token).
-  if new.raw_user_meta_data->>'referral_invitation_id' is not null then
-    begin
-      v_invitation_id := (new.raw_user_meta_data->>'referral_invitation_id')::uuid;
-      select i.supplier_company_id into v_referred_by
-      from public.supplier_referral_invitations i
-      where i.id = v_invitation_id
-        and i.status = 'active'
-        and (i.expires_at is null or i.expires_at > now());
-      if v_referred_by is null then
+  -- Defer invitation / legacy attribution until the account role is known to be pyme.
+  -- Signup usually omits user_type; onboarding applies attribution once the role is chosen.
+  if resolved_type = 'pyme' then
+    -- Opaque invitation path (signup metadata carries invitation id from resolved token).
+    if new.raw_user_meta_data->>'referral_invitation_id' is not null then
+      begin
+        v_invitation_id := (new.raw_user_meta_data->>'referral_invitation_id')::uuid;
+        select i.supplier_company_id into v_referred_by
+        from public.supplier_referral_invitations i
+        where i.id = v_invitation_id
+          and i.status = 'active'
+          and (i.expires_at is null or i.expires_at > now());
+        if v_referred_by is null then
+          v_invitation_id := null;
+        end if;
+      exception when others then
         v_invitation_id := null;
-      end if;
-    exception when others then
-      v_invitation_id := null;
-      v_referred_by := null;
-    end;
-  end if;
-
-  -- Legacy UUID referral compatibility.
-  if v_referred_by is null and new.raw_user_meta_data->>'referred_by_supplier_id' is not null then
-    begin
-      v_referred_by := (new.raw_user_meta_data->>'referred_by_supplier_id')::uuid;
-      if not exists (select 1 from public.supplier_companies where id = v_referred_by) then
         v_referred_by := null;
-      end if;
-    exception when others then
-      v_referred_by := null;
-    end;
+      end;
+    end if;
+
+    -- Legacy UUID referral compatibility.
+    if v_referred_by is null and new.raw_user_meta_data->>'referred_by_supplier_id' is not null then
+      begin
+        v_referred_by := (new.raw_user_meta_data->>'referred_by_supplier_id')::uuid;
+        if not exists (select 1 from public.supplier_companies where id = v_referred_by) then
+          v_referred_by := null;
+        end if;
+      exception when others then
+        v_referred_by := null;
+      end;
+    end if;
   end if;
 
   insert into public.profiles (
@@ -123,6 +127,63 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Conversion + account_created on insert OR first-time attribution update
 -- ---------------------------------------------------------------------------
+-- Claim invitation atomically before attribution is retained (avoids TOCTOU).
+create or replace function public.claim_referral_attribution_before_write()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_supplier uuid;
+begin
+  -- Strip pending attribution until the profile role is pyme.
+  if new.user_type is distinct from 'pyme' then
+    if tg_op = 'INSERT' or old.referred_by_supplier_id is null then
+      new.referred_by_supplier_id := null;
+    end if;
+    if tg_op = 'INSERT' or old.referral_invitation_id is null then
+      new.referral_invitation_id := null;
+    end if;
+    return new;
+  end if;
+
+  -- Already attributed — immutability trigger keeps prior values.
+  if tg_op = 'UPDATE' and old.referred_by_supplier_id is not null then
+    return new;
+  end if;
+
+  if new.referral_invitation_id is not null then
+    update public.supplier_referral_invitations
+    set
+      status = 'converted',
+      converted_profile_id = new.id,
+      updated_at = now()
+    where id = new.referral_invitation_id
+      and status = 'active'
+      and (expires_at is null or expires_at > now())
+    returning supplier_company_id into v_supplier;
+
+    if v_supplier is null then
+      -- Lost the race or invitation inactive: do not retain attribution.
+      new.referral_invitation_id := null;
+      new.referred_by_supplier_id := null;
+    else
+      new.referred_by_supplier_id := v_supplier;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_claim_referral_attribution on public.profiles;
+create trigger profiles_claim_referral_attribution
+  before insert or update of referred_by_supplier_id, referral_invitation_id, user_type
+  on public.profiles
+  for each row
+  execute function public.claim_referral_attribution_before_write();
+
 create or replace function public.after_profile_referral_attribution()
 returns trigger
 language plpgsql
@@ -133,7 +194,12 @@ declare
   v_invitation_id uuid;
   v_supplier_id uuid;
   already_logged boolean;
+  claim_ok boolean := true;
 begin
+  if new.user_type is distinct from 'pyme' then
+    return new;
+  end if;
+
   if tg_op = 'UPDATE' then
     -- Only act when attribution is newly applied.
     if old.referred_by_supplier_id is not null
@@ -150,13 +216,17 @@ begin
   end if;
 
   if v_invitation_id is not null then
-    update public.supplier_referral_invitations
-    set
-      status = 'converted',
-      converted_profile_id = new.id,
-      updated_at = now()
-    where id = v_invitation_id
-      and status = 'active';
+    select exists (
+      select 1
+      from public.supplier_referral_invitations i
+      where i.id = v_invitation_id
+        and i.status = 'converted'
+        and i.converted_profile_id = new.id
+    ) into claim_ok;
+
+    if not claim_ok then
+      return new;
+    end if;
   end if;
 
   select exists (
