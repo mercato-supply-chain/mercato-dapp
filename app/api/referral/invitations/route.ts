@@ -59,17 +59,21 @@ export async function GET(request: Request) {
   const openCounts: Record<string, number> = {}
 
   if (invitationIds.length > 0) {
-    const service = createServiceClient()
-    const { data: events } = await service
-      .from('referral_events')
-      .select('invitation_id')
-      .in('invitation_id', invitationIds)
-      .eq('event_type', 'link_opened')
+    try {
+      const service = createServiceClient()
+      const { data: events } = await service
+        .from('referral_events')
+        .select('invitation_id')
+        .in('invitation_id', invitationIds)
+        .eq('event_type', 'link_opened')
 
-    for (const ev of events ?? []) {
-      if (ev.invitation_id) {
-        openCounts[ev.invitation_id] = (openCounts[ev.invitation_id] ?? 0) + 1
+      for (const ev of events ?? []) {
+        if (ev.invitation_id) {
+          openCounts[ev.invitation_id] = (openCounts[ev.invitation_id] ?? 0) + 1
+        }
       }
+    } catch (err) {
+      console.error('[referral] link_opened counts skipped', err)
     }
   }
 
@@ -150,16 +154,22 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !invitation) {
-    return NextResponse.json({ error: error?.message ?? 'Failed to create invitation' }, { status: 500 })
+    console.error('[referral] create invitation failed', error)
+    return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
   }
 
-  const service = createServiceClient()
-  await logReferralEvent(service, {
-    supplierCompanyId: body.supplierCompanyId,
-    invitationId: invitation.id,
-    eventType: 'invitation_created',
-    metadata: { label: body.label ?? null },
-  })
+  try {
+    const service = createServiceClient()
+    await logReferralEvent(service, {
+      supplierCompanyId: body.supplierCompanyId,
+      invitationId: invitation.id,
+      eventType: 'invitation_created',
+      metadata: { label: body.label ?? null },
+    })
+  } catch (err) {
+    // Invitation is already persisted; event logging must not fail the response.
+    console.error('[referral] invitation_created event skipped', err)
+  }
 
   return NextResponse.json({ id: invitation.id, inviteUrl })
 }
