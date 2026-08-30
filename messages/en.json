@@ -3128,8 +3128,10 @@
       "events": {
         "invitation_created": "Invitation created",
         "link_opened": "Link opened",
+        "signup_started": "Signup started",
         "account_created": "Account created",
         "onboarding_completed": "Onboarding completed",
+        "invitation_revoked": "Invitation revoked",
         "deal_created": "Deal created",
         "deal_funded": "Deal funded"
       }
