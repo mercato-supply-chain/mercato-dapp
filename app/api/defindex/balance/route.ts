@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { parseVaultBalancePayload } from '@/lib/defindex/amounts'
 import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
 import {

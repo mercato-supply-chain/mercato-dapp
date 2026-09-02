@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/ramp-api'
+import { requireAdmin } from '@/lib/api/route-auth'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { isLikelyStellarAccountId, isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 import { getSacTokenBalance } from '@/lib/stellar/sac-token-balance'
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Horizon } from '@stellar/stellar-sdk'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { isLikelyStellarAccountId, isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 import {
   BLEND_TESTNET_USDC_CONTRACT,

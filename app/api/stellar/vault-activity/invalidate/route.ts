@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { invalidateVaultActivityCache } from '@/lib/stellar/vault-activity-cache'
 
 export const dynamic = 'force-dynamic'

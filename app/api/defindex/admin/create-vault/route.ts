@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { CreateVaultParams } from '@defindex/sdk'
-import { requireAdmin } from '@/lib/ramp-api'
+import { requireAdmin } from '@/lib/api/route-auth'
 import { getDefindexSupportedNetwork } from '@/lib/defindex/config'
 import { validateCreateVaultParams } from '@/lib/defindex/create-vault-validation'
 import {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { submitSignedStellarTransactionXdr } from '@/lib/stellar/submit-signed-transaction'
 
 export const dynamic = 'force-dynamic'

@@ -8,7 +8,7 @@ const state = {
   rpcCalls: [] as RpcCall[],
 }
 
-mock.module('@/lib/ramp-api', () => ({
+mock.module('@/lib/api/route-auth', () => ({
   requireAdmin: async () =>
     state.adminOk
       ? { ok: true, userId: 'admin-1', email: 'admin@mercato.xyz' }

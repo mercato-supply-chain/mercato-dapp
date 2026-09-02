@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/ramp-api'
+import { requireAdmin } from '@/lib/api/route-auth'
 import { getDefindexSupportedNetwork, getMercatoVaultContractId } from '@/lib/defindex/config'
 import {
   defindexErrorResponse,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/ramp-api'
+import { requireAuth } from '@/lib/api/route-auth'
 import { buildSacTrustTransactionXdr } from '@/lib/stellar/build-sac-trust'
 import { isLikelyStellarContractId } from '@/lib/defindex/stellar-address'
 

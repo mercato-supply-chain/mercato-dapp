@@ -220,7 +220,7 @@ Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 | Wallet types & storage | `lib/mercato-wallet.ts` |
 | TW config & platform roles | `lib/trustless/config.ts` |
 | DeFindex config & monitor | `lib/defindex/config.ts`, `lib/defindex/vault-monitor.ts` |
-| Ramp factory | `lib/anchor-factory.ts`, `lib/ramp-api.ts` |
+| API route auth | `lib/api/route-auth.ts` |
 | Admin queues | `lib/admin/get-admin-queue-data.ts` |
 | Dashboard data | `lib/dashboard/get-dashboard-data.ts` |
 | Investor portfolio | `lib/investments/get-investor-portfolio.ts` |
@@ -252,7 +252,7 @@ Optional feature flags:
 
 - **Pollar:** `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY`, `POLLAR_SECRET_KEY`, `NEXT_PUBLIC_POLLAR_NETWORK`
 - **DeFindex:** `DEFINDEX_API_KEY`, `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS`, `MERCATO_DEFINDEX_VAULT_ADDRESS`
-- **Ramps:** `
+
 Full list: [env.sample](env.sample). Architecture reference: [doc/architecture.md § Environment](doc/architecture.md#9-environment-variables).
 
 ## Verification commands
