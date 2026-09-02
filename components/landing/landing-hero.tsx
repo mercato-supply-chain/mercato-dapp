@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
 import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
 import type { LandingPlatformStats } from '@/lib/landing/platform-stats'
@@ -21,13 +22,13 @@ export function LandingHero({ stats }: LandingHeroProps) {
   return (
     <section className="hero-ref relative overflow-x-clip bg-landing-hero text-foreground dark:bg-[hsl(0_0%_4%)] dark:text-white transition-colors duration-500">
       <div className="relative isolate overflow-hidden bg-[hsl(0_0%_5%)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/hero-photo.png"
           alt=""
+          fill
+          sizes="100vw"
+          priority
           className="absolute inset-0 h-full w-full object-cover object-[60%_center]"
-          decoding="async"
-          fetchPriority="high"
           aria-hidden
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/35 to-black/5" aria-hidden />
