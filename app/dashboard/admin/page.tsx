@@ -7,25 +7,21 @@ import { AdminOverviewSummaryGrid } from '@/components/dashboard/admin/admin-ove
 import { AdminTaskInbox } from '@/components/dashboard/admin/admin-task-inbox'
 import { AdminTaskInboxDisputes } from '@/components/dashboard/admin/admin-task-inbox-disputes'
 import { AdminVaultHealthCard } from '@/components/dashboard/admin/admin-vault-health-card'
+import { getExpiredFundingDeals } from '@/lib/admin/get-expired-funding-deals'
 import { getAdminOverview } from '@/lib/admin/get-admin-overview'
 import { requireAdminProfile } from '@/lib/admin/require-admin'
+import { formatCurrency } from '@/lib/format'
+import { formatDate } from '@/lib/date-utils'
 import { getServerDictionary, getServerLocale, tr } from '@/lib/i18n/server'
 
 export default async function AdminOverviewPage() {
   const { supabase } = await requireAdminProfile()
-  const [overview, m, locale] = await Promise.all([
+  const [overview, expiredDeals, m, locale] = await Promise.all([
     getAdminOverview(supabase),
+    getExpiredFundingDeals(supabase),
     getServerDictionary(),
     getServerLocale(),
   ])
-
-  // Fetch expired funding opportunities that are eligible for reopening
-  const { data: expiredDeals, error: expiredDealsError } = await supabase
-    .from('deals')
-    .select('id, supplier_name, order_value, expires_at, reopen_count, last_reopened_at')
-    .eq('status', 'expired')
-    .order('expires_at', { ascending: false })
-    .limit(5)
 
   return (
     <div className="space-y-6">
@@ -51,34 +47,38 @@ export default async function AdminOverviewPage() {
         <AdminVaultHealthCard vaultConfigured={overview.vaultConfigured} />
       </div>
 
-      {/* Expired funding opportunities management */}
-      {!expiredDealsError && expiredDeals && expiredDeals.length > 0 && (
+      {expiredDeals.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Expired Funding Opportunities
+              {tr(m, 'adminOverview.expiredFundingTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent className="divide-y">
             {expiredDeals.map((deal) => (
-              <div key={deal.id} className="flex items-center justify-between py-3">
+              <div key={deal.id} className="flex items-center justify-between gap-4 py-3">
                 <div>
-                  <p className="font-medium">{deal.supplier_name ?? 'Unknown supplier'}</p>
+                  <p className="font-medium">{deal.title || deal.supplier_name || '—'}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).surformat(Number(deal.order_value ?? 0))}
+                    {formatCurrency(Number(deal.amount ?? 0))}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Expired: {deal.expires_at ? new Date(deal.expires_at).toLocaleDateString(locale) : 'N/A'}
+                    {tr(m, 'dealDetail.fundingDeadlineLabel')}{' '}
+                    {deal.funding_expires_at
+                      ? formatDate(deal.funding_expires_at)
+                      : '—'}
                   </p>
                   {Number(deal.reopen_count ?? 0) > 0 && (
                     <Badge variant="outline" className="mt-1 text-xs">
-                      Reopened Opportunity (x {String(deal.reopen_count ?? 0)})
+                      {tr(m, 'adminOverview.reopenedCount', {
+                        count: String(deal.reopen_count ?? 0),
+                      })}
                     </Badge>
                   )}
                 </div>
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/dashboard/admin/deals/${deal.id}/reopen`}>
-                    Reopen Opportunity
+                    {tr(m, 'adminOverview.dealReopen')}
                   </Link>
                 </Button>
               </div>

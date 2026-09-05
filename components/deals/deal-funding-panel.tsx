@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DealAdminReopenPanel } from '@/components/deals/deal-admin-reopen-panel'
 import { Clock, Wallet } from 'lucide-react'
 import { DealFundDialog } from '@/components/deals/deal-fund-dialog'
 import type { Deal } from '@/lib/types'
@@ -33,6 +34,7 @@ interface DealFundingPanelProps {
   deal: Deal
   isFundingOpen: boolean
   isPyme: boolean
+  isAdmin?: boolean
   userType: string | null
   isConnected: boolean
   walletAddress: string | undefined
@@ -49,6 +51,7 @@ export function DealFundingPanel({
   deal,
   isFundingOpen,
   isPyme,
+  isAdmin = false,
   userType,
   isConnected,
   walletAddress,
@@ -265,6 +268,14 @@ export function DealFundingPanel({
               <Clock className="h-4 w-4 shrink-0" aria-hidden />
               {t('dealDetail.fundingExpired')}
             </div>
+            <DealAdminReopenPanel
+              deal={deal}
+              isAdmin={isAdmin}
+              onReopened={async () => {
+                const updated = await fetchDeal()
+                if (updated) onDealUpdate(updated)
+              }}
+            />
             {isPyme && (
               <Dialog open={extendFundingDialogOpen} onOpenChange={setExtendFundingDialogOpen}>
                 <DialogTrigger asChild>

@@ -99,6 +99,9 @@ export interface Deal {
   fundingExpiresAt?: string
   extensionCount: number
   extendedAt?: string
+  reopenCount?: number
+  lastReopenedAt?: string
+  lastReopenedBy?: string
 }
 
 export interface User {

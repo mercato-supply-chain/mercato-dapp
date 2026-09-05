@@ -114,6 +114,7 @@ export default function DealDetailPage() {
     onDealUpdate: setDeal,
     isFundingOpen,
     isPyme,
+    isAdmin,
     userType,
     onConnect: handleConnect,
     canFund,
