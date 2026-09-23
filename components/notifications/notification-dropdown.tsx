@@ -25,6 +25,16 @@ interface NotificationDropdownProps {
   variant?: 'desktop' | 'mobile'
 }
 
+// Explicit column list — never `*` — matching `NotificationRow`.
+const NOTIFICATION_COLUMNS =
+  'id,user_id,type,title,body,link_url,link_label,metadata,read_at,created_at'
+
+const NOTIFICATION_LIMIT = 20
+
+// Shared in-flight request cache keyed by user. Desktop + mobile dropdowns
+// (and any other consumer) share one request instead of firing duplicates.
+const inflightByUser = new Map<string, Promise<Notification[]>>()
+
 export function NotificationDropdown({ userId }: NotificationDropdownProps) {
   const { t } = useI18n()
   const mounted = useMounted()
@@ -34,27 +44,101 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
-  const fetchNotifications = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    if (error) {
-      console.error('Failed to fetch notifications:', error)
-      setNotifications([])
-      return
+  const loadNotifications = useCallback(async (): Promise<Notification[]> => {
+    const existing = inflightByUser.get(userId)
+    if (existing) return existing
+
+    const request = (async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(NOTIFICATION_COLUMNS)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(NOTIFICATION_LIMIT)
+      if (error) {
+        console.error('Failed to fetch notifications:', error)
+        return []
+      }
+      return (data ?? []).map(mapNotificationFromDb)
+    })()
+
+    inflightByUser.set(userId, request)
+    try {
+      return await request
+    } finally {
+      if (inflightByUser.get(userId) === request) {
+        inflightByUser.delete(userId)
+      }
     }
-    const mapped = (data ?? []).map(mapNotificationFromDb)
+  }, [userId, supabase])
+
+  const fetchNotifications = useCallback(async () => {
+    const mapped = await loadNotifications()
     setNotifications(mapped)
     setUnreadCount(mapped.filter((n) => !n.read_at).length)
-  }, [userId, supabase])
+  }, [loadNotifications])
+
+  const upsertRealtimeRow = useCallback(
+    (row: unknown, event: 'INSERT' | 'UPDATE', oldRow?: unknown) => {
+      let mapped: Notification
+      try {
+        mapped = mapNotificationFromDb(
+          row as Parameters<typeof mapNotificationFromDb>[0],
+        )
+      } catch {
+        // Unusable payload shape — fall back to a shared refetch.
+        void fetchNotifications()
+        return
+      }
+      setNotifications((prev) => {
+        const next = prev.some((n) => n.id === mapped.id)
+          ? prev.map((n) => (n.id === mapped.id ? mapped : n))
+          : [mapped, ...prev]
+        return next
+          .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+          .slice(0, NOTIFICATION_LIMIT)
+      })
+      // Badge delta derived from the payload alone (no state read, so the
+      // updater stays pure under StrictMode).
+      if (event === 'INSERT') {
+        if (!mapped.read_at) setUnreadCount((c) => c + 1)
+      } else {
+        try {
+          const old = oldRow as { read_at?: string | null } | undefined
+          if (old && 'read_at' in (old as object)) {
+            const wasUnread = !old.read_at
+            const nowUnread = !mapped.read_at
+            if (wasUnread && !nowUnread) setUnreadCount((c) => Math.max(0, c - 1))
+            else if (!wasUnread && nowUnread) setUnreadCount((c) => c + 1)
+          } else {
+            // Replica identity didn't include the old row — resync once.
+            void fetchNotifications()
+          }
+        } catch {
+          void fetchNotifications()
+        }
+      }
+    },
+    [fetchNotifications],
+  )
 
   useEffect(() => {
     if (!userId) return
-    void fetchNotifications()
-    setIsLoading(false)
+    let cancelled = false
+    // Intentional re-render on user change: show the spinner while the new
+    // user's list loads. The `cancelled` guard below prevents a stale write.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoading(true)
+    fetchNotifications()
+      .catch((error) => {
+        console.error('Failed to fetch notifications:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [userId, fetchNotifications])
 
   useEffect(() => {
@@ -69,7 +153,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        () => fetchNotifications()
+        (payload) => upsertRealtimeRow(payload.new, 'INSERT'),
       )
       .on(
         'postgres_changes',
@@ -79,30 +163,45 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        () => fetchNotifications()
+        (payload) => upsertRealtimeRow(payload.new, 'UPDATE', payload.old),
       )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, supabase, fetchNotifications])
+  }, [userId, supabase, upsertRealtimeRow])
 
   const markAsRead = async (id: string) => {
-    await supabase
+    // Optimistic update — no full refetch on success. Only called for
+    // unread items (see the list item onClick guard below).
+    const stampedAt = new Date().toISOString()
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: stampedAt } : n)))
+    setUnreadCount((c) => Math.max(0, c - 1))
+    const { error } = await supabase
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: stampedAt })
       .eq('id', id)
       .eq('user_id', userId)
-    fetchNotifications()
+    if (error) {
+      console.error('Failed to mark notification as read:', error)
+      void fetchNotifications()
+    }
   }
 
   const markAllAsRead = async () => {
-    await supabase
+    const stampedAt = new Date().toISOString()
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? stampedAt })))
+    setUnreadCount(0)
+    const { error } = await supabase
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: stampedAt })
       .eq('user_id', userId)
       .is('read_at', null)
-    fetchNotifications()
+    if (error) {
+      console.error('Failed to mark all notifications as read:', error)
+      // Resync from the shared request on failure.
+      void fetchNotifications()
+    }
   }
 
   const trigger = (
