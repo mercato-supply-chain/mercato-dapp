@@ -28,7 +28,7 @@ import {
 } from '@/lib/i18n/server'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
 import { ProductImage } from '@/components/media/product-image'
-import { fetchPublicSupplier } from '@/lib/suppliers/directory'
+import { getPublicSupplier } from '@/lib/suppliers/directory'
 import { createServiceClient } from '@/lib/supabase/service'
 import { VerifiedBadge } from '@/components/verified-badge'
 
@@ -66,7 +66,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const profile = await fetchPublicSupplier(id)
+  const profile = await getPublicSupplier(id)
   if (!profile) {
     return { title: 'Supplier Not Found | Mercato' }
   }
@@ -103,7 +103,7 @@ export default async function SupplierDetailPage({
   const m = await getServerDictionary()
   const locale = await getServerLocale()
 
-  const company = await fetchPublicSupplier(id)
+  const company = await getPublicSupplier(id)
   if (!company) notFound()
 
   const [{ data: products }, { count: dealsCount }, { data: recentDeals }] =
