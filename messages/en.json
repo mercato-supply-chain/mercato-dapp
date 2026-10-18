@@ -206,6 +206,7 @@
     "removeCategory": "Remove category filter",
     "clearSearch": "Clear search",
     "loadingDeals": "Loading deals...",
+    "loadMore": "Load more deals",
     "dealCountOne": "deal",
     "dealCountOther": "deals",
     "noDeals": "No deals found",

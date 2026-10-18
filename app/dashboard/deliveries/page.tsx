@@ -8,7 +8,7 @@ import { Package, Upload, ArrowRight } from 'lucide-react'
 import { getServerDictionary } from '@/lib/i18n/server'
 
 export default async function DeliveriesPage() {
-  const m = await getServerDictionary()
+  const dictionaryPromise = getServerDictionary()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -48,6 +48,7 @@ export default async function DeliveriesPage() {
     : { data: null }
 
   const pendingShipments = deals ?? []
+  const m = await dictionaryPromise
 
   const dealStatusLabel = (status: string) => {
     const labels = m.dealStatus as Record<string, string>

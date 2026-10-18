@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { Supplier } from '@/lib/suppliers/directory-utils'
 
@@ -161,3 +162,5 @@ export async function fetchPublicSupplier(id: string): Promise<PublicSupplierDet
   if (dealsError) throw dealsError
   return null
 }
+
+export const getPublicSupplier = cache(fetchPublicSupplier)

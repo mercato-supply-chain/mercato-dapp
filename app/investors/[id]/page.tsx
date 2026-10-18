@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getPublicInvestorProfile } from '@/lib/investors/directory'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
@@ -30,15 +31,11 @@ import {
 } from '@/lib/i18n/server'
 import { getReputation } from '@/lib/reputation'
 import { InvestorReputationCard } from '@/components/investor-reputation-card'
-
-type DealRow = {
-  id: string
-  title: string
-  product_name: string | null
-  status: string
-  amount: number
-  created_at: string | null
-}
+import {
+  fetchRecentProfileDeals,
+  getInvestorDealAggregates,
+  PROFILE_DEAL_LIST_LIMIT,
+} from '@/lib/profiles/deal-aggregates'
 
 const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   completed: 'default',
@@ -66,13 +63,8 @@ export async function generateMetadata({
   const { id } = await params
   const locale = await getServerLocale()
   const m = getDictionary(locale)
-  const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_name, full_name, contact_name, user_type')
-    .eq('id', id)
-    .single()
-  if (!profile || profile.user_type !== 'investor') {
+  const profile = await getPublicInvestorProfile(id)
+  if (!profile) {
     return { title: tr(m, 'investorDetail.metaTitle') }
   }
   const name =
@@ -96,36 +88,26 @@ export default async function InvestorDetailPage({
   const m = await getServerDictionary()
   const locale = await getServerLocale()
 
-  const dealsPromise = supabase
-    .from('deals')
-    .select('id, title, product_name, status, amount, created_at')
-    .eq('investor_id', id)
-    .order('created_at', { ascending: false })
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount')
-    .eq('id', id)
-    .single()
-
-  if (profileError || !profile || profile.user_type !== 'investor') {
-    notFound()
-  }
-
-  const [{ data: fundedDeals }, reputation] = await Promise.all([
-    dealsPromise,
+  // Headline stats come from a single-row aggregate query over the account's full
+  // history; only the capped recent list transfers deal rows.
+  const [profileResult, dealsList, aggregates, reputation] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount')
+      .eq('id', id)
+      .single(),
+    fetchRecentProfileDeals(supabase, 'investor_id', id),
+    getInvestorDealAggregates(supabase, id),
     getReputation(supabase, id),
   ])
 
-  const allDeals = fundedDeals ?? []
-  const dealsList = allDeals.slice(0, 10) as DealRow[]
+  const { data: profile, error: profileError } = profileResult
 
-  const totalInvested = allDeals.reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
-  const activeDeals = allDeals.filter((d) => d.status === 'funded' || d.status === 'in_progress').length
-  const completedDeals = allDeals.filter((d) => d.status === 'completed').length
-  const activeVolume = allDeals
-    .filter((d) => d.status === 'funded' || d.status === 'in_progress')
-    .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
+  if (!profile) {
+    notFound()
+  }
+
+  const { totalDeals, totalDeployed, activeDeals, activeVolume, completedDeals } = aggregates
   const stakeAmount = Number(profile.stake_amount ?? 0)
 
   const displayName =
@@ -225,7 +207,7 @@ export default async function InvestorDetailPage({
                 <BarChart3 className="h-3.5 w-3.5" />
                 {tr(m, 'investorDetail.statTotalDeals')}
               </CardDescription>
-              <CardTitle className="text-3xl tabular-nums">{allDeals.length}</CardTitle>
+              <CardTitle className="text-3xl tabular-nums">{totalDeals}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -235,7 +217,7 @@ export default async function InvestorDetailPage({
                 {tr(m, 'investorDetail.statTotalDeployed')}
               </CardDescription>
               <CardTitle className="text-2xl tabular-nums text-emerald-600 dark:text-emerald-400">
-                {formatPrice(totalInvested)}
+                {formatPrice(totalDeployed)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -341,9 +323,12 @@ export default async function InvestorDetailPage({
                   ))}
                 </ul>
               )}
-              {allDeals.length > 10 && (
+              {totalDeals > PROFILE_DEAL_LIST_LIMIT && (
                 <p className="mt-4 text-center text-xs text-muted-foreground">
-                  {tr(m, 'investorDetail.showingLatest', { shown: 10, total: allDeals.length })}
+                  {tr(m, 'investorDetail.showingLatest', {
+                    shown: PROFILE_DEAL_LIST_LIMIT,
+                    total: totalDeals,
+                  })}
                 </p>
               )}
             </CardContent>

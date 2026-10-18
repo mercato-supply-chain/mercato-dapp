@@ -5,6 +5,7 @@ import { GeistMono } from 'geist/font/mono'
 import { DM_Serif_Display } from 'next/font/google'
 import '@pollar/react/styles.css'
 import { AppProviders } from '@/components/providers/app-providers'
+import { getNavAuth } from '@/lib/navigation/nav-auth-server'
 import { Toaster } from '@/components/ui/sonner'
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getServerLocale } from '@/lib/i18n/server'
@@ -78,13 +79,14 @@ export default async function RootLayout({
 }>) {
   const locale = await getServerLocale()
   const messages = getDictionary(locale)
+  const navAuth = await getNavAuth()
 
   return (
     <html lang={locale} className={`scroll-smooth ${GeistSans.variable} ${GeistMono.variable} ${dmSerifDisplay.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <JsonLd data={organizationSchema} />
         <JsonLd data={websiteSchema} />
-        <AppProviders locale={locale} messages={messages}>
+        <AppProviders locale={locale} messages={messages} navAuth={navAuth}>
           <UserTypeGate />
           {children}
           <Toaster />

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getDealSummary } from '@/lib/deals/detail'
 import DealDetailPageClient from './deal-detail-view'
 import { JsonLd } from '@/components/seo/json-ld'
 
@@ -9,16 +9,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: dbDeal } = await supabase
-    .from('deals')
-    .select(`
-      *,
-      pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)
-    `)
-    .eq('id', id)
-    .single()
+  const dbDeal = await getDealSummary(id)
 
   if (!dbDeal) {
     return {
@@ -50,13 +41,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function DealDetailPage({ params }: PageProps) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: dbDeal } = await supabase
-    .from('deals')
-    .select('id, product_name, title')
-    .eq('id', id)
-    .single()
+  const dbDeal = await getDealSummary(id)
 
   if (!dbDeal) {
     notFound()

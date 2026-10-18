@@ -1,14 +1,15 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 import { Navigation } from '@/components/navigation'
 import { SettingsOnboarding } from '@/components/settings/settings-onboarding'
 import { SettingsPageContent } from '@/components/settings/settings-page-content'
 import type { ProfileFormState } from '@/components/settings/settings-profile-form'
 import { needsOnboarding } from '@/lib/profile/onboarding'
+
+// Only the columns the settings/onboarding forms consume.
+const PROFILE_COLUMNS =
+  'user_type, full_name, contact_name, company_name, phone, address, bio, country, sector, avatar_url, stake_amount'
 
 const EMPTY_FORM: ProfileFormState = {
   full_name: '',
@@ -21,94 +22,74 @@ const EMPTY_FORM: ProfileFormState = {
   avatar_url: '',
 }
 
-function SettingsPageInner() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const supabase = createClient()
-  const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
-  const [formData, setFormData] = useState<ProfileFormState>(EMPTY_FORM)
-  const [stakeAmount, setStakeAmount] = useState('0')
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ onboarding?: string | string[] }>
+}) {
+  const [{ onboarding }, supabase] = await Promise.all([searchParams, createClient()])
 
-  const forceOnboarding = searchParams.get('onboarding') === '1'
-  const showOnboarding =
-    forceOnboarding || needsOnboarding(profile?.user_type as string | null | undefined)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    const load = async () => {
-      const {
-        data: { user: u },
-      } = await supabase.auth.getUser()
-      if (!u) {
-        router.push('/auth/login')
-        return
-      }
-      setUser(u)
-      const { data: row } = await supabase.from('profiles').select('*').eq('id', u.id).single()
-      if (row) {
-        setProfile(row)
-        setStakeAmount(String(Number(row.stake_amount ?? 0)))
-        setFormData({
-          full_name: (row.full_name as string) || (row.contact_name as string) || '',
-          company_name: (row.company_name as string) || '',
-          phone: (row.phone as string) || '',
-          address: (row.address as string) || '',
-          bio: (row.bio as string) || '',
-          country: (row.country as string) || '',
-          sector: (row.sector as string) || '',
-          avatar_url: (row.avatar_url as string) || '',
-        })
-      }
-      setIsLoading(false)
-    }
-    void load()
-  }, [router, supabase])
+  // Redirect before any client boundary renders.
+  if (!user) redirect('/auth/login')
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-      </div>
-    )
+  // Sequential by necessity: the profile query depends on user.id.
+  const { data: row, error: profileError } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('id', user.id)
+    .single()
+
+  // PGRST116 = no rows found, expected for a brand-new user pre-onboarding.
+  // Anything else is a real failure and should not be swallowed silently.
+  if (profileError && profileError.code !== 'PGRST116') {
+    console.error('Failed to load profile for settings page', profileError)
   }
 
-  if (!user) return null
+  const initialForm: ProfileFormState = row
+    ? {
+        full_name: (row.full_name as string) || (row.contact_name as string) || '',
+        company_name: (row.company_name as string) || '',
+        phone: (row.phone as string) || '',
+        address: (row.address as string) || '',
+        bio: (row.bio as string) || '',
+        country: (row.country as string) || '',
+        sector: (row.sector as string) || '',
+        avatar_url: (row.avatar_url as string) || '',
+      }
+    : EMPTY_FORM
 
-  return (
-    <div className="container mx-auto min-w-0 px-4 py-8">
-      {showOnboarding ? (
-        <SettingsOnboarding
-          userId={user.id}
-          email={user.email ?? ''}
-          initialFullName={formData.full_name}
-        />
-      ) : (
-        <SettingsPageContent
-          userId={user.id}
-          email={user.email ?? ''}
-          userType={String(profile?.user_type ?? 'pyme')}
-          initialForm={formData}
-          initialStake={stakeAmount}
-        />
-      )}
-    </div>
-  )
-}
+  const initialStake = String(Number(row?.stake_amount ?? 0))
+  const userType = String(row?.user_type ?? 'pyme')
 
-export default function SettingsPage() {
+  const forceOnboarding = (Array.isArray(onboarding) ? onboarding[0] : onboarding) === '1'
+
+  const showOnboarding =
+    forceOnboarding || needsOnboarding(row?.user_type as string | null | undefined)
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <Suspense
-        fallback={
-          <div className="flex flex-1 items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden />
-          </div>
-        }
-      >
-        <SettingsPageInner />
-      </Suspense>
+      <div className="container mx-auto min-w-0 px-4 py-8">
+        {showOnboarding ? (
+          <SettingsOnboarding
+            userId={user.id}
+            email={user.email ?? ''}
+            initialFullName={initialForm.full_name}
+          />
+        ) : (
+          <SettingsPageContent
+            userId={user.id}
+            email={user.email ?? ''}
+            userType={userType}
+            initialForm={initialForm}
+            initialStake={initialStake}
+          />
+        )}
+      </div>
     </div>
   )
 }

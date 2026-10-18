@@ -1,8 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigation } from '@/components/navigation'
 import { DealCard } from '@/components/deal-card'
 import { Input } from '@/components/ui/input'
@@ -15,28 +13,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { mapDealFromDb, type DealRow } from '@/lib/deals'
+import { fetchDealsBrowse } from '@/lib/deals/browse-client'
+import {
+  dealBrowseCacheKey,
+  type DealBrowseFilters,
+  type DealBrowseSort,
+  type DealBrowseStatusFilter,
+  type DealsBrowseResponse,
+  type DealsBrowseSummary,
+} from '@/lib/deals/browse'
 import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
 import { Search, TrendingUp, BarChart3, Clock, DollarSign, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
 
-type StatusQuickFilter =
-  | 'all'
-  | 'open'
-  | 'extended'
-  | 'expired'
-  | 'funded'
-  | 'active'
-  | 'completed'
-type SortOption = 'newest' | 'highest_yield' | 'highest_amount' | 'shortest_term'
-
-const STATUS_PILLS: { value: StatusQuickFilter; labelKey: string }[] = [
+const STATUS_PILLS: { value: DealBrowseStatusFilter; labelKey: string }[] = [
   { value: 'all', labelKey: 'deals.allDeals' },
   { value: 'open', labelKey: 'deals.openForFunding' },
   { value: 'active', labelKey: 'deals.active' },
   { value: 'completed', labelKey: 'deals.completed' },
 ]
+
+const SORT_OPTIONS: { value: DealBrowseSort; labelKey: string }[] = [
+  { value: 'newest', labelKey: 'deals.newest' },
+  { value: 'highest_yield', labelKey: 'deals.highestApr' },
+  { value: 'highest_amount', labelKey: 'deals.highestAmount' },
+  { value: 'shortest_term', labelKey: 'deals.shortestTerm' },
+]
+
+export interface DealsBrowseProps {
+  /** First page rendered on the server so deals are present in the HTML. */
+  initialDeals: Deal[]
+  initialPage: number
+  initialHasMore: boolean
+  initialMatchCount: number
+  initialSummary: DealsBrowseSummary
+  initialCategories: string[]
+  initialFilters: DealBrowseFilters
+}
 
 function formatCompact(v: number): string {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
@@ -45,109 +59,87 @@ function formatCompact(v: number): string {
   return formatCurrency(v)
 }
 
-function matchesStatusFilter(deal: Deal, filter: StatusQuickFilter): boolean {
-  if (filter === 'all') return true
-  if (filter === 'open') return deal.fundingStatus === 'open'
-  if (filter === 'extended') return deal.fundingStatus === 'extended'
-  if (filter === 'expired') return deal.fundingStatus === 'expired'
-  if (filter === 'funded') return deal.fundingStatus === 'funded'
-  if (filter === 'active') {
-    return ['funded', 'in_progress', 'milestone_pending'].includes(deal.status)
-  }
-  if (filter === 'completed') return ['completed', 'released'].includes(deal.status)
-  return true
-}
-
-export function DealsBrowse() {
+export function DealsBrowse({
+  initialDeals,
+  initialPage,
+  initialHasMore,
+  initialMatchCount,
+  initialSummary,
+  initialCategories,
+  initialFilters,
+}: DealsBrowseProps) {
   const { t } = useI18n()
-  const searchParams = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusQuickFilter>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<SortOption>('newest')
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+
+  const [searchQuery, setSearchQuery] = useState(initialFilters.q)
+  const [debouncedQuery, setDebouncedQuery] = useState(initialFilters.q)
+  const [statusFilter, setStatusFilter] = useState<DealBrowseStatusFilter>(initialFilters.status)
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialFilters.category ?? 'all')
+  const [sortBy, setSortBy] = useState<DealBrowseSort>(initialFilters.sort)
+
+  const [deals, setDeals] = useState<Deal[]>(initialDeals)
+  const [page, setPage] = useState(initialPage)
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [matchCount, setMatchCount] = useState(initialMatchCount)
+  const [summary, setSummary] = useState<DealsBrowseSummary>(initialSummary)
+  const [categories, setCategories] = useState<string[]>(initialCategories)
+  const [isLoading, setIsLoading] = useState(false)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
-    const filter = searchParams.get('filter')
-    if (filter === 'awaiting_funding') setStatusFilter('open')
-    else if (filter === 'expired') setStatusFilter('expired')
-    else if (filter === 'funded' || filter === 'in_progress') setStatusFilter('active')
-    else if (filter === 'completed') setStatusFilter('completed')
-  }, [searchParams])
+    const id = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300)
+    return () => clearTimeout(id)
+  }, [searchQuery])
 
-  useEffect(() => {
-    const supabase = createClient()
-    const fetchDeals = async () => {
-      const { data, error } = await supabase
-        .from('deals')
-        .select(
-          `
-          *,
-          milestones(*),
-          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount)
-        `
-        )
-        .order('created_at', { ascending: false })
-      if (error) {
-        console.error('Error fetching deals:', error)
+  const filters = useMemo<DealBrowseFilters>(
+    () => ({
+      status: statusFilter,
+      category: categoryFilter === 'all' ? null : categoryFilter,
+      q: debouncedQuery,
+      sort: sortBy,
+      page: 1,
+    }),
+    [statusFilter, categoryFilter, debouncedQuery, sortBy],
+  )
+
+  const request = useCallback(async (next: DealBrowseFilters, append: boolean) => {
+    const requestId = requestIdRef.current + 1
+    requestIdRef.current = requestId
+    setIsLoading(true)
+    try {
+      const payload: DealsBrowseResponse = await fetchDealsBrowse(next)
+      if (requestId !== requestIdRef.current) return
+      setDeals((prev) => (append ? [...prev, ...payload.deals] : payload.deals))
+      setPage(payload.page)
+      setHasMore(payload.hasMore)
+      setMatchCount(payload.matchCount)
+      setSummary(payload.summary)
+      setCategories(payload.categories)
+    } catch (error) {
+      console.error('Error fetching deals:', error)
+      if (requestId === requestIdRef.current && !append) {
         setDeals([])
-      } else {
-        const rows = (data ?? []) as DealRow[]
-        setDeals(rows.map(mapDealFromDb))
+        setMatchCount(0)
       }
-      setIsLoading(false)
+    } finally {
+      if (requestId === requestIdRef.current) setIsLoading(false)
     }
-    fetchDeals()
   }, [])
 
-  const categories = useMemo(
-    () => Array.from(new Set(deals.map((d) => d.category).filter(Boolean))).sort(),
-    [deals]
-  )
+  // The server already rendered the filters in `initialFilters`, so the first
+  // effect run is skipped and only interactive changes refetch.
+  const filtersKey = dealBrowseCacheKey(filters)
+  const lastFiltersKeyRef = useRef(filtersKey)
 
-  const stats = useMemo(
-    () => ({
-      total: deals.length,
-      open: deals.filter((d) => d.fundingStatus === 'open' || d.fundingStatus === 'extended').length,
-      expired: deals.filter((d) => d.fundingStatus === 'expired').length,
-      active: deals.filter((d) =>
-        ['funded', 'in_progress', 'milestone_pending'].includes(d.status)
-      ).length,
-      totalValue: deals.reduce((sum, d) => sum + d.priceUSDC, 0),
-    }),
-    [deals]
-  )
+  useEffect(() => {
+    if (lastFiltersKeyRef.current === filtersKey) return
+    lastFiltersKeyRef.current = filtersKey
+    void request(filters, false)
+  }, [filters, filtersKey, request])
 
-  const filteredDeals = useMemo(() => {
-    const q = searchQuery.toLowerCase()
-    const filtered = deals.filter((deal) => {
-      if (
-        q &&
-        !deal.productName.toLowerCase().includes(q) &&
-        !deal.pymeName.toLowerCase().includes(q) &&
-        !deal.supplier.toLowerCase().includes(q)
-      )
-        return false
-      if (!matchesStatusFilter(deal, statusFilter)) return false
-      if (categoryFilter !== 'all' && deal.category !== categoryFilter) return false
-      return true
-    })
-
-    return filtered.slice().sort((a, b) => {
-      if (sortBy === 'highest_yield') {
-        return (b.yieldAPR ?? 0) - (a.yieldAPR ?? 0)
-      }
-      if (sortBy === 'highest_amount') {
-        return b.priceUSDC - a.priceUSDC
-      }
-      if (sortBy === 'shortest_term') {
-        return a.term - b.term
-      }
-      // newest (default): already sorted by created_at desc from the query
-      return 0
-    })
-  }, [deals, searchQuery, statusFilter, categoryFilter, sortBy])
+  const loadMore = useCallback(() => {
+    if (isLoading) return
+    void request({ ...filters, page: page + 1 }, true)
+  }, [filters, isLoading, page, request])
 
   const hasActiveFilters =
     statusFilter !== 'all' || categoryFilter !== 'all' || searchQuery !== ''
@@ -156,6 +148,21 @@ export function DealsBrowse() {
     setStatusFilter('all')
     setCategoryFilter('all')
     setSearchQuery('')
+  }
+
+  const pillCount = (value: DealBrowseStatusFilter): number => {
+    switch (value) {
+      case 'open':
+        return summary.open
+      case 'expired':
+        return summary.expired
+      case 'active':
+        return summary.active
+      case 'completed':
+        return summary.completed
+      default:
+        return 0
+    }
   }
 
   return (
@@ -183,9 +190,7 @@ export function DealsBrowse() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('deals.totalDeals')}</p>
-              <p className="text-2xl font-bold tabular-nums">
-                {isLoading ? '—' : stats.total}
-              </p>
+              <p className="text-2xl font-bold tabular-nums">{summary.total}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
@@ -194,9 +199,7 @@ export function DealsBrowse() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('deals.openForFunding')}</p>
-              <p className="text-2xl font-bold tabular-nums text-accent">
-                {isLoading ? '—' : stats.open}
-              </p>
+              <p className="text-2xl font-bold tabular-nums text-accent">{summary.open}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border border-success/30 bg-success/5 p-4">
@@ -205,9 +208,7 @@ export function DealsBrowse() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{t('deals.active')}</p>
-              <p className="text-2xl font-bold tabular-nums text-success">
-                {isLoading ? '—' : stats.active}
-              </p>
+              <p className="text-2xl font-bold tabular-nums text-success">{summary.active}</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
@@ -217,7 +218,7 @@ export function DealsBrowse() {
             <div>
               <p className="text-sm text-muted-foreground">{t('deals.totalValue')}</p>
               <p className="text-2xl font-bold tabular-nums">
-                {isLoading ? '—' : formatCompact(stats.totalValue)}
+                {formatCompact(summary.totalValue)}
               </p>
             </div>
           </div>
@@ -239,22 +240,14 @@ export function DealsBrowse() {
                 }`}
               >
                 {t(pill.labelKey)}
-                {pill.value !== 'all' && !isLoading && (
+                {pill.value !== 'all' && (
                   <Badge
                     variant="secondary"
                     className={`h-4 min-w-4 px-1 py-0 text-[10px] tabular-nums ${
                       statusFilter === pill.value ? 'bg-background/20 text-background' : ''
                     }`}
                   >
-                    {pill.value === 'open'
-                      ? stats.open
-                      : pill.value === 'expired'
-                        ? stats.expired
-                      : pill.value === 'active'
-                        ? stats.active
-                        : deals.filter((d) =>
-                            matchesStatusFilter(d, pill.value)
-                          ).length}
+                    {pillCount(pill.value)}
                   </Badge>
                 )}
               </button>
@@ -283,7 +276,7 @@ export function DealsBrowse() {
               <SelectContent>
                 <SelectItem value="all">{t('deals.allCategories')}</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat as string} className="capitalize">
+                  <SelectItem key={cat} value={cat} className="capitalize">
                     {cat}
                   </SelectItem>
                 ))}
@@ -292,16 +285,17 @@ export function DealsBrowse() {
 
             <Select
               value={sortBy}
-              onValueChange={(v) => setSortBy(v as SortOption)}
+              onValueChange={(v) => setSortBy(v as DealBrowseSort)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder={t('deals.sortBy')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">{t('deals.newest')}</SelectItem>
-                <SelectItem value="highest_yield">{t('deals.highestApr')}</SelectItem>
-                <SelectItem value="highest_amount">{t('deals.highestAmount')}</SelectItem>
-                <SelectItem value="shortest_term">{t('deals.shortestTerm')}</SelectItem>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {t(option.labelKey)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -358,17 +352,15 @@ export function DealsBrowse() {
 
         {/* Result count */}
         <p className="mb-4 text-sm text-muted-foreground">
-          {isLoading
+          {isLoading && deals.length === 0
             ? t('deals.loadingDeals')
-            : `${filteredDeals.length} ${
-                filteredDeals.length === 1
-                  ? t('deals.dealCountOne')
-                  : t('deals.dealCountOther')
+            : `${matchCount} ${
+                matchCount === 1 ? t('deals.dealCountOne') : t('deals.dealCountOther')
               }`}
         </p>
 
         {/* Deal grid */}
-        {isLoading ? (
+        {isLoading && deals.length === 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
@@ -377,12 +369,21 @@ export function DealsBrowse() {
               />
             ))}
           </div>
-        ) : filteredDeals.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredDeals.map((deal, index) => (
-              <DealCard key={deal.id} deal={deal} listIndex={index} />
-            ))}
-          </div>
+        ) : deals.length > 0 ? (
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {deals.map((deal, index) => (
+                <DealCard key={deal.id} deal={deal} listIndex={index} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <Button variant="outline" onClick={loadMore} disabled={isLoading}>
+                  {isLoading ? t('deals.loadingDeals') : t('deals.loadMore')}
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
@@ -390,9 +391,7 @@ export function DealsBrowse() {
             </div>
             <p className="mb-1 text-base font-semibold">{t('deals.noDeals')}</p>
             <p className="mb-5 max-w-xs text-sm text-muted-foreground">
-              {deals.length === 0
-                ? t('deals.noDealsEmpty')
-                : t('deals.noDealsFiltered')}
+              {hasActiveFilters ? t('deals.noDealsFiltered') : t('deals.noDealsEmpty')}
             </p>
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearAll}>

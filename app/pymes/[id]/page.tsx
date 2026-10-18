@@ -21,20 +21,17 @@ import { getReputation } from '@/lib/reputation'
 import { formatCurrency } from '@/lib/format'
 import { ReputationSummaryCard } from '@/components/reputation-summary-card'
 import { dealStatusLabel, getServerDictionary, tr } from '@/lib/i18n/server'
-import { aggregateDealsToStats, computePymeReputation } from '@/lib/pyme-reputation'
+import { computePymeReputation } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
 import { VerifiedBadge } from '@/components/verified-badge'
-import { fetchPublicPymeProfile } from '@/lib/pymes/directory'
+import { getPublicPymeProfile } from '@/lib/pymes/directory'
 import { createServiceClient } from '@/lib/supabase/service'
-
-type DealRow = {
-  id: string
-  title: string
-  product_name: string | null
-  status: string
-  amount: number
-  created_at: string | null
-}
+import {
+  computeCompletionRate,
+  fetchRecentProfileDeals,
+  getPymeDealAggregates,
+  PROFILE_DEAL_LIST_LIMIT,
+} from '@/lib/profiles/deal-aggregates'
 
 const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   completed: 'default',
@@ -59,7 +56,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const profile = await fetchPublicPymeProfile(id)
+  const profile = await getPublicPymeProfile(id)
   if (!profile) {
     return { title: 'PyME Not Found | Mercato' }
   }
@@ -94,53 +91,34 @@ export default async function SmbDetailPage({
   const serviceSupabase = createServiceClient()
   const m = await getServerDictionary()
 
-  const profile = await fetchPublicPymeProfile(id)
+  // Headline stats and reputation inputs come from a single-row aggregate query
+  // over the PyME's full history; only the capped recent list transfers deal rows.
+  const [profile, dealsList, aggregates, reputation] = await Promise.all([
+    fetchPublicPymeProfile(id),
+    fetchRecentProfileDeals(serviceSupabase, 'pyme_id', id),
+    getPymeDealAggregates(serviceSupabase, id),
+    getReputation(supabase, id),
+  ])
+
   if (!profile) notFound()
 
-  const dealsPromise = serviceSupabase
-    .from('deals')
-    .select('id, title, product_name, status, amount, created_at')
-    .eq('pyme_id', id)
-    .order('created_at', { ascending: false })
-  const reputationPromise = getReputation(supabase, id)
-  const referringSupplierPromise =
+  const { data: referringSupplier } =
     'referred_by_supplier_id' in profile && profile.referred_by_supplier_id
-      ? serviceSupabase
+      ? await serviceSupabase
           .from('supplier_companies')
           .select('id, company_name')
           .eq('id', profile.referred_by_supplier_id)
           .maybeSingle()
-      : null
+      : { data: null }
 
-  const [{ data: allDeals }, reputation, referringSupplierResult] = await Promise.all([
-    dealsPromise,
-    reputationPromise,
-    referringSupplierPromise,
-  ])
-  const referringSupplier = referringSupplierResult?.data ?? null
-
-  const dealsList = (allDeals ?? []).slice(0, 10) as DealRow[]
-  const totalDeals = (allDeals ?? []).length
-  const activeDeals = (allDeals ?? []).filter((d) =>
-    ['funded', 'in_progress', 'milestone_pending'].includes(d.status)
-  ).length
-  const completedDeals = (allDeals ?? []).filter((d) => d.status === 'completed').length
-  const totalRepaid = (allDeals ?? [])
-    .filter((d) => d.status === 'completed')
-    .reduce((sum, d) => sum + Number(d.amount ?? 0), 0)
-  const fundedDeals = (allDeals ?? []).filter((d) =>
-    ['funded', 'in_progress', 'milestone_pending', 'completed'].includes(d.status)
-  )
-  const completionRate =
-    fundedDeals.length > 0 ? Math.round((completedDeals / fundedDeals.length) * 100) : null
+  const { totalDeals, activeDeals, completedDeals, totalRepaid, fundedDeals, reputationStats } =
+    aggregates
+  const completionRate = computeCompletionRate(completedDeals, fundedDeals)
 
   const stakeAmount = Number(profile.stake_amount ?? 0)
 
-  // Compute PyME reputation tier from deal data (for tooltip breakdown)
-  const pymeReputationStats = aggregateDealsToStats(
-    (allDeals ?? []).map((d) => ({ status: d.status, amount: Number(d.amount ?? 0) }))
-  )
-  const pymeReputation = computePymeReputation(pymeReputationStats)
+  // Reputation tier reuses the aggregate query output (no deal rows needed).
+  const pymeReputation = computePymeReputation(reputationStats)
 
   const displayName =
     profile.company_name || profile.full_name || profile.contact_name || tr(m, 'smbDetail.fallbackSmb')
@@ -321,7 +299,7 @@ export default async function SmbDetailPage({
                 ))}
               </ul>
             )}
-            {totalDeals > 10 && (
+            {totalDeals > PROFILE_DEAL_LIST_LIMIT && (
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 {tr(m, 'smbDetail.showingLatest', { total: totalDeals })}
               </p>

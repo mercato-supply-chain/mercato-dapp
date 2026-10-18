@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,99 +10,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Bell, Package, CheckCircle2, Loader2 } from 'lucide-react'
-import {
-  mapNotificationFromDb,
-  formatNotificationTime,
-  type Notification,
-} from '@/lib/notifications'
+import { formatNotificationTime } from '@/lib/notifications'
 import { useMounted } from '@/hooks/use-mounted'
 import { useI18n } from '@/lib/i18n/provider'
+import { useNotifications } from '@/components/notifications/notifications-provider'
 
-interface NotificationDropdownProps {
-  userId: string
-  /** Desktop: show inline. Mobile: may need different placement */
-  variant?: 'desktop' | 'mobile'
-}
-
-export function NotificationDropdown({ userId }: NotificationDropdownProps) {
+export function NotificationDropdown() {
   const { t } = useI18n()
   const mounted = useMounted()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
+    useNotifications()
   const [isOpen, setIsOpen] = useState(false)
-  const supabase = useMemo(() => createClient(), [])
-
-  const fetchNotifications = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    if (error) {
-      console.error('Failed to fetch notifications:', error)
-      setNotifications([])
-      return
-    }
-    const mapped = (data ?? []).map(mapNotificationFromDb)
-    setNotifications(mapped)
-    setUnreadCount(mapped.filter((n) => !n.read_at).length)
-  }, [userId, supabase])
-
-  useEffect(() => {
-    if (!userId) return
-    void fetchNotifications()
-    setIsLoading(false)
-  }, [userId, fetchNotifications])
-
-  useEffect(() => {
-    if (!userId) return
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => fetchNotifications()
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => fetchNotifications()
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [userId, supabase, fetchNotifications])
-
-  const markAsRead = async (id: string) => {
-    await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', userId)
-    fetchNotifications()
-  }
-
-  const markAllAsRead = async () => {
-    await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .is('read_at', null)
-    fetchNotifications()
-  }
 
   const trigger = (
     <Button
@@ -125,9 +42,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
     </Button>
   )
 
-  if (!mounted) {
-    return trigger
-  }
+  if (!mounted) return trigger
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -163,7 +78,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
                   <Link
                     href={n.link_url || '#'}
                     onClick={() => {
-                      if (!n.read_at) markAsRead(n.id)
+                      if (!n.read_at) void markAsRead(n.id)
                       setIsOpen(false)
                     }}
                     className={`block px-3 py-3 transition-colors hover:bg-muted/50 ${

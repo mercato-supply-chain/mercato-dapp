@@ -52,12 +52,15 @@ export default async function DashboardDealsPage({
   searchParams?: DealsSearchParams
 }) {
   const supabase = await createClient()
+  // Start the dictionary request at route entry so it overlaps auth and the data queries below.
+  const dictionaryPromise = getServerDictionary()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  // One profile read with exactly the columns the dashboard payload consumes (no `select('*')`).
   const { data: profile } = await supabase
     .from('profiles')
-    .select('user_type')
+    .select('user_type, full_name, contact_name, company_name')
     .eq('id', user.id)
     .single()
 
@@ -69,16 +72,24 @@ export default async function DashboardDealsPage({
   const companyFilterId = params.company ?? null
 
   if (profile?.user_type !== 'supplier') {
-    const t = await getServerDictionary()
-    const { data: fullProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    const data = await getDashboardData(supabase, user.id, fullProfile, user.email, companyFilterId)
+    // The dictionary and the dashboard data are independent: load them together instead of
+    // awaiting the dictionary first and only then starting the dashboard queries.
+    const [t, data] = await Promise.all([
+      dictionaryPromise,
+      getDashboardData(supabase, user.id, profile, user.email, companyFilterId),
+    ])
     return <DashboardDealsView data={data} t={t} />
   }
 
-  const { data: supplierCompanies } = await supabase
-    .from('supplier_companies')
-    .select('id, company_name')
-    .eq('owner_id', user.id)
+  // The supplier companies query must resolve before the deals query, so overlap the in-flight
+  // dictionary with it rather than awaiting the dictionary on its own.
+  const [{ data: supplierCompanies }, m] = await Promise.all([
+    supabase
+      .from('supplier_companies')
+      .select('id, company_name')
+      .eq('owner_id', user.id),
+    dictionaryPromise,
+  ])
   const companies = supplierCompanies ?? []
   const companyIds = companies.map((c) => c.id)
 
@@ -117,7 +128,6 @@ export default async function DashboardDealsPage({
     : { data: null }
 
   const list = (deals ?? []) as DealRow[]
-  const m = await getServerDictionary()
 
   return (
     <div className="container mx-auto px-4 py-8">

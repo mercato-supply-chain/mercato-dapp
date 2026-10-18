@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { signOutApp } from '@/lib/auth/sign-out-app'
 import { useWallet } from '@/hooks/use-wallet'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -13,10 +12,11 @@ import { MobileNavSheet } from '@/components/navigation/mobile-nav-sheet'
 import { MercatoLogo } from '@/components/mercato-logo'
 import { NavLinks } from '@/components/navigation/nav-links'
 import { PublicNavLinks } from '@/components/navigation/public-nav-links'
-import { UserNav, type NavProfile, type NavUser } from '@/components/navigation/user-nav'
+import { UserNav } from '@/components/navigation/user-nav'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useI18n } from '@/lib/i18n/provider'
+import { useNavAuth } from '@/components/providers/nav-auth-provider'
 
 const NAV_HEIGHT_PX = 64
 const SCROLL_FADE_DISTANCE = 80
@@ -24,10 +24,7 @@ const SCROLL_FADE_DISTANCE = 80
 export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const router = useRouter()
   const { t } = useI18n()
-  const supabase = useMemo(() => createClient(), [])
-  const [user, setUser] = useState<NavUser | null>(null)
-  const [profile, setProfile] = useState<NavProfile | null>(null)
-  const [authReady, setAuthReady] = useState(false)
+  const { user, profile, ready: authReady, clear: clearNavAuth } = useNavAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrollFade, setScrollFade] = useState(0)
 
@@ -41,6 +38,7 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
     window.addEventListener('scroll', updateScrollFade, { passive: true })
     return () => window.removeEventListener('scroll', updateScrollFade)
   }, [updateScrollFade])
+
   const {
     walletInfo,
     isConnected,
@@ -53,59 +51,8 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
     isEmbedded,
   } = useWallet()
 
-  useEffect(() => {
-    const init = async () => {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      setUser(u)
-      if (u) {
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', u.id)
-          .single()
-        setProfile(p)
-      }
-    }
-    void init().finally(() => setAuthReady(true))
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const newUser = session?.user ?? null
-        setUser(newUser)
-        if (newUser) {
-          supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newUser.id)
-            .single()
-            .then(({ data }) => setProfile(data))
-        } else {
-          setProfile(null)
-        }
-      }
-    )
-    const onProfileUpdated = () => {
-      void supabase.auth.getUser().then(({ data: { user: u } }) => {
-        if (!u) return
-        void supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', u.id)
-          .single()
-          .then(({ data }) => setProfile(data))
-      })
-    }
-    window.addEventListener('mercato:profile-updated', onProfileUpdated)
-
-    return () => {
-      subscription.unsubscribe()
-      window.removeEventListener('mercato:profile-updated', onProfileUpdated)
-    }
-  }, [supabase])
-
   const handleLogout = async () => {
-    setUser(null)
-    setProfile(null)
+    clearNavAuth()
     try {
       await handleDisconnect()
     } catch (e) {
@@ -184,9 +131,7 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher />
           <ThemeToggle />
-          {isAuthenticated && user?.id && (
-            <NotificationDropdown userId={user.id} />
-          )}
+          {isAuthenticated && <NotificationDropdown />}
           <div className="hidden items-center gap-2 md:flex md:gap-3">
             {authReady && !isAuthenticated && (
               <>

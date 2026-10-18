@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import useSWRInfinite from 'swr/infinite'
 import { createClient } from '@/lib/supabase/client'
 import { PRODUCT_CATEGORIES } from '@/lib/categories'
 import {
@@ -14,18 +15,73 @@ import { useI18n } from '@/lib/i18n/provider'
 import { toast } from 'sonner'
 import type { NormalizedProduct } from '@/lib/supplier-profile/product-validation'
 
+const PRODUCTS_PAGE_SIZE = 50
+
+type ProductPage = { products: SupplierProduct[]; hasMore: boolean }
+
 export function useSupplierProducts(
   selectedCompanyId: string | null,
   user: { id: string } | null,
 ) {
   const supabase = useMemo(() => createClient(), [])
   const { t } = useI18n()
+  const userId = user?.id
 
-  const [products, setProducts] = useState<SupplierProduct[]>([])
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
-  const PAGE_SIZE = 50
+  const getPageKey = useCallback((pageIndex: number, previousPage: ProductPage | null) => {
+    if (!selectedCompanyId || !userId || (previousPage && !previousPage.hasMore)) return null
+    return ['supplier-products', userId, selectedCompanyId, pageIndex] as const
+  }, [selectedCompanyId, userId])
+
+  const fetchPage = useCallback(async ([, , companyId, pageIndex]: readonly [string, string, string, number]): Promise<ProductPage> => {
+    const start = pageIndex * PRODUCTS_PAGE_SIZE
+    const { data, count, error } = await supabase
+      .from('supplier_products')
+      .select(PRODUCT_SELECT, { count: 'exact' })
+      .eq('supplier_id', companyId)
+      .order('name')
+      .order('id') // unique tiebreaker for stable pagination
+      .range(start, start + PRODUCTS_PAGE_SIZE - 1)
+
+    if (error) throw error
+    const products = (data ?? []) as SupplierProduct[]
+    return {
+      products,
+      hasMore: count === null ? products.length === PRODUCTS_PAGE_SIZE : start + products.length < count,
+    }
+  }, [supabase])
+
+  const { data: pages, error: loadError, isValidating, size, setSize, mutate } = useSWRInfinite(
+    getPageKey,
+    fetchPage,
+    {
+      revalidateIfStale: false,
+      revalidateFirstPage: false,
+      shouldRetryOnError: false,
+      onError: (error) => console.error('[useSupplierProducts]', error),
+    },
+  )
+  const products = useMemo(() => {
+    const seen = new Set<string>()
+    return (pages ?? []).flatMap((page) => page.products.filter((product) => {
+      if (seen.has(product.id)) return false
+      seen.add(product.id)
+      return true
+    }))
+  }, [pages])
+  const hasMore = Boolean(selectedCompanyId && user && !loadError && (pages?.at(-1)?.hasMore ?? true))
+  const isLoading = Boolean(selectedCompanyId && user && !loadError && (isValidating || !pages))
+
+  // Writes use the same SWR page cache that all mounted catalog consumers read.
+  const updateCachedProduct = useCallback(async (id: string, changes: Partial<SupplierProduct>) => {
+    await mutate((current) => current?.map((page) => ({
+      ...page,
+      products: page.products.map((product) => product.id === id ? { ...product, ...changes } : product),
+    })), { revalidate: false })
+  }, [mutate])
+
+  const refreshProducts = useCallback(async () => {
+    await mutate()
+  }, [mutate])
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<SupplierProduct | null>(null)
@@ -47,75 +103,15 @@ export function useSupplierProducts(
       error?: string
     }
     if (!response.ok) throw new Error(payload.error ?? 'import.failed')
-    setProducts((prev) => [...prev, ...(payload.products ?? [])])
+    await refreshProducts()
     return true
-  }, [selectedCompanyId])
-
-  useEffect(() => {
-    if (!selectedCompanyId || !user) {
-      setProducts([])
-      setPage(1)
-      setHasMore(true)
-      return
-    }
-    setPage(1)
-    setProducts([])
-    setHasMore(true)
-  }, [selectedCompanyId, user])
-
-  useEffect(() => {
-    if (!selectedCompanyId || !user) return
-    let isMounted = true
-
-    const loadProducts = async () => {
-      setIsLoading(true)
-      const start = (page - 1) * PAGE_SIZE
-      const end = start + PAGE_SIZE - 1
-
-      const { data: productsData, count, error: loadError } = await supabase
-        .from('supplier_products')
-        .select(PRODUCT_SELECT, { count: 'exact' })
-        .eq('supplier_id', selectedCompanyId)
-        .order('name')
-        .order('id') // unique tiebreaker for stable pagination
-        .range(start, end)
-
-      if (loadError) {
-        console.error('[useSupplierProducts]', loadError)
-        if (isMounted) {
-          setHasMore(false)
-          setIsLoading(false)
-        }
-        return
-      }
-
-      if (isMounted && productsData) {
-        setProducts((prev) => {
-          if (page === 1) return productsData as SupplierProduct[]
-          // Filter out duplicates just in case
-          const existingIds = new Set(prev.map(p => p.id))
-          const newProducts = (productsData as SupplierProduct[]).filter(p => !existingIds.has(p.id))
-          return [...prev, ...newProducts]
-        })
-        if (count !== null) {
-          setHasMore(start + productsData.length < count)
-        } else {
-          setHasMore(productsData.length === PAGE_SIZE)
-        }
-      }
-      if (isMounted) setIsLoading(false)
-    }
-    void loadProducts()
-    return () => {
-      isMounted = false
-    }
-  }, [selectedCompanyId, user, supabase, page])
+  }, [selectedCompanyId, refreshProducts])
 
   const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      setPage((prev) => prev + 1)
+    if (!isLoading && hasMore && pages?.length === size) {
+      void setSize(size + 1)
     }
-  }, [isLoading, hasMore])
+  }, [isLoading, hasMore, pages?.length, size, setSize])
 
   const openAddDialog = useCallback(() => {
     setFormProduct(EMPTY_PRODUCT_FORM)
@@ -153,25 +149,23 @@ export function useSupplierProducts(
     const stockQty = Math.max(0, Math.floor(Number.parseInt(formProduct.stock_quantity, 10) || 0))
     const reorderPoint = Math.max(0, Math.floor(Number.parseInt(formProduct.reorder_point, 10) || 0))
     const status = formProduct.status || 'active'
-    const handleStatusChange = useCallback(async (product: SupplierProduct, newStatus: 'active' | 'paused' | 'discontinued') => {
+    return { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint, status }
+  }, [formProduct])
+
+  const handleStatusChange = useCallback(async (product: SupplierProduct, newStatus: 'active' | 'paused' | 'discontinued') => {
     try {
       const { error } = await supabase
         .from('supplier_products')
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', product.id)
       if (error) throw error
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, status: newStatus } : p)),
-      )
+      await updateCachedProduct(product.id, { status: newStatus })
       toast.success(t('supplierProfile.toastStatusUpdated') || 'Status updated')
     } catch (err) {
       console.error(err)
       toast.error(t('supplierProfile.toastStatusUpdateFail') || 'Failed to update status')
     }
-  }, [supabase, t])
-
-  return { name, category, price, minOrder, deliveryTime, sku, unit, stockQty, reorderPoint, status }
-  }, [formProduct])
+  }, [supabase, t, updateCachedProduct])
 
   const adjustStock = useCallback(async (product: SupplierProduct, delta: number) => {
     if (!selectedCompanyId) return
@@ -187,16 +181,14 @@ export function useSupplierProducts(
         .update({ stock_quantity: next, updated_at: new Date().toISOString() })
         .eq('id', product.id)
       if (error) throw error
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, stock_quantity: next } : p)),
-      )
+      await updateCachedProduct(product.id, { stock_quantity: next })
     } catch (err) {
       console.error(err)
       toast.error(t('supplierProfile.toastStockAdjustFail'))
     } finally {
       setStockAdjustingId(null)
     }
-  }, [selectedCompanyId, supabase, t])
+  }, [selectedCompanyId, supabase, t, updateCachedProduct])
 
   const handleAddProduct = useCallback(async () => {
     if (!user || !selectedCompanyId) return
@@ -228,8 +220,6 @@ export function useSupplierProducts(
         .single()
       if (error) throw error
 
-      let finalProduct = { ...data } as SupplierProduct
-
       if (formProduct.imageFile) {
         const filePath = `${user.id}/${selectedCompanyId}/${data.id}/${formProduct.imageFile.name}`
         const { error: uploadError } = await supabase.storage
@@ -248,11 +238,9 @@ export function useSupplierProducts(
           .update({ image_url: publicUrl })
           .eq('id', data.id)
         if (updateError) throw updateError
-
-        finalProduct.image_url = publicUrl
       }
 
-      setProducts((prev) => [...prev, finalProduct])
+      await refreshProducts()
       setAddDialogOpen(false)
       setFormProduct(EMPTY_PRODUCT_FORM)
       toast.success(t('supplierProfile.toastProductAdded'))
@@ -262,7 +250,7 @@ export function useSupplierProducts(
     } finally {
       setFormSaving(false)
     }
-  }, [user, selectedCompanyId, parseProductForm, formProduct, supabase, t])
+  }, [user, selectedCompanyId, parseProductForm, formProduct, supabase, t, refreshProducts])
 
   const handleUpdateProduct = useCallback(async () => {
     if (!editingProduct || !user || !selectedCompanyId) return
@@ -317,27 +305,7 @@ export function useSupplierProducts(
         .eq('id', editingProduct.id)
       if (error) throw error
 
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingProduct.id
-            ? {
-                ...p,
-                name,
-                category,
-                price_per_unit: price,
-                description: formProduct.description.trim() || null,
-                minimum_order: minOrder != null && !Number.isNaN(minOrder) && minOrder >= 0 ? minOrder : null,
-                delivery_time: deliveryTime,
-                image_url: imageUrlToSave,
-                sku,
-                unit,
-                stock_quantity: stockQty,
-                reorder_point: reorderPoint,
-                status,
-              }
-            : p,
-        ),
-      )
+      await refreshProducts() // Name changes can move a product between ordered pages.
       setEditingProduct(null)
       setFormProduct(EMPTY_PRODUCT_FORM)
       toast.success(t('supplierProfile.toastProductUpdated'))
@@ -347,7 +315,7 @@ export function useSupplierProducts(
     } finally {
       setFormSaving(false)
     }
-  }, [editingProduct, user, selectedCompanyId, parseProductForm, formProduct, supabase, t])
+  }, [editingProduct, user, selectedCompanyId, parseProductForm, formProduct, supabase, t, refreshProducts])
 
   const handleDeleteProduct = useCallback(async () => {
     if (!deleteProduct || !selectedCompanyId) return
@@ -357,14 +325,14 @@ export function useSupplierProducts(
       }
       const { error } = await supabase.from('supplier_products').delete().eq('id', deleteProduct.id)
       if (error) throw error
-      setProducts((prev) => prev.filter((p) => p.id !== deleteProduct.id))
+      await refreshProducts()
       setDeleteProduct(null)
       toast.success(t('supplierProfile.toastProductRemoved'))
     } catch (err) {
       console.error(err)
       toast.error(t('supplierProfile.toastProductRemoveFail'))
     }
-  }, [deleteProduct, selectedCompanyId, supabase, t])
+  }, [deleteProduct, selectedCompanyId, supabase, t, refreshProducts])
 
   return {
     products,

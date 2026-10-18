@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getDashboardNavSections, isNavItemActive } from '@/lib/dashboard/dashboard-nav'
 import { getRoleTheme } from '@/lib/dashboard/role-theme'
+import { SIDEBAR_COLLAPSED_STORAGE_KEY } from '@/lib/dashboard/sidebar-preference'
 import { useI18n } from '@/lib/i18n/provider'
 import {
   Tooltip,
@@ -12,8 +13,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-
-const SIDEBAR_COLLAPSED_KEY = 'dashboard-sidebar:collapsed'
 
 type DashboardSidebarProps = {
   userType: string
@@ -95,4 +94,6 @@ export function DashboardSidebar({
   return nav
 }
 
-export { SIDEBAR_COLLAPSED_KEY }
+// Backwards-compatible alias; the canonical, versioned key lives in
+// lib/dashboard/sidebar-preference so stored values can be migrated safely.
+export { SIDEBAR_COLLAPSED_STORAGE_KEY as SIDEBAR_COLLAPSED_KEY }
