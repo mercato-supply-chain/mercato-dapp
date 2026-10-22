@@ -26,6 +26,7 @@ import type {
   SyncDealFromIndexerOptions,
   TxTransport,
 } from '@/lib/deals/repayment-escrow-types'
+import { planPositionPayoutDeploy } from '@/lib/trustless/repayment-position-payout-deploy'
 import {
   DEFAULT_REPAYMENT_RETRY_POLICY,
   type RetryPolicy,
@@ -73,52 +74,11 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
     await sync(dealId, contractId)
   }
 
-  async function deployRepaymentEscrow(
+  async function confirmDeployedContract(
+    unsigned: string,
+    engagementId: string,
     params: DeployRepaymentParams,
-  ): Promise<{ contractId: string }> {
-    if (params.draft) {
-      throw new Error('deployRepaymentEscrow called with draft — use draft-specific flow')
-    }
-    if (
-      params.principal == null ||
-      params.aprPercent == null ||
-      params.termDays == null ||
-      !params.productName
-    ) {
-      throw new Error(
-        'Missing required fields for deploy without draft: principal, aprPercent, termDays, productName',
-      )
-    }
-    if (!deps.config.platformAddress) {
-      throw new Error('Platform address not configured')
-    }
-    if (!deps.config.trustline.address) {
-      throw new Error('USDC trustline not configured')
-    }
-
-    const investor =
-      params.investorAddress?.trim() ||
-      (await deps.deals.resolveInvestorWallet(params.dealId))
-    if (!investor) {
-      throw new Error('Investor wallet address is required')
-    }
-
-    const planned = planRepaymentDeploy({
-      params,
-      investorAddress: investor,
-      roles: deps.config.roles(),
-      trustline: deps.config.trustline,
-    })
-
-    const deployResponse = await deps.builder.initialize(
-      planned.payload,
-      'multi-release',
-    )
-    const unsigned = requireUnsigned(
-      deployResponse,
-      'Failed to create repayment escrow transaction',
-    )
-
+  ): Promise<string> {
     let contractId: string | undefined
 
     if (params.provider === 'pollar') {
@@ -133,7 +93,7 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
         try {
           const escrows = await deps.indexer.getBySigner(params.adminAddress)
           const match = escrows.find(
-            (e) => e.engagementId === planned.engagementId,
+            (e) => e.engagementId === engagementId,
           )
           if (match?.contractId) {
             contractId = match.contractId
@@ -158,6 +118,76 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
     if (!contractId) {
       throw new Error('Repayment escrow contract ID was not confirmed')
     }
+    return contractId
+  }
+
+  async function deployRepaymentEscrow(
+    params: DeployRepaymentParams,
+  ): Promise<{ contractId: string }> {
+    if (!deps.config.platformAddress) {
+      throw new Error('Platform address not configured')
+    }
+    if (!deps.config.trustline.address) {
+      throw new Error('USDC trustline not configured')
+    }
+
+    let planned: ReturnType<typeof planRepaymentDeploy> | ReturnType<typeof planPositionPayoutDeploy>
+
+    if (params.payoutSchedule) {
+      if (!params.productName) {
+        throw new Error('Missing required fields for payout deploy: productName')
+      }
+      planned = planPositionPayoutDeploy({
+        schedule: params.payoutSchedule,
+        dealId: params.dealId,
+        productName: params.productName,
+        signer: params.adminAddress,
+        roles: deps.config.roles(),
+        trustline: deps.config.trustline,
+      })
+    } else {
+      if (params.draft) {
+        throw new Error('deployRepaymentEscrow called with draft — use draft-specific flow')
+      }
+      if (
+        params.principal == null ||
+        params.aprPercent == null ||
+        params.termDays == null ||
+        !params.productName
+      ) {
+        throw new Error(
+          'Missing required fields for deploy without draft: principal, aprPercent, termDays, productName',
+        )
+      }
+
+      const investor =
+        params.investorAddress?.trim() ||
+        (await deps.deals.resolveInvestorWallet(params.dealId))
+      if (!investor) {
+        throw new Error('Investor wallet address is required')
+      }
+
+      planned = planRepaymentDeploy({
+        params,
+        investorAddress: investor,
+        roles: deps.config.roles(),
+        trustline: deps.config.trustline,
+      })
+    }
+
+    const deployResponse = await deps.builder.initialize(
+      planned.payload,
+      'multi-release',
+    )
+    const unsigned = requireUnsigned(
+      deployResponse,
+      'Failed to create repayment escrow transaction',
+    )
+    const contractId = await confirmDeployedContract(
+      unsigned,
+      planned.engagementId,
+      params,
+    )
 
     const existingDueAt = await deps.deals.getRepaymentDueAt(params.dealId)
     const updates: Record<string, unknown> = {
@@ -168,7 +198,7 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
       repayment_total_amount: planned.totalGrossed,
       repayment_milestones: planned.initialMilestones,
     }
-    if (!existingDueAt) {
+    if (!existingDueAt && params.termDays != null) {
       updates.repayment_due_at = repaymentDueAtIso(params.termDays, now())
     }
     await deps.deals.updateDeal(params.dealId, updates)

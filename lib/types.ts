@@ -31,6 +31,20 @@ export interface RepaymentMilestoneCache {
   description: string
   amount: number
   released: boolean
+  /** RWA only: frozen position this milestone services. */
+  positionId?: string
+  /** RWA only: zero-based tranche within the position. */
+  trancheIndex?: number
+  /** RWA only: receiver captured at funding time. */
+  receiver?: string
+  /** RWA only: exact net entitlement after release deductions. */
+  netAmount?: number
+  /** RWA only: exact atomic gross obligation. */
+  grossAtomic?: string
+  /** RWA only: exact atomic net entitlement. */
+  netAtomic?: string
+  /** RWA only: canonical reviewed schedule commitment. */
+  scheduleCommitment?: string
 }
 
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
