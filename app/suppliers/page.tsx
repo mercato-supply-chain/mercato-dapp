@@ -1,4 +1,6 @@
-import { fetchPublicSuppliers } from '-@/lib/suppliers/directory'
+import { Suspense } from 'react'
+import { Building2 } from 'lucide-react'
+import { Navigation } from '@/components/navigation'
 import SuppliersDirectory from './suppliers-directory'
 import { JsonLd } from '@/components/seo/json-ld'
 import { getServerDictionary, tr } from '@/lib/i18n/server'

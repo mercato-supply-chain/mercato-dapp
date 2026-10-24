@@ -16,9 +16,7 @@ export default async function DashboardPage({
     getServerDictionary(),
     getServerAuth(),
     searchParams
-      ? typeof (searchParams as Promise<{ company?: string }>).then === 'function'
-        ? (searchParams as Promise<{ company?: string }>)
-        : Promise.resolve(searchParams as { company?: string })
+      ? getSearchParamsPromise(searchParams)
       : Promise.resolve({} as { company?: string }),
   ])
 
@@ -29,7 +27,20 @@ export default async function DashboardPage({
     redirect('/auth/login')
   }
 
+  // Required query failures surface to the route error boundary instead of
+  // being silently coerced into zero/empty data. Optional section failures are
+  // represented in the payload and rendered explicitly by the dashboard.
   const data = await getDashboardData(supabase, user.id, profile, user.email, companyFilterId)
 
   return <DashboardHome data={data} t={t} />
+}
+
+async function getSearchParamsPromise(
+  searchParams: DashboardSearchParams,
+): Promise<{ company?: string }> {
+  if (typeof (searchParams as Promise<{ company?: string }>).then === 'function') {
+    return searchParams as Promise<{ company?: string }>
+  }
+
+  return Promise.resolve(searchParams as { company?: string })
 }

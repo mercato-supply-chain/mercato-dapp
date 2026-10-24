@@ -131,6 +131,11 @@ export function useScrollProgress<T extends HTMLElement = HTMLDivElement>(onPhas
 }
 
 // Ensure the scroll listener is attached globally once
+declare global {
+  // eslint-disable-next-line no-var
+  var __mercato_scroll_listener_attached: boolean | undefined
+}
+
 if (typeof window !== 'undefined' && !globalThis.__mercato_scroll_listener_attached) {
   window.addEventListener('scroll', onScrollEvent, { passive: true })
   globalThis.__mercato_scroll_listener_attached = true
