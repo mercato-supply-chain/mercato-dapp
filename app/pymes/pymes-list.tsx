@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Navigation } from '@/components/navigation'
@@ -319,20 +319,15 @@ export function PymesList({
                             </span>
                           </ReputationTooltip>
                         )}
-                        {smb.deal_count > 0 && (
-                          <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                            {smb.deal_count}
-                          </span>
-                        )}
                       </div>
                     </div>
+                    <CardTitle className="text-lg">{displayName(smb)}</CardTitle>
                   </CardHeader>
                 </Card>
               </Link>
             ))}
           </div>
         ) : null}
-      </div>
-    </div>
+    </>
   )
 }

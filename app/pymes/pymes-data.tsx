@@ -50,5 +50,5 @@ export async function PymesData() {
       return b.deal_count - a.deal_count
     })
 
-  return <PymesList initialSmbs={smbs} />
+  return <PymesList initialResult={{ smbs, total: smbs.length }} />
 }
