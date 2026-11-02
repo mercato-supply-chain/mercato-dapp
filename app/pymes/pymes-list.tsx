@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
@@ -21,15 +19,12 @@ import {
   TrendingUp,
   CheckCircle2,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
 import { useI18n } from '@/lib/i18n/provider'
 import type { PymeReputation, PymeReputationTier } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
 import { VerifiedBadge } from '@/components/verified-badge'
-import { Button } from '@/components/ui/button'
 
 export type Smb = {
   id: string
@@ -46,20 +41,6 @@ export type Smb = {
   reputationTier: PymeReputationTier
   totalRepaid: number
   completionRate: number
-}
-
-export type PymesFacets = {
-  countries: Record<string, number>
-  sectors: Record<string, number>
-}
-
-export type PymesPageResult = {
-  items: Smb[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-  facets: PymesFacets
 }
 
 const TIER_STYLES: Record<PymeReputationTier, string> = {
@@ -87,19 +68,7 @@ function getInitials(smb: Smb): string {
   )
 }
 
-export function PymesList({
-  initialResult,
-  initialSearchQuery = '',
-  initialCountry = 'all',
-  initialSector = 'all',
-  initialPage = 1,
-}: {
-  initialResult: PymesPageResult
-  initialSearchQuery?: string
-  initialCountry?: string
-  initialSector?: string
-  initialPage?: number
-}) {
+export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
   const { t, messages, locale } = useI18n()
   const countryLabel = (code: string) =>
     messages.geo.countries[code as keyof typeof messages.geo.countries] ?? getCountryLabel(code)
@@ -112,95 +81,31 @@ export function PymesList({
       maximumFractionDigits: 0,
     }).format(value)
 
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState<string>('all')
+  const [selectedSector, setSelectedSector] = useState<string>('all')
 
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
-  const [selectedCountry, setSelectedCountry] = useState<string>(initialCountry)
-  const [selectedSector, setSelectedSector] = useState<string>(initialSector)
-  const [page, setPage] = useState(initialPage)
-  const [result, setResult] = useState<PymesPageResult>(initialResult)
-  const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const buildQuery = useCallback(
-    (overrides: {
-      q?: string
-      country?: string
-      sector?: string
-      page?: number
-    }) => {
-      const params = new URLSearchParams(searchParams?.toString() ?? '')
-      const q = overrides.q ?? searchQuery
-      const country = overrides.country ?? selectedCountry
-      const sector = overrides.sector ?? selectedSector
-      const nextPage = overrides.page ?? page
-      if (q) params.set('q', q)
-      else params.delete('q')
-      if (country && country !== 'all') params.set('country', country)
-      else params.delete('country')
-      if (sector && sector !== 'all') params.set('sector', sector)
-      else params.delete('sector')
-      if (nextPage > 1) params.set('page', String(nextPage))
-      else params.delete('page')
-      return params.toString()
-    },
-    [searchParams, searchQuery, selectedCountry, selectedSector, page],
-  )
-
-  const fetchPage = useCallback(
-    async (overrides: { q?: string; country?: string; sector?: string; page?: number }) => {
-      setIsPending(true)
-      setError(null)
-      try {
-        const qs = buildQuery(overrides)
-        const res = await fetch(`/api/pymess${qs ? `?${qs}` : ''}`, {
-          headers: { accept: 'application/json' },
-        })
-        if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-        const data = (await res.json()) as PymesPageResult
-        setResult(data)
-        setPage(data.page)
-        router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load')
-      } finally {
-        setIsPending(false)
-      }
-    },
-    [buildQuery, pathname, router],
-  )
-
-  const filteredSmbs = result.items
+  const filteredSmbs = useMemo(() => {
+    let result = [...initialSmbs]
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(
+        (p) =>
+          p.company_name?.toLowerCase().includes(q) ||
+          p.full_name?.toLowerCase().includes(q) ||
+          p.contact_name?.toLowerCase().includes(q) ||
+          p.bio?.toLowerCase().includes(q),
+      )
+    }
+    if (selectedCountry !== 'all') result = result.filter((p) => p.country === selectedCountry)
+    if (selectedSector !== 'all') result = result.filter((p) => p.sector === selectedSector)
+    return result
+  }, [initialSmbs, searchQuery, selectedCountry, selectedSector])
 
   const displayName = (p: Smb) =>
-    p.company_name || p.full_name || p.contact_name || t('pymesPage.smbFollback')
+    p.company_name || p.full_name || p.contact_name || t('pymesPage.smbFallback')
 
-  const hasActiveFilters = Boolean(searchQuery) || selectedCountry !== 'all' || selectedSector !== 'all'
-  const totalPages = Math.max(1, result.totalPages)
-  const canPrev = page > 1 && !isPending
-  const canNext = page < totalPages && !isPending
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    void fetchPage({ q: value, page: 1 })
-  }
-
-  const handleCountryChange = (value: string) => {
-    setSelectedCountry(value)
-    void fetchPage({ country: value, page: 1 })
-  }
-
-  const handleSectorChange = (value: string) => {
-    setSelectedSector(value)
-    void fetchPage({ sector: value, page: 1 })
-  }
-
-  const handlePageChange = (nextPage: number) => {
-    if (nextPage < 1 || nextPage > totalPages) return
-    void fetchPage({ page: nextPage })
-  }
+  const hasActiveFilters = searchQuery || selectedCountry !== 'all' || selectedSector !== 'all'
 
   // Debounce the live-region count so a screen reader hears one settled
   // announcement per filter change instead of one per keystroke.
@@ -224,13 +129,13 @@ export function PymesList({
               type="search"
               placeholder={t('pymesPage.searchPlaceholder')}
               value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
               aria-label={t('pymesPage.searchAria')}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
               <SelectTrigger className="w-[150px]" aria-label={t('pymesPage.filterCountryAria')}>
                 <SelectValue placeholder={t('pymesPage.countryPlaceholder')} />
               </SelectTrigger>
@@ -243,7 +148,7 @@ export function PymesList({
                 ))}
               </SelectContent>
             </Select>
-            <Select value={selectedSector} onValueChange={handleSectorChange}>
+            <Select value={selectedSector} onValueChange={setSelectedSector}>
               <SelectTrigger className="w-[160px]" aria-label={t('pymesPage.filterSectorAria')}>
                 <SelectValue placeholder={t('pymesPage.sectorPlaceholder')} />
               </SelectTrigger>
@@ -265,9 +170,9 @@ export function PymesList({
         <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Store className="h-4 w-4" aria-hidden />
           <span>
-            {result.total === 1
-              ? t('pymesPage.foundOne', { count: result.total })
-              : t('pymesPage.foundMany', { count: result.total })}
+            {filteredSmbs.length === 1
+              ? t('pymesPage.foundOne', { count: filteredSmbs.length })
+              : t('pymesPage.foundMany', { count: filteredSmbs.length })}
             {hasActiveFilters && t('pymesPage.matchingFilters')}
           </span>
         </div>
@@ -275,14 +180,8 @@ export function PymesList({
           {announceText}
         </span>
 
-        {error && (
-          <div role="alert" className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
         {/* Grid */}
-        {filteredSmbs.length === 0 && !isPending ? (
+        {filteredSmbs.length === 0 ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               <Store className="h-8 w-8 text-muted-foreground" aria-hidden />
@@ -292,7 +191,7 @@ export function PymesList({
               {hasActiveFilters ? t('pymesPage.emptyHint') : t('pymesPage.emptyNoJoined')}
             </p>
           </div>
-        ) : filteredSmbs.length > 0 ? (
+        ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredSmbs.map((smb) => (
               <Link key={smb.id} href={`/pymes/${smb.id}`}>
@@ -321,18 +220,90 @@ export function PymesList({
                         )}
                         {smb.deal_count > 0 && (
                           <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                            {smb.deal_count}
+                            {smb.deal_count}{' '}
+                            {smb.deal_count === 1 ? t('deals.dealCountOne') : t('deals.dealCountOther')}
                           </span>
                         )}
                       </div>
                     </div>
+
+                    <CardTitle className="flex items-center gap-1.5 text-base leading-snug">
+                      <span>{displayName(smb)}</span>
+                      {smb.verified ? (
+                        <VerifiedBadge label={t('common.verifiedCompanyTooltip')} />
+                      ) : null}
+                    </CardTitle>
+
+                    {(smb.country || smb.sector) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {smb.sector && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="h-3 w-3 shrink-0" aria-hidden />
+                            {sectorLabel(smb.sector)}
+                          </span>
+                        )}
+                        {smb.country && (
+                          <span className="flex items-center gap-1">
+                            <Globe className="h-3 w-3 shrink-0" aria-hidden />
+                            {countryLabel(smb.country)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {smb.bio && (
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-snug">
+                        {smb.bio}
+                      </p>
+                    )}
                   </CardHeader>
+
+                  <CardContent className="pt-0">
+                    <div className="border-t border-border pt-3 space-y-2">
+                      {smb.active_deals > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                          <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          {smb.active_deals === 1
+                            ? t('investorsPage.activeDealOne', { count: smb.active_deals })
+                            : t('investorsPage.activeDealMany', { count: smb.active_deals })}
+                        </div>
+                      )}
+                      {smb.totalRepaid > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          {fmtUsd(smb.totalRepaid)} {t('pymesPage.repaidSuffix')}
+                        </div>
+                      )}
+                      {smb.completionRate > 0 && (
+                        <div className="mt-1">
+                          <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{t('pymesPage.completionRate')}</span>
+                            <span className="font-medium tabular-nums">
+                              {Math.round(smb.completionRate * 100)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-emerald-500"
+                              style={{ width: `${Math.round(smb.completionRate * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {smb.deal_count === 0 && (
+                        <p className="text-xs text-muted-foreground">{t('pymesPage.noDealsYetMercato')}</p>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary group-hover:gap-2 transition-all">
+                      {t('pymesPage.viewProfile')}
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </div>
+                  </CardContent>
                 </Card>
               </Link>
             ))}
           </div>
-        ) : null}
-      </div>
-    </div>
+        )}
+    </>
   )
 }

@@ -105,12 +105,26 @@ function mapRepaymentMilestones(
         Number.isFinite(Number(m.index)) &&
         Number.isFinite(Number(m.amount)),
     )
-    .map((m) => ({
-      index: Number(m.index),
-      description: typeof m.description === 'string' ? m.description : '',
-      amount: Number(m.amount),
-      released: Boolean(m.released),
-    }))
+    .map((m) => {
+      const milestone: RepaymentMilestoneCache = {
+        index: Number(m.index),
+        description: typeof m.description === 'string' ? m.description : '',
+        amount: Number(m.amount),
+        released: Boolean(m.released),
+      }
+      if (typeof m.positionId === 'string') milestone.positionId = m.positionId
+      if (Number.isInteger(m.trancheIndex)) milestone.trancheIndex = Number(m.trancheIndex)
+      if (typeof m.receiver === 'string') milestone.receiver = m.receiver
+      if (typeof m.netAmount === 'number' && Number.isFinite(m.netAmount)) {
+        milestone.netAmount = m.netAmount
+      }
+      if (typeof m.grossAtomic === 'string') milestone.grossAtomic = m.grossAtomic
+      if (typeof m.netAtomic === 'string') milestone.netAtomic = m.netAtomic
+      if (typeof m.scheduleCommitment === 'string') {
+        milestone.scheduleCommitment = m.scheduleCommitment
+      }
+      return milestone
+    })
 }
 
 export interface MilestoneRow {

@@ -43,6 +43,16 @@ export type PendingApprovalItem = {
   supplierLogoUrl: string | null
   repaymentStatus?: string | null
   remainingToSchedule?: number
+  /** RWA only: frozen position this milestone services. */
+  positionId?: string
+  /** RWA only: zero-based tranche within the position. */
+  trancheIndex?: number
+  /** RWA only: receiver captured at funding time. */
+  receiver?: string
+  /** RWA only: exact net entitlement after release deductions. */
+  netAmount?: number
+  /** RWA only: canonical reviewed schedule commitment. */
+  scheduleCommitment?: string
   createdAt?: string
 }
 
@@ -60,6 +70,16 @@ export type ReleaseFallbackItem = {
   completedAt: string | null
   supplierLogoUrl: string | null
   pymeAddress?: string | null
+  /** RWA only: frozen position this milestone services. */
+  positionId?: string
+  /** RWA only: zero-based tranche within the position. */
+  trancheIndex?: number
+  /** RWA only: receiver captured at funding time. */
+  receiver?: string
+  /** RWA only: exact net entitlement after release deductions. */
+  netAmount?: number
+  /** RWA only: canonical reviewed schedule commitment. */
+  scheduleCommitment?: string
 }
 
 export type AdminQueueFilters = {

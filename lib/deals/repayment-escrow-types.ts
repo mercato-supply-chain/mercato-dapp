@@ -1,4 +1,5 @@
 import type { RepaymentEscrowDeploymentDraft } from '@/lib/trustless/repayment-deployment-draft'
+import type { PositionPayoutSchedule } from '@/lib/trustless/repayment-position-payout'
 import type {
   FundEscrowPayload,
   GetEscrowsFromIndexerResponse,
@@ -21,6 +22,12 @@ export interface DeployRepaymentParams {
    * When provided, principal/apr/productName are ignored.
    */
   draft?: RepaymentEscrowDeploymentDraft
+  /**
+   * RWA position servicing path. When provided, the frozen multi-position
+   * schedule is deployed in full and `principal`/`aprPercent`/`investorAddress`
+   * are ignored. Legacy single-investor deploys continue to omit this field.
+   */
+  payoutSchedule?: PositionPayoutSchedule
   /** Fallback (days) when the deal has no repayment_due_at yet. */
   termDays?: number
   /** Optional audit context captured at review time (generated vs reviewed). */

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { PayoutAuditContext } from '@/lib/trustless/repayment-position-payout'
 
 /**
  * Exact lifecycle actions the issue must record. Each maps to one append-only
@@ -36,6 +37,12 @@ export type RepaymentEscrowActionInput = {
   readonly contractId: string | null
   readonly generatedPayload: unknown
   readonly reviewedPayload: unknown
+  /**
+   * RWA position/tranche context. Merged into `reviewed_payload` so the
+   * append-only audit trail identifies which position a release settled and
+   * what remains outstanding.
+   */
+  readonly payout?: PayoutAuditContext | null
   /** Dotted field paths that changed between generated and reviewed. */
   readonly changedFields: readonly string[]
   readonly reviewTimestamp: string | null
@@ -66,6 +73,17 @@ type AuditRow = {
  * and `deployment_succeeded` are independent inserts so a failed transaction
  * cannot retroactively produce a success audit record by mutating a shared row.
  */
+function withPayoutContext(
+  payload: unknown,
+  payout: PayoutAuditContext | null | undefined,
+): unknown {
+  if (!payout) return payload
+  if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+    return { ...(payload as Record<string, unknown>), payout }
+  }
+  return { reviewedPayload: payload, payout }
+}
+
 export async function recordRepaymentEscrowAction(
   action: RepaymentEscrowActionInput,
 ): Promise<void> {
@@ -77,7 +95,7 @@ export async function recordRepaymentEscrowAction(
     signing_wallet: action.signingWallet,
     contract_id: action.contractId,
     generated_payload: action.generatedPayload,
-    reviewed_payload: action.reviewedPayload,
+    reviewed_payload: withPayoutContext(action.reviewedPayload, action.payout),
     changed_fields: action.changedFields,
     review_timestamp: action.reviewTimestamp,
     submission_timestamp: action.submissionTimestamp,

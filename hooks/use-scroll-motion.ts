@@ -131,7 +131,10 @@ export function useScrollProgress<T extends HTMLElement = HTMLDivElement>(onPhas
 }
 
 // Ensure the scroll listener is attached globally once
-if (typeof window !== 'undefined' && !globalThis.__mercato_scroll_listener_attached) {
+const globalState = globalThis as typeof globalThis & {
+  __mercato_scroll_listener_attached?: boolean
+}
+if (typeof window !== 'undefined' && !globalState.__mercato_scroll_listener_attached) {
   window.addEventListener('scroll', onScrollEvent, { passive: true })
-  globalThis.__mercato_scroll_listener_attached = true
+  globalState.__mercato_scroll_listener_attached = true
 }
