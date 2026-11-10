@@ -37,6 +37,10 @@ struct AssetRegisteredEvent {
     target_principal: i128,
     #[data]
     deadline: u64,
+    #[data]
+    deal_hash: BytesN<32>,
+    #[data]
+    snapshot_hash: BytesN<32>,
 }
 
 #[contractevent(topics = ["pool_v1"])]
@@ -131,6 +135,8 @@ impl CreditRegistry {
             token: terms.token,
             target_principal: terms.target_principal,
             deadline: terms.deadline,
+            deal_hash: terms.deal_hash.clone(),
+            snapshot_hash: terms.snapshot_hash.clone(),
         }
         .publish(&env);
         Ok(())
@@ -282,10 +288,17 @@ fn validate_terms(env: &Env, terms: &RegistryAssetTerms) -> Result<(), RegistryE
         || terms.deadline <= env.ledger().timestamp()
         || terms.fee_recipient == terms.supplier
         || terms.funding_fee_bps >= BASIS_POINTS
+        || is_zero_hash(&terms.deal_hash)
+        || is_zero_hash(&terms.snapshot_hash)
+        || is_zero_hash(&terms.document_root)
     {
         return Err(RegistryError::InvalidTerms);
     }
     Ok(())
+}
+
+fn is_zero_hash(value: &BytesN<32>) -> bool {
+    value.to_array().iter().all(|byte| *byte == 0)
 }
 
 fn read_admin(env: &Env) -> Result<Address, RegistryError> {

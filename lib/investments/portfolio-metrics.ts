@@ -146,6 +146,7 @@ export function buildInvestorPortfolio(args: {
       total: args.historyTotal,
       hasMore: args.page * args.pageSize < args.historyTotal,
     },
+    rwaPositions: [],
   }
 }
 

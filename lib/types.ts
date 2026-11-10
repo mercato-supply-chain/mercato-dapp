@@ -113,6 +113,13 @@ export interface Deal {
   fundingExpiresAt?: string
   extensionCount: number
   extendedAt?: string
+  /** Opted into multi-investor RWA funding. Legacy investor_id stays unused. */
+  rwaOptedIn?: boolean
+  /** Registry asset id once issuance has created the funding pool. */
+  rwaAssetId?: string
+  rwaLifecycle?: 'open' | 'ready_to_settle' | 'settled' | 'cancelled'
+  /** Confirmed principal already in the pool, in whole USDC. */
+  confirmedPrincipal?: number
 }
 
 export interface User {

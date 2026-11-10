@@ -51,6 +51,8 @@ export type PendingApprovalItem = {
   receiver?: string
   /** RWA only: exact net entitlement after release deductions. */
   netAmount?: number
+  /** Exact atomic net, used to record the redemption without rounding. */
+  netAtomic?: string
   /** RWA only: canonical reviewed schedule commitment. */
   scheduleCommitment?: string
   createdAt?: string
@@ -78,6 +80,8 @@ export type ReleaseFallbackItem = {
   receiver?: string
   /** RWA only: exact net entitlement after release deductions. */
   netAmount?: number
+  /** Exact atomic net, used to record the redemption without rounding. */
+  netAtomic?: string
   /** RWA only: canonical reviewed schedule commitment. */
   scheduleCommitment?: string
 }

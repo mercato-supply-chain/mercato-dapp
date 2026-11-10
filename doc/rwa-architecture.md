@@ -414,5 +414,37 @@ migration applied and those two excluded, so this change is independent of them.
 ## 12. Out of scope
 
 Not implemented, intentionally: secondary trading, vault collateral, equity tokenization,
-SEP-57/T-REX production compliance, FX conversion, contracts and live payments, custodial
-holding of repayment funds, and backfilled historic issuance for legacy deals.
+SEP-57/T-REX production compliance, FX conversion, custodial holding of repayment funds,
+SEP-41 position tokens, and backfilled historic issuance for legacy deals.
+
+## 13. Unified issuance, funding and redemption
+
+`rwa_credit_assets` is the issuance record. Confirming `create_funding_pool` also writes
+the `rwa_assets` row that `/api/rwa/contributions/*` already reconciles, and sets
+`deals.funding_mode = 'rwa'` without setting `investor_id`. `deals.rwa_opted_in` is the
+product switch. Legacy deals keep classic USDC funding.
+
+Registry terms now include `deal_hash`, `snapshot_hash` and `document_root`. Maturity
+stays delivery-relative in Postgres (`rwa_activate_issuance`). The pool lifecycle remains
+`open → ready_to_settle → settled | cancelled`. Credit-asset states
+`fully_funded → settling → settled` are the repayment clock and are updated from the
+position mirror and `rwa_redeem_position`.
+
+| SOS name | Persisted state |
+|----------|-----------------|
+| FUNDED | `rwa_credit_assets.state = fully_funded` |
+| ACTIVE | `active` (set by `rwa_activate_issuance` at delivery) |
+| REPAYING | `settling` |
+| REPAID / REDEEMED | `settled` |
+
+Transaction sequence: admin `register_asset` → admin `create_funding_pool` → investor
+`contribute` (at most two new investors) → pool `settle` once principal equals the target →
+Trustless Work milestones, one receiver per position → `rwa_redeem_position` until the asset
+is `settled`.
+
+`POST /api/rwa/reconcile` re-reads `submitted` and `unknown` issuance attempts and submitted
+contributions. Both confirmation paths are idempotent on issuance identity and on
+`(network, tx hash, event)`.
+
+No verified Testnet evidence is recorded. See [rwa-testnet-evidence.md](rwa-testnet-evidence.md).
+

@@ -20,6 +20,9 @@ import type { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/provider'
 import { buildUsdcSplitPaymentXdr } from '@/lib/stellar/build-usdc-split-payment'
+import { buildAssembledSorobanInvoke, bytes32, addressVal } from '@/lib/stellar/build-soroban-invoke'
+import { nativeToScVal } from '@stellar/stellar-sdk'
+import { getAppStellarNetwork } from '@/lib/stellar/network-config'
 import { submitSignedTransaction } from '@/lib/stellar-submit'
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
@@ -71,7 +74,115 @@ export function DealFundingPanel({
 
   const fundingTotal = deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
 
+  const fundRwaDeal = async (contributionPrincipal?: number) => {
+    if (!walletAddress) return
+    if (!deal.rwaAssetId) {
+      toast.error('This deal is waiting for its credit asset to be issued.')
+      return
+    }
+    if (provider === 'pollar') {
+      toast.error('RWA funding needs an external Stellar wallet.')
+      return
+    }
+    if (userType !== 'investor') {
+      toast.error(t('dealDetail.toastFundOnlyInvestors'))
+      return
+    }
+    const principal = contributionPrincipal ?? deal.priceUSDC
+    setIsFunding(true)
+    try {
+      const prepared = await fetch('/api/rwa/contributions/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assetId: deal.rwaAssetId,
+          amount: principal,
+          walletAddress,
+          idempotencyKey: `${deal.id}:${walletAddress}:${principal}`,
+        }),
+      })
+      const preparedBody = await prepared.json()
+      if (!prepared.ok) throw new Error(preparedBody.message ?? 'Could not reserve this contribution')
+      const call = preparedBody.call as {
+        contractId: string
+        args: { investor: string; principalUnits: string; nonce: string; contributionRef: string }
+      }
+      const unsignedXdr = await buildAssembledSorobanInvoke({
+        sourceAddress: walletAddress,
+        contractId: call.contractId,
+        functionName: 'contribute',
+        network: getAppStellarNetwork(),
+        args: [
+          addressVal(call.args.investor),
+          nativeToScVal(call.args.principalUnits, { type: 'i128' }),
+          nativeToScVal(call.args.nonce, { type: 'u64' }),
+          bytes32(call.args.contributionRef),
+        ],
+      })
+      const signedXdr = await signTransaction({
+        unsignedTransaction: unsignedXdr,
+        address: walletAddress,
+      })
+      if (!signedXdr) throw new Error(t('dealDetail.errorSignedTxMissing'))
+      const result = await submitSignedTransaction(signedXdr)
+      if (!result.successful || !result.hash) throw new Error(t('dealDetail.errorTxFailed'))
+
+      await fetch('/api/rwa/contributions/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: preparedBody.attemptId, txHash: result.hash }),
+      })
+      const confirmed = await fetch('/api/rwa/contributions/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: preparedBody.attemptId, txHash: result.hash }),
+      })
+      const confirmedBody = await confirmed.json()
+      if (!confirmed.ok) throw new Error(confirmedBody.message ?? 'Contribution was not confirmed')
+
+      await supabase.from('profiles').update({ address: walletAddress }).eq('id', userId ?? '')
+      const updated = await fetchDeal()
+      if (updated) onDealUpdate(updated)
+      toast.success(
+        confirmedBody.targetReached
+          ? 'Funding target reached. The supplier is paid only after settlement.'
+          : 'Contribution recorded. The supplier is paid once the target is reached.',
+      )
+      setIsFundingDialogOpen(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('dealDetail.toastFundFailDefault')
+      toast.error(message)
+    } finally {
+      setIsFunding(false)
+    }
+  }
+
+  const settleSupplier = async () => {
+    if (!deal.rwaAssetId) return
+    setIsFunding(true)
+    try {
+      const response = await fetch('/api/rwa/settlements/supplier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId: deal.rwaAssetId }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.message ?? 'Supplier settlement is not ready')
+      const updated = await fetchDeal()
+      if (updated) onDealUpdate(updated)
+      toast.success('Supplier settlement recorded.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Supplier settlement failed')
+    } finally {
+      setIsFunding(false)
+    }
+  }
+
   const handleFundDeal = async (contributionPrincipal?: number) => {
+    if (deal.rwaOptedIn) {
+      await fundRwaDeal(contributionPrincipal)
+      return
+    }
     if (!deal || !walletAddress) return
     if (!deal.supplierAddress) {
       toast.error(t('dealDetail.toastSupplierAddressMissing'))
@@ -243,6 +354,11 @@ export function DealFundingPanel({
 
   return (
     <>
+      {userType === 'admin' && deal.rwaLifecycle === 'ready_to_settle' ? (
+        <Button type="button" onClick={() => void settleSupplier()} disabled={isFunding}>
+          {isFunding ? 'Settling supplier…' : 'Settle supplier'}
+        </Button>
+      ) : null}
       {deal.status === 'awaiting_funding' && (
         isFundingOpen ? (
           deal.supplierAddress ? (

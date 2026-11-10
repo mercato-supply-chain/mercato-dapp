@@ -229,6 +229,7 @@ export async function getAdminQueueData(
         trancheIndex: ms.trancheIndex,
         receiver: ms.receiver,
         netAmount: ms.netAmount,
+        netAtomic: ms.netAtomic,
         scheduleCommitment: ms.scheduleCommitment,
         createdAt: deal.created_at ?? undefined,
       })
@@ -284,6 +285,7 @@ export async function getAdminQueueData(
         trancheIndex: ms.trancheIndex,
         receiver: ms.receiver,
         netAmount: ms.netAmount,
+        netAtomic: ms.netAtomic,
         scheduleCommitment: ms.scheduleCommitment,
       })
     }

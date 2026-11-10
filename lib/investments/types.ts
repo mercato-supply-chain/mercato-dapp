@@ -96,4 +96,15 @@ export type InvestorPortfolio = {
   openEscrowsBySmb: Record<string, number>
   displayName: string | null
   history: InvestorHistoryPage
+  rwaPositions: RwaPortfolioPosition[]
+}
+
+export type RwaPortfolioPosition = {
+  id: string
+  creditAssetId: string
+  principalAtomic: string
+  unitsAtomic: string
+  settledAtomic: string
+  state: string
+  wallet: string
 }

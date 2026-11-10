@@ -22,6 +22,12 @@ pub struct RegistryAssetTerms {
     pub funding_fee_bps: u32,
     pub fee_policy_version: u32,
     pub deadline: u64,
+    /// SHA-256 of the commercial deal id. Binds this registry record to one deal.
+    pub deal_hash: BytesN<32>,
+    /// SHA-256 of the frozen financial snapshot. Maturity stays off-chain.
+    pub snapshot_hash: BytesN<32>,
+    /// SHA-256 root of the document commitment hashes.
+    pub document_root: BytesN<32>,
 }
 
 #[contracttype]

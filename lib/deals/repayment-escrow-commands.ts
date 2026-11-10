@@ -251,7 +251,7 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
       releaseResponse,
       'Failed to build release transaction',
     )
-    await deps.transport.signAndSend(
+    const sent = await deps.transport.signAndSend(
       unsigned,
       params.releaseSigner,
       params.provider,
@@ -261,6 +261,9 @@ export function createRepaymentEscrowCommands(deps: RepaymentEscrowCommandDeps) 
       params.dealId,
       params.contractId,
     )
+    return {
+      txHash: sent?.hash ?? sent?.transactionHash ?? null,
+    }
   }
 
   async function approveAndReleaseMilestone(params: ReleaseMilestoneParams) {

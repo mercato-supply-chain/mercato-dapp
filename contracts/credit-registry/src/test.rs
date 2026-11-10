@@ -13,6 +13,9 @@ fn terms(env: &Env, token: &Address, supplier: &Address) -> RegistryAssetTerms {
         funding_fee_bps: 100,
         fee_policy_version: 1,
         deadline: env.ledger().timestamp() + 100,
+        deal_hash: BytesN::from_array(env, &[4; 32]),
+        snapshot_hash: BytesN::from_array(env, &[5; 32]),
+        document_root: BytesN::from_array(env, &[6; 32]),
     }
 }
 

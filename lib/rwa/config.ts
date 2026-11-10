@@ -27,6 +27,12 @@ export type RwaConfig = {
   usdcSacAddress: string | null
   /** Whether the RWA funding path is enabled for this deployment. */
   enabled: boolean
+  /** Registry admin that must sign register_asset and create_funding_pool. */
+  registryAdminAddress: string | null
+  /** Platform account that receives the funding fee and excess. */
+  platformAddress: string | null
+  /** Classic USDC issuer recorded on the frozen financial snapshot. */
+  usdcIssuer: string | null
 }
 
 function readContractId(value: string | undefined): string | null {
@@ -60,6 +66,9 @@ export function getRwaConfig(): RwaConfig {
     registryContractId: readContractId(process.env.RWA_REGISTRY_CONTRACT_ID),
     usdcSacAddress: readContractId(process.env.RWA_USDC_SAC_ADDRESS),
     enabled: process.env.RWA_ENABLED === 'true',
+    registryAdminAddress: readContractId(process.env.RWA_REGISTRY_ADMIN_ADDRESS),
+    platformAddress: readContractId(process.env.NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS),
+    usdcIssuer: readContractId(process.env.NEXT_PUBLIC_USDC_ISSUER),
   }
 }
 

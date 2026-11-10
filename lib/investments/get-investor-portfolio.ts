@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { InvestorDeal } from './types'
+import type { InvestorDeal, RwaPortfolioPosition } from './types'
 import { buildInvestorPortfolio } from './portfolio-metrics'
 
 const DEAL_COLUMNS = `id, title, product_name, status, amount, contribution_amount, interest_rate, term_days,
@@ -54,8 +54,7 @@ export async function getInvestorPortfolio(
   }
 
   const displayName = profile?.company_name || profile?.full_name || profile?.contact_name || null
-
-  return buildInvestorPortfolio({
+  const portfolio = buildInvestorPortfolio({
     activeDeals: (activeDeals ?? []) as InvestorDeal[],
     historyDeals: (historyDeals ?? []) as InvestorDeal[],
     historyTotal: historyTotal ?? 0,
@@ -66,4 +65,21 @@ export async function getInvestorPortfolio(
     smbFallback: labels.smbFallback,
     dealFallbackTitle: labels.dealFallbackTitle,
   })
+
+  const { data: positionRows } = await supabase
+    .from('rwa_investor_positions')
+    .select('id, credit_asset_id, confirmed_principal_atomic, units_atomic, state, investor_wallet')
+    .eq('investor_profile_id', userId)
+
+  const rwaPositions: RwaPortfolioPosition[] = (positionRows ?? []).map((row) => ({
+    id: String(row.id),
+    creditAssetId: String(row.credit_asset_id),
+    principalAtomic: String(row.confirmed_principal_atomic),
+    unitsAtomic: String(row.units_atomic),
+    settledAtomic: row.state === 'settled' ? String(row.confirmed_principal_atomic) : '0',
+    state: String(row.state),
+    wallet: String(row.investor_wallet),
+  }))
+
+  return { ...portfolio, rwaPositions }
 }

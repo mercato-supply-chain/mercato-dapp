@@ -79,6 +79,39 @@ export type ContributionStatusInput = z.infer<typeof contributionStatusSchema>
 export type SupplierSettlementInput = z.infer<typeof supplierSettlementSchema>
 export type RefundInput = z.infer<typeof refundSchema>
 
+const documentInput = z.object({
+  kind: z.string().trim().min(1).max(64),
+  contentHash: z.string().trim().regex(/^[0-9a-fA-F]{64}$/),
+  opaqueRef: z.string().trim().min(1).max(500).optional(),
+  byteLength: z.number().int().positive().optional(),
+})
+
+export const prepareIssuanceSchema = z.object({
+  dealId: z.string().uuid(),
+  idempotencyKey: z.string().trim().min(8).max(200),
+  signingWallet: stellarAddress,
+  documents: z.array(documentInput).min(1).max(8),
+})
+
+export const submitIssuanceSchema = z.object({
+  attemptId: z.string().uuid(),
+  signedXdr: z.string().trim().min(20),
+})
+
+export const issuanceStatusSchema = z.object({
+  attemptId: z.string().uuid(),
+})
+
+export const redeemPositionSchema = z.object({
+  positionId: z.string().uuid(),
+  amountAtomic: z.string().trim().regex(/^[1-9][0-9]*$/),
+  txHash: z.string().trim().regex(/^[0-9a-fA-F]{64}$/),
+  operationId: z.string().trim().min(1).max(128).default('release'),
+})
+
+export type PrepareIssuanceInput = z.infer<typeof prepareIssuanceSchema>
+export type SubmitIssuanceInput = z.infer<typeof submitIssuanceSchema>
+
 /** Coerce a zod failure into a flat field -> message map. */
 export function formatZodError(error: z.ZodError): Record<string, string> {
   const details: Record<string, string> = {}

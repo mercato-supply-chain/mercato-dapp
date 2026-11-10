@@ -135,6 +135,9 @@ fn fixture_with_target(balance_a: i128, balance_b: i128, target: i128) -> Fixtur
         funding_fee_bps: 100,
         fee_policy_version: 1,
         deadline: 200,
+        deal_hash: BytesN::from_array(&env, &[4; 32]),
+        snapshot_hash: BytesN::from_array(&env, &[5; 32]),
+        document_root: BytesN::from_array(&env, &[6; 32]),
     };
     let record = RegistryAssetRecord {
         asset_id: asset_id.clone(),

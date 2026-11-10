@@ -409,4 +409,24 @@ export async function getAssetState(
   return row
 }
 
+export async function listOpenContributionAttempts(
+  supabase: SupabaseClient,
+): Promise<Array<{ attempt_id: string; investor_id: string; tx_hash: string }>> {
+  const { data, error } = await supabase
+    .from('rwa_contributions')
+    .select('attempt_id, investor_id, tx_hash, status')
+    .in('status', ['submitted'])
+    .not('tx_hash', 'is', null)
+    .limit(25)
+  if (error) throw error
+  return (data ?? []).flatMap((row) => {
+    const attemptId = String((row as { attempt_id?: string }).attempt_id ?? '')
+    const investorId = String((row as { investor_id?: string }).investor_id ?? '')
+    const txHash = String((row as { tx_hash?: string }).tx_hash ?? '')
+    return attemptId && investorId && txHash
+      ? [{ attempt_id: attemptId, investor_id: investorId, tx_hash: txHash }]
+      : []
+  })
+}
+
 export { RWA_ERROR_CODES, RwaError }

@@ -15,6 +15,7 @@ import type { RepaymentEscrowDeploymentDraft } from '@/lib/trustless/repayment-d
 import { revalidateAuthoritativeState } from '@/lib/trustless/repayment-deployment-guard'
 import { buildRepaymentConfigSnapshot } from '@/lib/trustless/repayment-config-snapshot'
 import { EscrowDeploymentReviewDialog } from '@/components/admin/repayment-escrow/escrow-deployment-review-dialog'
+import type { PositionPayoutSchedule } from '@/lib/trustless/repayment-position-payout'
 
 interface CreateRepaymentEscrowsProps {
   items: CreateEscrowItem[]
@@ -57,12 +58,24 @@ export function CreateRepaymentEscrows({ items, onAfterCommand }: CreateRepaymen
       return
     }
 
+    let payoutSchedule: PositionPayoutSchedule | undefined
+    try {
+      const scheduleResponse = await fetch(`/api/rwa/repayment/schedule?dealId=${item.dealId}`)
+      if (scheduleResponse.ok) {
+        const body = await scheduleResponse.json()
+        payoutSchedule = body.schedule ?? undefined
+      }
+    } catch {
+      payoutSchedule = undefined
+    }
+
     await deployRepaymentEscrow({
       dealId: item.dealId,
       adminAddress: walletInfo.address,
       provider,
       draft,
       termDays: item.termDays,
+      payoutSchedule,
       audit: audit ? { generatedDraft: audit.generated, reviewTimestamp: audit.reviewTimestamp } : undefined,
     })
     toast.success(t('adminCreateEscrow.deploySuccess'))

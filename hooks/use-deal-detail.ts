@@ -58,7 +58,22 @@ export function useDealDetail(dealId: string | undefined) {
         return noRows ? { kind: 'not-found' } : { kind: 'error' }
       }
       if (!data) return { kind: 'not-found' }
-      return { kind: 'found', deal: mapDealFromDb(data as DealRow) }
+      const deal = mapDealFromDb(data as DealRow)
+      const assetRowId = (data as DealRow).rwa_asset_row_id
+      if (assetRowId) {
+        const { data: asset } = await supabase
+          .from('rwa_assets')
+          .select('asset_id, lifecycle, funded_principal_units, token_decimals')
+          .eq('id', assetRowId)
+          .maybeSingle()
+        if (asset) {
+          const decimals = Number(asset.token_decimals ?? 7)
+          deal.rwaAssetId = String(asset.asset_id)
+          deal.rwaLifecycle = asset.lifecycle as Deal['rwaLifecycle']
+          deal.confirmedPrincipal = Number(asset.funded_principal_units) / 10 ** decimals
+        }
+      }
+      return { kind: 'found', deal }
     } catch {
       return { kind: 'error' }
     }

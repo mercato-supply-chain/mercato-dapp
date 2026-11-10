@@ -23,6 +23,7 @@ import type { RwaConfig } from '@/lib/rwa/config'
 import { isValidAssetId, isValidStellarAddress } from '@/lib/rwa/config'
 import { selectContributionEvents, type RwaChainReader } from '@/lib/rwa/chain'
 import { RWA_ERROR_CODES, RwaError } from '@/lib/rwa/errors'
+import { investorCapExceeded } from '@/lib/rwa/bindings'
 import { amountToUnits, formatUnits } from '@/lib/rwa/units'
 import {
   confirmContribution,
@@ -294,6 +295,13 @@ export async function prepareContribution(
     throw new RwaError(
       RWA_ERROR_CODES.WALLET_NOT_AUTHORIZED,
       'A different wallet is already bound to this funding position',
+    )
+  }
+
+  if (investorCapExceeded(asset.position_count, Boolean(existingPosition))) {
+    throw new RwaError(
+      RWA_ERROR_CODES.INSUFFICIENT_CAPACITY,
+      'This financing already has the maximum number of investors',
     )
   }
 

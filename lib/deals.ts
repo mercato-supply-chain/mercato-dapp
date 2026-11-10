@@ -45,6 +45,8 @@ export interface DealRow {
   extension_count?: number | null
   extended_at?: string | null
   created_at?: string | null
+  rwa_opted_in?: boolean | null
+  rwa_asset_row_id?: string | null
   funded_at?: string | null
   completed_at?: string | null
   milestones?: MilestoneRow[] | null
@@ -299,6 +301,7 @@ export function mapDealFromDb(row: DealRow): Deal {
     extendedAt: row.extended_at
       ? new Date(row.extended_at).toISOString()
       : undefined,
+    rwaOptedIn: Boolean(row.rwa_opted_in),
     yieldAPR: (() => {
       const amount = principal
       const termDays = row.term_days ?? 0

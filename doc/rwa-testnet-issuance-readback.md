@@ -1,6 +1,16 @@
 # RWA issuance: implementation and Testnet evidence status
 
-**Incomplete. There is no verified Testnet issuance/readback for this PR.**
+**Issuance prepare, submit and status are implemented. There is still no verified Testnet receipt in this repository.**
+
+Admin routes:
+
+- `POST /api/rwa/issuance/prepare` builds `register_asset` for an opted-in deal and stores the unsigned envelope.
+- `POST /api/rwa/issuance/submit` checks the signature against that envelope and submits it.
+- `GET /api/rwa/issuance/status?attemptId=` re-reads the ledger. A confirmed `register_asset` returns the `create_funding_pool` envelope. A confirmed pool transaction writes `rwa_credit_assets` and the linked `rwa_assets` row once.
+
+`RWA_ENABLED=true`, `RWA_REGISTRY_CONTRACT_ID`, `RWA_USDC_SAC_ADDRESS` and the registry admin key are required. The deal still needs `rwa_opted_in`, verified parties and an existing repayment escrow before issuance, which is the rule in `rwa_commit_verified_issuance`.
+
+A Testnet run is still required before this file can cite a transaction hash, ledger or contract id.
 
 The previous version of this document incorrectly presented unverified contract
 addresses, a transaction hash and a ledger as successful on-chain evidence.
@@ -9,24 +19,18 @@ Stellar SDK's StrKey validation; the cited transaction was not found by the
 Testnet RPC or Horizon. RPC history is bounded, so `NOT_FOUND` alone would not
 prove that a historical transaction never existed.
 
-## What this draft implements
+## What the issuance service implements
 
 - A reusable check of a wallet-signed Soroban envelope against the exact
-  server-owned unsigned transaction reviewed by the administrator. It checks
-  the complete signature base and a real Ed25519 signature on the selected
-  network, rejects expired/unbounded transactions and fee-bump envelopes, and
-  supports only a single source-account signer/authorization flow.
-- Admin-protected prepare, submit and status endpoints that return HTTP 503
-  with `RWA_ISSUANCE_UNAVAILABLE`. They do not prepare transactions, submit to
-  RPC, write financial mappings, or report completed issuance. There is no
-  environment flag that enables the unfinished flow.
-- Local tests with real SDK-generated XDR and disposable test signatures.
-  These tests do not submit transactions or establish Testnet evidence.
+  server-owned unsigned transaction reviewed by the administrator.
+- Admin prepare, submit and status routes that build `register_asset`, then
+  `create_funding_pool`, and commit the credit asset plus pool row only after
+  ledger readback of the deal hash and snapshot hash.
+- Local tests for asset identity, the two-investor cap and pro-rata dust.
+  Those tests do not submit transactions or establish Testnet evidence.
 
-The provisional business orchestration, invented financial snapshot/hash
-format, synthetic deployment defaults, unused confirmation card and unreleased
-schema migration have been removed from this draft. Existing legacy deal
-creation, funding, repayment and database migrations are unchanged.
+Legacy deals that are not opted in still fund with classic USDC and a single
+investor wallet.
 
 ## Required to complete #246
 
