@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import {
   Copy,
   ExternalLink,
+  LayoutDashboard,
   LogOut,
   Settings,
   Unplug,
@@ -16,13 +18,17 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatar, localizedUserType } from '@/components/navigation/user-avatar'
 import type { NavProfile, NavUser, WalletNavProps } from '@/components/navigation/user-nav-types'
-import { getDashboardNavSections, isNavItemActive } from '@/lib/dashboard/dashboard-nav'
 import { getRoleTheme } from '@/lib/dashboard/role-theme'
+import {
+  activeUserMenuGroupId,
+  getUserMenu,
+  isUserMenuItemActive,
+  type UserMenuItem,
+} from '@/lib/navigation/user-menu-model'
 import { useI18n } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 
@@ -123,9 +129,7 @@ function WalletSummary({
   return (
     <div className="mx-2 mb-1 rounded-xl border border-border/70 bg-muted/30 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-          {walletLabel}
-        </p>
+        <p className="text-xs font-medium text-muted-foreground">{walletLabel}</p>
         {wallet.isConnected && statusLabel && (
           <span
             className={cn(
@@ -142,29 +146,38 @@ function WalletSummary({
 
       {wallet.isConnected && wallet.address ? (
         <>
-          <p className="font-mono text-xs leading-relaxed text-foreground">
-            {wallet.truncatedAddress ?? wallet.address}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1">
-            <Button variant="outline" size="sm" className="h-7 flex-1 text-xs" onClick={copyAddress}>
-              <Copy className="mr-1.5 h-3 w-3" aria-hidden />
-              {t('wallet.copy')}
+          <div className="flex items-center gap-1">
+            <p className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+              {wallet.truncatedAddress ?? wallet.address}
+            </p>
+            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={copyAddress}>
+              <Copy className="h-3 w-3" aria-hidden />
+              <span className="sr-only">{t('wallet.copy')}</span>
             </Button>
-            <Button variant="outline" size="sm" className="h-7 flex-1 text-xs" asChild>
+            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" asChild>
               <a
                 href={`https://stellar.expert/explorer/${EXPLORER_NETWORK}/account/${wallet.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink className="mr-1.5 h-3 w-3" aria-hidden />
-                {t('userMenu.explorer')}
+                <ExternalLink className="h-3 w-3" aria-hidden />
+                <span className="sr-only">{t('userMenu.explorer')}</span>
               </a>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+              onClick={wallet.onDisconnect}
+            >
+              <Unplug className="h-3 w-3" aria-hidden />
+              <span className="sr-only">{t('wallet.disconnect')}</span>
             </Button>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="mt-2 h-7 w-full justify-between px-2 text-xs text-muted-foreground"
+            className="mt-1.5 h-7 w-full justify-between px-1 text-xs text-muted-foreground"
             asChild
             onClick={onNavigate}
           >
@@ -172,15 +185,6 @@ function WalletSummary({
               {t('userMenu.manageWallets')}
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-1 h-7 w-full justify-start px-2 text-xs text-destructive hover:text-destructive"
-            onClick={wallet.onDisconnect}
-          >
-            <Unplug className="mr-1.5 h-3 w-3" aria-hidden />
-            {t('wallet.disconnect')}
           </Button>
         </>
       ) : (
@@ -214,7 +218,7 @@ function WalletSummaryMobile({
 
   return (
     <div className="mx-2 mb-3 rounded-xl border border-border/70 bg-muted/30 p-3">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{walletLabel}</p>
+      <p className="text-xs font-medium text-muted-foreground">{walletLabel}</p>
       {wallet.isConnected && wallet.address ? (
         <>
           <p className="mt-1 font-mono text-xs break-all">{wallet.address}</p>
@@ -242,6 +246,46 @@ function WalletSummaryMobile({
   )
 }
 
+function MenuDestination({
+  item,
+  active,
+  onNavigate,
+  emphasize,
+}: {
+  item: UserMenuItem
+  active: boolean
+  onNavigate?: () => void
+  emphasize?: boolean
+}) {
+  const { t } = useI18n()
+  const Icon = item.icon
+  const hint = item.hintKey ? t(item.hintKey) : null
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        'flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition-colors',
+        active
+          ? 'bg-foreground/5 text-foreground'
+          : 'text-foreground hover:bg-muted/60',
+        emphasize && !active && 'bg-muted/40',
+      )}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', active ? 'opacity-100' : 'opacity-70')} aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-sm font-medium leading-tight">
+          <span className="truncate">{t(item.labelKey)}</span>
+          {active && <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-current" />}
+        </span>
+        {hint ? <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{hint}</span> : null}
+      </span>
+    </Link>
+  )
+}
+
 function NavSections({
   userType,
   variant,
@@ -253,76 +297,84 @@ function NavSections({
 }) {
   const { t } = useI18n()
   const pathname = usePathname()
-  const sections = getDashboardNavSections(userType)
-
-  if (variant === 'mobile') {
-    return (
-      <div className="space-y-4 px-2">
-        {sections.map((section) => (
-          <div key={section.titleKey}>
-            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              {t(section.titleKey)}
-            </p>
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const Icon = item.icon
-                const active = isNavItemActive(pathname, item)
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={cn(
-                        'flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors',
-                        active
-                          ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-                          : 'text-foreground hover:bg-muted/60',
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                      {t(item.labelKey)}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
-    )
+  const menu = getUserMenu(userType)
+  const suggestedGroupId = activeUserMenuGroupId(pathname, menu.groups)
+  const [groupOverride, setGroupOverride] = useState<string | null>(null)
+  const [seenPath, setSeenPath] = useState(pathname)
+  if (pathname !== seenPath) {
+    setSeenPath(pathname)
+    setGroupOverride(null)
   }
+  const groupId = groupOverride ?? suggestedGroupId
+  const visibleGroups = menu.switchGroups
+    ? menu.groups.filter((group) => group.id === groupId)
+    : menu.groups
+  const activeGroup = menu.groups.find((group) => group.id === groupId) ?? menu.groups[0]
+
+  const switcher = menu.switchGroups ? (
+    <div
+      role="tablist"
+      aria-label={t('userMenu.groupsLabel')}
+      className="mx-2 mb-1 grid grid-cols-3 gap-1 rounded-lg bg-muted/60 p-1"
+    >
+      {menu.groups.map((group) => {
+        const selected = group.id === activeGroup?.id
+        return (
+          <button
+            key={group.id}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              'rounded-md px-1.5 py-1.5 text-xs font-medium transition-colors',
+              selected ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setGroupOverride(group.id)}
+          >
+            {t(group.titleKey)}
+          </button>
+        )
+      })}
+    </div>
+  ) : null
+
+  const lists = visibleGroups.map((group) => (
+    <div key={group.id} className="px-2">
+      {menu.switchGroups ? null : (
+        <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">{t(group.titleKey)}</p>
+      )}
+      <ul className="space-y-0.5">
+        {group.items.map((item, index) => {
+          const active = isUserMenuItemActive(pathname, item)
+          const link = (
+            <MenuDestination
+              item={item}
+              active={active}
+              onNavigate={onNavigate}
+              emphasize={!menu.switchGroups && index === 0}
+            />
+          )
+          return (
+            <li key={item.href}>
+              {variant === 'dropdown' ? (
+                <DropdownMenuItem asChild className="cursor-pointer p-0 focus:bg-transparent">
+                  {link}
+                </DropdownMenuItem>
+              ) : (
+                link
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  ))
 
   return (
-    <>
-      {sections.map((section, index) => (
-        <DropdownMenuGroup key={section.titleKey}>
-          {index > 0 && <DropdownMenuSeparator className="my-1" />}
-          <DropdownMenuLabel className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            {t(section.titleKey)}
-          </DropdownMenuLabel>
-          {section.items.map((item) => {
-            const Icon = item.icon
-            const active = isNavItemActive(pathname, item)
-            return (
-              <DropdownMenuItem key={item.href} asChild className="cursor-pointer px-2 py-1.5">
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cn(
-                    'flex w-full items-center gap-2.5 rounded-lg',
-                    active && 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                  <span className="flex-1">{t(item.labelKey)}</span>
-                  {active && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                </Link>
-              </DropdownMenuItem>
-            )
-          })}
-        </DropdownMenuGroup>
-      ))}
-    </>
+    <div className="space-y-1">
+      {switcher}
+      {lists}
+    </div>
   )
 }
 
@@ -346,6 +398,14 @@ export function UserMenuContent({
         <NavSections userType={userType} variant="mobile" onNavigate={onNavigate} />
         <div className="my-2 border-t border-border" />
         <div className="flex flex-col gap-1 px-2 pb-2">
+          <Link
+            href="/dashboard"
+            onClick={onNavigate}
+            className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium hover:bg-muted/60"
+          >
+            <LayoutDashboard className="h-4 w-4" aria-hidden />
+            {t('nav.dashboard')}
+          </Link>
           <Link
             href="/settings"
             onClick={onNavigate}
@@ -381,6 +441,12 @@ export function UserMenuContent({
       <NavSections userType={userType} variant="dropdown" onNavigate={onNavigate} />
       <DropdownMenuSeparator className="my-1" />
       <DropdownMenuGroup>
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" aria-hidden />
+            {t('nav.dashboard')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild className="cursor-pointer">
           <Link href="/settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" aria-hidden />

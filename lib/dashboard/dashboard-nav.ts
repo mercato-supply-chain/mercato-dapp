@@ -4,7 +4,6 @@ import {
   Building2,
   CheckCircle2,
   FileCheck,
-  HandCoins,
   History,
   Landmark,
   LayoutDashboard,
@@ -153,18 +152,13 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
           items: [overview],
         },
         {
-          titleKey: 'dashboardNav.sectionOperations',
+          titleKey: 'dashboardNav.sectionWork',
           items: [
             {
               href: '/dashboard/admin',
               labelKey: 'dashboardNav.adminOverview',
               icon: LayoutDashboard,
               matchPrefix: false,
-            },
-            {
-              href: '/dashboard/admin/users',
-              labelKey: 'dashboardNav.adminUsers',
-              icon: UserCog,
             },
             {
               href: '/dashboard/admin/approvals',
@@ -176,6 +170,31 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               labelKey: 'dashboardNav.releaseQueue',
               icon: Unlock,
             },
+          ],
+        },
+        {
+          titleKey: 'dashboardNav.sectionPeople',
+          items: [
+            {
+              href: '/dashboard/admin/users',
+              labelKey: 'dashboardNav.adminUsers',
+              icon: UserCog,
+            },
+            {
+              href: '/dashboard/admin/leads',
+              labelKey: 'dashboardNav.leads',
+              icon: Users,
+            },
+            {
+              href: '/suppliers',
+              labelKey: 'dashboardNav.suppliers',
+              icon: Building2,
+            },
+          ],
+        },
+        {
+          titleKey: 'dashboardNav.sectionInsight',
+          items: [
             {
               href: '/dashboard/admin/vault',
               labelKey: 'dashboardNav.vaultMonitor',
@@ -191,24 +210,11 @@ export function getDashboardNavSections(userType: string): DashboardNavSection[]
               labelKey: 'dashboardNav.activity',
               icon: History,
             },
-            {
-              href: '/dashboard/admin/leads',
-              labelKey: 'dashboardNav.leads',
-              icon: Users,
-            },
           ],
         },
         {
           titleKey: 'dashboardNav.sectionPlatform',
-          items: [
-            deals,
-            marketplace,
-            {
-              href: '/suppliers',
-              labelKey: 'dashboardNav.suppliers',
-              icon: Building2,
-            },
-          ],
+          items: [deals, marketplace],
         },
       ]
     default:

@@ -62,7 +62,18 @@
   "userMenu": {
     "manageWallets": "Manage wallets",
     "walletNotConnected": "Connect a wallet to fund deals and receive payouts.",
-    "explorer": "Explorer"
+    "explorer": "Explorer",
+    "shortcuts": "Go to",
+    "groupsLabel": "Menu groups",
+    "hintApprovals": "Deploy repayment escrows",
+    "hintReleases": "Release funded milestones",
+    "hintAdminHome": "Queues and platform health",
+    "hintUsers": "Accounts and roles",
+    "hintLeads": "Event signups",
+    "hintSuppliers": "Supplier directory",
+    "hintAnalytics": "Platform numbers",
+    "hintActivity": "Recent actions",
+    "hintVault": "DeFindex vault"
   },
   "wallet": {
     "stellarWallet": "Stellar Wallet",
@@ -355,6 +366,9 @@
     "sectionPortfolio": "Portfolio",
     "sectionDeals": "Deals",
     "sectionOperations": "Operations",
+    "sectionWork": "Work",
+    "sectionPeople": "People",
+    "sectionInsight": "Insight",
     "sectionPlatform": "Platform",
     "overview": "Overview",
     "wallets": "Wallets",
@@ -378,7 +392,7 @@
     "adminVault": "Mercato vault",
     "vaultMonitor": "Vault monitor",
     "suppliers": "Suppliers",
-    "adminOverview": "Overview",
+    "adminOverview": "Command center",
     "adminUsers": "Users",
     "analytics": "Analytics",
     "activity": "Activity"

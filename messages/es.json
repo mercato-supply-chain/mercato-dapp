@@ -62,7 +62,18 @@
   "userMenu": {
     "manageWallets": "Administrar billeteras",
     "walletNotConnected": "Conecta una billetera para financiar órdenes y recibir pagos.",
-    "explorer": "Explorador"
+    "explorer": "Explorador",
+    "shortcuts": "Ir a",
+    "groupsLabel": "Grupos del menú",
+    "hintApprovals": "Crear escrows de pago",
+    "hintReleases": "Liberar hitos fondeados",
+    "hintAdminHome": "Colas y estado de la plataforma",
+    "hintUsers": "Cuentas y roles",
+    "hintLeads": "Registros de eventos",
+    "hintSuppliers": "Directorio de proveedores",
+    "hintAnalytics": "Números de la plataforma",
+    "hintActivity": "Acciones recientes",
+    "hintVault": "Bóveda DeFindex"
   },
   "wallet": {
     "stellarWallet": "Billetera Stellar",
@@ -355,6 +366,9 @@
     "sectionPortfolio": "Portafolio",
     "sectionDeals": "Órdenes",
     "sectionOperations": "Operaciones",
+    "sectionWork": "Trabajo",
+    "sectionPeople": "Personas",
+    "sectionInsight": "Seguimiento",
     "sectionPlatform": "Plataforma",
     "overview": "Resumen",
     "wallets": "Billeteras",
@@ -378,7 +392,7 @@
     "adminVault": "Bóveda Mercato",
     "vaultMonitor": "Monitor de bóveda",
     "suppliers": "Proveedores",
-    "adminOverview": "Resumen",
+    "adminOverview": "Centro de mando",
     "adminUsers": "Usuarios",
     "analytics": "Analítica",
     "activity": "Actividad"

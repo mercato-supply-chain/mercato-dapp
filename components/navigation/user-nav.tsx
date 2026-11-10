@@ -101,7 +101,11 @@ export function UserNav({ user, profile, onLogout, wallet, variant }: UserNavPro
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>{userTrigger}</DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 p-0" sideOffset={8}>
+        <DropdownMenuContent
+          align="end"
+          className="w-[22rem] max-h-[min(32rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto p-0"
+          sideOffset={8}
+        >
           <UserMenuContent
             user={user}
             profile={profile}
