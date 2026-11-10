@@ -1,7 +1,9 @@
 # RWA architecture — credit assets, positions and frozen terms
 
-> **Status:** accepted (RWA task 01/10) · **Scope:** persistence + shared interfaces only
-> **Migration:** `supabase/migrations/20261021071817_rwa_credit_assets_and_positions.sql`
+> **Status:** issuance, funding, and redemption are wired for opted-in deals. The Testnet registry is deployed. A full two-investor lifecycle run is not recorded.
+> **Migrations:** `supabase/migrations/20261021071817_rwa_credit_assets_and_positions.sql`, `supabase/migrations/20261110120000_rwa_credit_pool_link.sql`
+> **App entry:** `lib/rwa/issuance.ts`, `lib/rwa/contribution-intent.ts`, `lib/rwa/position-servicing.ts`
+> **Agent orientation:** [AGENTS.md](../AGENTS.md)
 > **Commitments:** `lib/rwa/commitment.ts` · **Fixtures:** `__tests__/rwa/fixtures/snapshot-v1/`
 > **SQL tests:** `supabase/tests/rwa/`
 
@@ -446,5 +448,5 @@ is `settled`.
 contributions. Both confirmation paths are idempotent on issuance identity and on
 `(network, tx hash, event)`.
 
-No verified Testnet evidence is recorded. See [rwa-testnet-evidence.md](rwa-testnet-evidence.md).
+The Testnet registry deployment is recorded in [rwa-testnet-evidence.md](rwa-testnet-evidence.md). The lifecycle tables in that file are a template. Do not treat them as receipts.
 

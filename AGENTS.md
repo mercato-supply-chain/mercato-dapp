@@ -12,7 +12,7 @@
 | **License** | Apache-2.0 |
 | **Primary network** | Stellar (testnet by default) |
 | **Auth & data** | Supabase (Postgres + Auth) |
-| **Settlement** | Classic USDC payments (funding) + Trustless Work Soroban escrow (repayment) |
+| **Settlement** | Classic USDC for default deals. Opt-in deals use the Soroban credit registry and funding pool, then Trustless Work for repayment. |
 | **Package manager** | Bun (`bun install`, `bun dev`, `bun test`) |
 
 ## Documentation map
@@ -27,6 +27,8 @@ Read documents in this order depending on your task:
 | **[doc/technical-architecture.md](doc/technical-architecture.md)** | Reviewer-grade current/target architecture, including MoneyGram and Privy coexistence plans |
 | **[SETUP.md](SETUP.md)** | Step-by-step local setup checklist |
 | **[env.sample](env.sample)** | Complete environment variable list |
+| **[doc/rwa-architecture.md](doc/rwa-architecture.md)** | Credit-asset schema, allowed state edges, issuance → contribute → settle → redeem |
+| **[doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md)** | Testnet contract ids and tx hashes. Lifecycle tables under that deploy record are a template. |
 | **[lib/anchors/README.md](lib/anchors/README.md)** | Fiat ramp anchor interface and provider clients |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Branch policy (`develop`), PR expectations, Drips Wave |
 
@@ -38,7 +40,8 @@ Read documents in this order depending on your task:
 | **Investor** | Funds supplier invoice + 1% platform fee in USDC; receives principal + yield from repayment milestones. |
 | **Supplier** | Ships goods; receives full invoice amount at funding (fee-free). |
 | **Admin** | Platform operator: deploys repayment escrows, approves/releases milestones, manages DeFindex vault monitor. |
-| **Direct funding** | Investor → supplier (principal) + platform (1% fee) via **classic Stellar USDC** — **not escrowed**. |
+| **Direct funding** | Default deal. Investor → supplier (principal) + platform (1% fee) via **classic Stellar USDC**. `deals.investor_id` is set. |
+| **RWA / credit pool** | Opt-in (`deals.rwa_opted_in`). Investors contribute USDC to a Soroban funding pool. Supplier is paid only at the target. `deals.investor_id` stays null. `deals.funding_mode` becomes `rwa` at verified issuance. |
 | **Repayment escrow** | Trustless Work **multi-release** contract: PyME funds grossed amount; admin releases to **investor** in milestones. |
 | **Grossed repayment** | Amount PyME must fund so investor nets principal + yield after platform 1% + TW 0.3% fees (`lib/deals/fees.ts`). |
 | **SAC** | Stellar Asset Contract (Soroban token); used for TW escrow trustline and DeFindex vault assets. |
@@ -96,7 +99,50 @@ Types: `lib/types.ts`. Fee math: `lib/deals/fees.ts`.
 
 ### Investor wallet resolution
 
-Repayment escrow releases go to the **funded investor's Stellar address**, resolved from `profiles.address` or `profiles.stellar_public_key` via `lib/deals/investor-wallet.ts`. On funding, the investor's address is saved to their profile (`deal-funding-panel.tsx`).
+Repayment escrow releases go to the **funded investor's Stellar address**, resolved from `profiles.address` or `profiles.stellar_public_key` via `lib/deals/investor-wallet.ts`. On direct funding, the investor's address is saved to their profile (`deal-funding-panel.tsx`). On an RWA deal, each release uses the wallet stored on that position.
+
+## Opt-in RWA path
+
+Use this path only when `deals.rwa_opted_in` is true and `RWA_ENABLED=true`. Default deals stay on classic USDC. Do not set `investor_id` on an RWA deal.
+
+```
+1. CREATE     PyME creates an opted-in deal (Supabase only)
+2. ESCROW     A repayment escrow address must already exist before issuance
+3. ISSUE      Admin signs register_asset, then create_funding_pool
+              POST /api/rwa/issuance/prepare|submit|status
+              Commit: rwa_commit_verified_issuance (service role + admin profile id)
+4. FUND       Each investor signs contribute (Stellar Wallets Kit; Pollar is refused)
+              POST /api/rwa/contributions/prepare|submit|confirm
+              Cap: RWA_MAX_INVESTORS = 2 in lib/rwa/bindings.ts (checked at prepare, not in SQL)
+5. SETTLE     Pool lifecycle ready_to_settle → admin POST /api/rwa/settlements/supplier
+              Deal status becomes funded only here
+6. REPAY      Admin deploys TW milestones from GET /api/rwa/repayment/schedule?dealId=
+              Release confirm: POST /api/rwa/repayment/confirm → rwa_redeem_position
+7. RECONCILE  POST /api/rwa/reconcile re-reads submitted/unknown issuance and contributions
+```
+
+| Layer | States |
+|-------|--------|
+| Pool `rwa_assets.lifecycle` | `open` → `ready_to_settle` → `settled` (supplier paid). `cancelled` is terminal. |
+| Credit `rwa_credit_assets.state` | `issued` → `partially_funded` → `fully_funded` → `settling` → `settled`. `issued` cannot jump straight to `fully_funded`; the mirror trigger steps through `partially_funded`. |
+| SOS names | `FUNDED` = `fully_funded`, `ACTIVE` = `active`, `REPAYING` = `settling`, `REPAID`/`REDEEMED` = `settled`. Pool `settled` means the supplier was paid, not that investors were redeemed. |
+
+Issuance identity is `network:registry_contract:asset_id`. Asset id, deal hash, snapshot hash, and document root are SHA-256 values from `lib/rwa/bindings.ts` and `lib/rwa/commitment.ts`. Registry terms store `deal_hash`, `snapshot_hash`, and `document_root` (`contracts/credit-protocol`).
+
+Signing: `RWA_REGISTRY_ADMIN_ADDRESS` must sign issuance and must be the registry constructor admin. Investors sign `contribute`. Platform fee recipient is `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS`.
+
+Testnet deployment (public ids; secret stays in the local Stellar CLI identity `mercato-rwa-testnet`):
+
+| Role | Value |
+|------|--------|
+| Registry | `CD5G343KUP7KN3O22FRH43MMMLEMZKU2DQBHHCGVAPT7S3IUUMMWHXSF` |
+| Admin | `GAGZSSVI7IJ7G4B57SCOPHFYV3YSS76ONOC22XOOEF47SP4OZJPG4BXS` |
+| USDC SAC | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+| Funding WASM | `7f6e0cc81619d4851c5effd0409fe94eb8924d9f1f00780720323aab2b44b083` |
+
+A full two-investor funding and redemption run is not recorded. Do not fill [doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md) with invented hashes.
+
+Build and deploy contracts with `stellar contract build` (target `wasm32v1-none`, soroban-sdk 29). Upload `credit_funding.wasm`, then deploy `credit_registry.wasm` with constructor `(admin, funding_wasm_hash, usdc_sac)`.
 
 ## Wallet providers and signing matrix
 
@@ -111,7 +157,9 @@ Unified context: `providers/wallet-provider.tsx` → `hooks/use-wallet.ts`.
 
 | Operation | SWK | Pollar | Notes |
 |-----------|-----|--------|-------|
-| Fund deal (investor → supplier) | ✅ | ✅ | `components/deals/deal-funding-panel.tsx` |
+| Fund deal (direct USDC) | ✅ | ✅ | `components/deals/deal-funding-panel.tsx` |
+| Fund deal (RWA `contribute`) | ✅ | ❌ | Pollar is refused. Prepare via `/api/rwa/contributions/prepare`. |
+| Issue / settle RWA pool | ✅ | ❌ | Signer must be `RWA_REGISTRY_ADMIN_ADDRESS` |
 | Micro-fund repayment escrow (PyME) | ✅ | ⚠️ Limited | TW signing expects SWK |
 | Deploy / release repayment escrow (admin) | ✅ | ❌ | `PollarWalletKitLimitations` in `lib/mercato-wallet.ts` |
 | Ramp off-ramp (sign XDR) | ✅ | ⚠️ | Provider-dependent |
@@ -129,10 +177,9 @@ Wallet UI: `/dashboard/wallets` (`app/dashboard/wallets/page.tsx`).
 | **Stellar Wallets Kit** | ✅ | `lib/trustless/wallet-kit.ts` |
 | **Pollar embedded wallet** | ✅ | `providers/pollar-provider.tsx`, `api/auth/pollar-sync`, `api/pollar/activate` |
 | **DeFindex vault** | ✅ | `lib/defindex/`, `app/api/defindex/`, `/dashboard/vault`, `/dashboard/admin/vault` |
-| **Fiat ramps** (MoneyGram) | ✅ Opt-in via env | `lib/anchors/`, `app/api/ramp/`, `/dashboard/ramp` |
-| **RWA funding pool** | ⚠️ Soroban contracts implemented; not wired to app/DB | `contracts/credit-registry/`, `contracts/credit-funding/` |
-| **Blend** | ⚠️ Indirect only | Testnet SAC/trustline helpers for DeFindex vault setup (`lib/stellar/vault-asset-trustline.ts`) — **no Blend SDK or pool calls** |
-| **MoneyGram** | ❌ Not implemented | Mentioned in early docs only; no code references |
+| **RWA funding pool** | ✅ Opt-in. App, DB, and Testnet registry are wired. Lifecycle run is not recorded. | `contracts/credit-registry/`, `contracts/credit-funding/`, `lib/rwa/`, `app/api/rwa/` |
+| **Fiat ramp code** | Present under `lib/anchors` and `/api/ramp` | Provider-dependent. MoneyGram is the stated target and is not a completed corridor. |
+| **Blend** | ⚠️ Indirect only | Testnet SAC/trustline helpers for DeFindex vault setup (`lib/stellar/vault-asset-trustline.ts`). No Blend SDK or pool calls. |
 
 ## Route index
 
@@ -183,7 +230,7 @@ Wallet UI: `/dashboard/wallets` (`app/dashboard/wallets/page.tsx`).
 | `/api/ramp/*` | 14 | Fiat ramp proxy (MoneyGram) |
 | `/api/defindex/*` | 10 | Vault read/deposit/withdraw + admin create/monitor/rebalance |
 | `/api/stellar/*` | 6 | Submit tx, SAC balance, trustline, vault activity cache |
-| `/api/rwa/*` | 6 | RWA contribution prepare/submit/confirm/status, supplier settlement, refunds |
+| `/api/rwa/*` | 12 | Issuance prepare/submit/status, contributions, supplier settlement, refunds, repayment schedule/confirm, reconcile |
 | `/api/auth/pollar-sync` | 1 | Sync Pollar session to Supabase profile |
 | `/api/pollar/activate` | 1 | Activate embedded wallet |
 | `/api/catalog` | 1 | Supplier product catalog |
@@ -206,10 +253,14 @@ Ramp and DeFindex API keys are **server-only** — never expose secrets in `NEXT
 | `notifications` | In-app alerts (DB triggers on deal events) |
 | `reputations` | Trust scores, stake signals, repayment performance |
 | `leads` | Event form submissions (admin RLS) |
-| `rwa_assets` | RWA funding pool terms + projected state (`open` → `ready_to_settle` → `settled`) |
-| `rwa_contributions` | RWA contribution attempts (`prepared`/`submitted`/`confirmed`/`failed`/`expired`) |
-| `rwa_positions` | Confirmed RWA positions, one row per (asset, investor) |
-| `rwa_receipts` | Verified on-chain receipts; unique per (network, tx hash, event index) |
+| `rwa_assets` | Pool projection the contribution APIs reconcile (`open` → `ready_to_settle` → `settled`) |
+| `rwa_contributions` | Pool contribution attempts (`prepared`/`submitted`/`confirmed`/`failed`/`expired`) |
+| `rwa_positions` | Confirmed pool positions, one row per (asset, investor). A trigger mirrors these into credit positions. |
+| `rwa_receipts` | Verified pool receipts; unique per (network, tx hash, event index) |
+| `rwa_credit_assets` | Canonical issued obligation. Linked to the pool row by `pool_asset_row_id`. |
+| `rwa_investor_positions` | Credit ownership. Unique on `(credit_asset_id, investor_profile_id)`. |
+| `rwa_issuance_attempts` | Pre-commit issuance attempts (`register_asset`, `create_funding_pool`). RLS on, no client policies. |
+| `rwa_repayment_payout_intents` | Position/tranche repayment intents. Service role writes; admins can read. |
 
 Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 
@@ -226,7 +277,13 @@ Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 | Wallet types & storage | `lib/mercato-wallet.ts` |
 | TW config & platform roles | `lib/trustless/config.ts` |
 | RWA funding registry/pool | `contracts/credit-registry/`, `contracts/credit-funding/`, `contracts/credit-protocol/` |
-| RWA contribution intent service | `lib/rwa/contribution-intent.ts`, `lib/rwa/settlement.ts`, `lib/rwa/db.ts` |
+| RWA issuance | `lib/rwa/issuance.ts`, `app/api/rwa/issuance/` |
+| RWA bindings (asset id, two-investor cap, net split) | `lib/rwa/bindings.ts` |
+| RWA contribution intent | `lib/rwa/contribution-intent.ts`, `lib/rwa/settlement.ts`, `lib/rwa/db.ts` |
+| RWA position repayment | `lib/rwa/position-servicing.ts`, `lib/trustless/repayment-position-payout.ts` |
+| RWA reconcile | `lib/rwa/reconcile.ts`, `app/api/rwa/reconcile/route.ts` |
+| Soroban unsigned XDR | `lib/stellar/build-soroban-invoke.ts` |
+| Credit pool link migration | `supabase/migrations/20261110120000_rwa_credit_pool_link.sql` |
 | RWA chain reading & event decoding | `lib/rwa/chain.ts` |
 | DeFindex config & monitor | `lib/defindex/config.ts`, `lib/defindex/vault-monitor.ts` |
 | API route auth | `lib/api/route-auth.ts` |
@@ -258,8 +315,9 @@ Required for core flows:
 - **Trustless Work:** `NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY`, `NEXT_PUBLIC_TRUSTLESS_NETWORK`, `NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS`, `NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS`
 - **USDC (classic):** `NEXT_PUBLIC_USDC_ISSUER` (optional; network defaults)
 
-Optional feature flags:
+Opt-in features:
 
+- **RWA:** `RWA_ENABLED=true`, `RWA_REGISTRY_CONTRACT_ID`, `RWA_USDC_SAC_ADDRESS`, `RWA_REGISTRY_ADMIN_ADDRESS`. Network comes from `NEXT_PUBLIC_TRUSTLESS_NETWORK`. Testnet ids are commented in `env.sample` and recorded in `doc/rwa-testnet-evidence.md`.
 - **Pollar:** `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY`, `POLLAR_SECRET_KEY`, `NEXT_PUBLIC_POLLAR_NETWORK`
 - **DeFindex:** `DEFINDEX_API_KEY`, `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS`, `MERCATO_DEFINDEX_VAULT_ADDRESS`
 
@@ -286,7 +344,8 @@ Before opening a PR: lint + typecheck + typecheck:tests + build must pass. Schem
 | Task | Where to look |
 |------|---------------|
 | Change deal creation flow | `app/create-deal/`, `hooks/use-create-deal-*.ts` |
-| Change investor funding | `components/deals/deal-funding-panel.tsx`, `lib/stellar/build-usdc-split-payment.ts` |
+| Change investor funding | Direct: `components/deals/deal-funding-panel.tsx`, `lib/stellar/build-usdc-split-payment.ts`. RWA: `lib/rwa/contribution-intent.ts`. |
+| Change RWA issuance | `lib/rwa/issuance.ts`, `app/api/rwa/issuance/`, `supabase/migrations/20261110120000_rwa_credit_pool_link.sql` |
 | Change Soroban RWA funding contracts | `contracts/credit-registry/`, `contracts/credit-funding/`, `contracts/credit-protocol/` |
 | Change repayment escrow | `hooks/use-repayment-escrow.ts`, `components/deals/deal-repayment-panel.tsx` |
 | Admin approval queue | `lib/admin/get-admin-queue-data.ts`, `app/dashboard/admin/` |
@@ -297,8 +356,11 @@ Before opening a PR: lint + typecheck + typecheck:tests + build must pass. Schem
 
 ## Out of scope / do not assume
 
-- MoneyGram integration — not in codebase
+- Full two-investor Testnet lifecycle — registry deploy is recorded; issuance, funding, and redemption receipts are not
+- SEP-41 position tokens, a second on-chain repayment ledger, or tables named `credit_positions` / `deal_investments`
+- Pollar signatures for RWA contribute, issuance, or Trustless Work escrow
+- MoneyGram as a completed fiat corridor — ramp code exists; do not assume a live partner integration
 - Direct Blend lending pool integration — only testnet asset helpers for DeFindex
-- Escrow at deal creation — deals are DB-only until investor funds
+- Escrow at deal creation — deals are DB-only until funding or, for RWA, until verified issuance creates the pool
 - Custodial platform holding of repayment funds — repayment uses non-custodial TW escrow
 - `lib/mock-data.ts` — does not exist (remove references if found)

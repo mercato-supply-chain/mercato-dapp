@@ -75,7 +75,7 @@ flowchart TB
   Ramps -.-> StellarNet
 ```
 
-MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The current funding model lets one investor pay the supplier directly plus a 1% platform fee; the planned multi-investor model aggregates independently tracked contributions in a funding escrow before releasing the full invoice to the supplier. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**, with a separate per-investor milestone design for multi-investor orders. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. **MoneyGram Ramps is the sole planned fiat ramp**, using SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out for the Costa Rica and Argentina customer focus. **DeFindex** ([documentation](https://docs.defindex.io)) is MERCATO's planned capital-management layer: investors, PyMEs, and suppliers manage supported vault positions inside MERCATO, and investors can withdraw idle vault liquidity into direct or multi-investor financing transactions. Investors are never reputation-gated; PyME and supplier access is controlled by role-specific Soroban reputation based on repayment and fulfillment behavior. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
+MERCATO is a web app that connects **PyMEs**, **investors**, and **suppliers** through transparent Stellar settlement. Auth and deal data live in **Supabase**. The default funding model lets one investor pay the supplier directly plus a 1% platform fee. An opted-in deal aggregates up to two contributions in the Soroban funding pool and pays the supplier only when the target is met. **Repayment** uses non-custodial **Trustless Work multi-release escrow** on **Stellar**. Opted-in deals use one milestone per confirmed position. The wallet architecture supports **Stellar Wallets Kit** (Freighter, Albedo) and **Pollar**, with **Privy** planned as a third provider after Stellar signing capability validation; TW escrow signing currently requires SWK. **MoneyGram Ramps is the sole planned fiat ramp**, using SEP-10 authentication and SEP-24 interactive USDC cash-in/cash-out for the Costa Rica and Argentina customer focus. **DeFindex** ([documentation](https://docs.defindex.io)) is MERCATO's planned capital-management layer: investors, PyMEs, and suppliers manage supported vault positions inside MERCATO, and investors can withdraw idle vault liquidity into direct or multi-investor financing transactions. Investors are never reputation-gated; PyME and supplier access is controlled by role-specific Soroban reputation based on repayment and fulfillment behavior. **Blend** testnet assets appear only as helpers for DeFindex vault trustline setup — there is no direct Blend SDK integration. An **Admin** role creates repayment escrows, releases milestones, and oversees vault operations.
 
 ---
 
@@ -402,11 +402,11 @@ mercato-dapp/
 
 ## 5. Stellar Funding and Trustless Work Escrow Models
 
-MERCATO supports the existing **single-investor model** and plans optional **multi-investor financing** for orders that are too large for one investor. These models have different funding and repayment semantics and must remain explicit in data, UI, and transaction construction.
+MERCATO supports the existing **single-investor model** and an opt-in **two-investor credit pool** for orders that are too large for one investor. These models have different funding and repayment semantics and must remain explicit in data, UI, and transaction construction.
 
-**Current application path:** funding is not escrowed. One investor pays the supplier principal and Mercato's 1% platform fee with a classic Stellar USDC transaction built in `lib/stellar/build-usdc-split-payment.ts`. This legacy path remains unchanged.
+**Current application path:** a default deal is not escrowed at funding. One investor pays the supplier principal and Mercato's 1% platform fee with a classic Stellar USDC transaction built in `lib/stellar/build-usdc-split-payment.ts`.
 
-**Soroban funding contracts:** `contracts/credit-registry` and `contracts/credit-funding` implement a separate target-gated USDC SAC funding pool with independently recorded, non-transferable investor positions. The contracts are not yet wired into the Next.js deal UI, Supabase deal workflow, portfolio, or repayment payout flow; do not treat this as an application rollout or replace legacy direct funding with it.
+**Opt-in Soroban path:** when `deals.rwa_opted_in` is true and `RWA_ENABLED=true`, `contracts/credit-registry` and `contracts/credit-funding` hold the USDC SAC pool. The app issues the asset, records contributions, and pays the supplier only at the target. See [rwa-architecture.md](rwa-architecture.md) and [AGENTS.md](../AGENTS.md). The Testnet registry is deployed ([rwa-testnet-evidence.md](rwa-testnet-evidence.md)). A full two-investor lifecycle run is not recorded. Leave `deals.investor_id` null on this path.
 
 In both models, repayment is non-custodial. The single-investor repayment escrow retains its time-sliced milestones. The dual-investor repayment escrow instead creates one payout milestone per investor, with principal and profit allocated from that investor's contribution.
 
@@ -521,19 +521,24 @@ Open -> Cancelled -> per-position Refunded
 
 Persistent contract entries extend their TTL when read or written. Clients/operators must restore archived registry and position entries using Soroban's restore-footprint flow before invoking functions that access them; TTL extension alone cannot restore archived entries. Keep a recovery index of asset/position IDs off-chain.
 
-The Next.js/Supabase integration remains future work. It must introduce a funding mode and contribution records rather than storing multiple investors in `deals.investor_id`:
+The Next.js/Supabase integration uses the tables below. Do not add `deal_investments`. Leave `deals.investor_id` null on an opted-in deal; it remains the single investor on a default deal.
 
-| Record | Target fields |
-|--------|---------------|
-| `deals` | `funding_mode` (`single` or `dual`), locked target, funding deadline, funding escrow ID, aggregate funding state |
-| `deal_investments` | deal ID, investor ID, committed principal, ownership share, contribution status, funding transaction hash, timestamps |
-| funding pool snapshot | contract ID, expected target, confirmed balance, settlement/refund transaction hashes, last reconciled ledger |
+| Record | Role |
+|--------|------|
+| `deals` | `rwa_opted_in`, `funding_mode` (`direct` until issuance, then `rwa`), `investor_id` null on the RWA path |
+| `rwa_credit_assets` | Issued obligation, hashes, state, `pool_asset_row_id` |
+| `rwa_assets` | Pool projection (`lifecycle`, contract id, target, confirmed principal) |
+| `rwa_contributions` / `rwa_receipts` | Attempt and verified receipt |
+| `rwa_positions` | One confirmed pool position per investor. Trigger mirrors into `rwa_investor_positions`. |
+| `rwa_investor_positions` | Credit ownership used for repayment and redemption |
 
-`deal_investments` should become the source for portfolio ownership and repayment allocation. `deals.investor_id` remains a compatibility field for existing single-investor deals and must not be treated as authoritative for multi-investor orders.
+Canonical sequence: [rwa-architecture.md](rwa-architecture.md). Agent entry: [AGENTS.md](../AGENTS.md).
 
-### 5.5 Planned Dual-Investor Repayment Flow
+### 5.5 Position repayment
 
-Dual-investor repayment uses a **separate Trustless Work multi-release escrow** created after delivery confirmation. Unlike the current model—where milestones are time slices paid to one investor—each dual-mode milestone belongs to one investor and represents that investor's complete principal-plus-profit entitlement.
+The app builds this schedule in `lib/rwa/position-servicing.ts` and `lib/trustless/repayment-position-payout.ts` after the pool is `ready_to_settle` or `settled`. Admin deploy reads `GET /api/rwa/repayment/schedule`. Release confirm calls `POST /api/rwa/repayment/confirm`, which runs `rwa_redeem_position`.
+
+Each position is one Trustless Work milestone: that investor's principal plus profit. Default deals keep time-sliced milestones for the single investor.
 
 Let:
 
@@ -715,7 +720,7 @@ Users sign deposit/withdraw XDR client-side; the server submits through `api/def
 | Investor vault-to-deal withdrawal UI | Existing foundation | `components/vault-to-deal-allocator.tsx` |
 | Durable allocation intent linking withdrawal to financing | Planned expansion | `capital_allocation_intents`, reconciliation, retry/redeposit UX |
 | Direct-funding allocation | Planned expansion | Confirm withdrawal, rebuild current full-order payment, record both hashes |
-| Multi-investor allocation | Planned expansion | Confirm withdrawal, create/update `deal_investments`, fund target-gated escrow contribution |
+| Multi-investor allocation from a vault withdrawal | Planned expansion | Confirm withdrawal, then the existing `/api/rwa/contributions` path. Ownership stays in `rwa_positions`. |
 | PyME/supplier eligibility | Planned expansion | Tranche 1 Soroban reputation contract plus role-specific policy guard |
 | Embedded-wallet coverage | Capability-gated | Enable each provider only after DeFindex Soroban signing and recovery tests pass |
 
@@ -780,7 +785,7 @@ recoverable alternatives: withdrawal_failed, funding_failed, expired, cancelled
 
 **Direct Funding:** one investor selects the full remaining principal. After the DeFindex withdrawal confirms, MERCATO rebuilds the current classic USDC funding transaction from fresh deal data. The supplier receives the full invoice principal and the platform receives its fee only after the investor reviews and signs.
 
-**Multi-Investor Funding:** an investor selects a partial contribution. After withdrawal confirms, the investor signs a contribution to the Stellar funding escrow. Each contribution is independently stored in `deal_investments` and reconciled on-chain. The supplier cannot be paid until confirmed contributions reach the locked financing target. The initial product design may cap participation at two investors (the dual-investor release), while the data and allocation model should avoid assuming that every future multi-investor order has exactly two participants.
+**Opt-in pool funding:** an investor signs `contribute` on the Soroban funding pool. The confirmed row is `rwa_positions`, mirrored to `rwa_investor_positions`. The supplier is paid only when confirmed principal equals the target (`POST /api/rwa/settlements/supplier`). The product cap is two investors (`RWA_MAX_INVESTORS` in `lib/rwa/bindings.ts`), enforced when the contribution is prepared.
 
 For both models:
 
@@ -1042,7 +1047,7 @@ flowchart LR
     Leads["leads\n(event form submissions)"]
     ProfileWallets["profile_wallets\n(planned multi-provider wallets)"]
     RampTransactions["ramp_transactions\n(planned MoneyGram state)"]
-    DealInvestments["deal_investments\n(planned dual-investor allocations)"]
+    RwaPositions["rwa_positions +\nrwa_investor_positions\n(opt-in credit pool)"]
     CapitalAllocations["capital_allocation_intents\n(vault withdrawal → financing)"]
   end
 
