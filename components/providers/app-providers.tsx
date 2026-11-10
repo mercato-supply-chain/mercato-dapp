@@ -25,15 +25,17 @@ export function AppProviders({
 }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <I18nProvider locale={locale} messages={messages}>
-        <NavAuthProvider initial={navAuth}>
-          <PollarProvider>
-            <TrustlessWorkProvider>
-              <WalletProvider>{children}</WalletProvider>
-            </TrustlessWorkProvider>
-          </PollarProvider>
-        </NavAuthProvider>
-      </I18nProvider>
+      <NotificationsProvider>
+        <I18nProvider locale={locale} messages={messages}>
+          <NavAuthProvider initial={navAuth}>
+            <PollarProvider>
+              <TrustlessWorkProvider>
+                <WalletProvider>{children}</WalletProvider>
+              </TrustlessWorkProvider>
+            </PollarProvider>
+          </NavAuthProvider>
+        </I18nProvider>
+      </NotificationsProvider>
     </ThemeProvider>
   )
 }

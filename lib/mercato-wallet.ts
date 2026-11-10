@@ -1,4 +1,4 @@
-import type { TxHistoryState, WalletType } from '@pollar/core'
+import type { WalletBalanceState, WalletInfo } from '@pollar/core'
 
 export type WalletProviderType = 'stellar-wallets-kit' | 'pollar'
 export type WalletStatus = 'pending' | 'active'
@@ -169,39 +169,22 @@ export function saveStoredWallet(wallet: StoredWalletRecord | null): void {
 }
 
 export function normalizePollarWalletBalance(
-  balanceState:
-    | {
-        step: 'idle' | 'loading' | 'error'
-      }
-    | {
-        step: 'loaded'
-        data: {
-          balances: Array<Record<string, unknown> & { balance?: string }>
-        }
-      }
-    | null
-    | undefined,
+  balanceState: WalletBalanceState | null | undefined,
 ): WalletBalanceSummary | null {
   if (!balanceState || balanceState.step !== 'loaded') return null
 
   const records = balanceState.data.balances ?? []
-  // Pollar API returns `code` for the asset identifier (e.g. "XLM", "USDC").
-  // Older paths also checked `asset` / `asset_code` for compatibility.
-  const xlm = records.find((record) => {
-    const value = record as any
-    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
-    return code === 'XLM' || value.type === 'native'
+  const stellarRecords = records.filter((record) => !record.chain || record.chain === 'STELLAR')
+  const xlm = stellarRecords.find((record) => {
+    const code = record.code.toUpperCase()
+    return code === 'XLM' || record.type === 'native'
   })
-  const usdc = records.find((record) => {
-    const value = record as any
-    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
-    return code === 'USDC'
-  })
+  const usdc = stellarRecords.find((record) => record.code.toUpperCase() === 'USDC')
 
   return {
-    xlm: (xlm as any)?.balance ?? null,
-    usdc: (usdc as any)?.balance ?? null,
-    records,
+    xlm: xlm?.balance ?? null,
+    usdc: usdc?.balance ?? null,
+    records: stellarRecords as unknown as Array<Record<string, unknown>>,
     source: 'pollar',
     updatedAt: new Date().toISOString(),
   }
@@ -252,19 +235,16 @@ export async function fetchHorizonBalances(publicKey: string): Promise<WalletBal
 export function getEmbeddedWalletId(session: {
   clientSessionId?: string
   userId?: string | null
-  wallet?: { publicKey: string | null; existsOnStellar?: boolean; createdAt?: number }
 } | null): string | null {
   if (!session) return null
-  return session.clientSessionId ?? session.userId ?? null
+  return session.userId ?? session.clientSessionId ?? null
 }
 
-export function getEmbeddedWalletStatus(session: {
-  wallet?: { publicKey: string | null; existsOnStellar?: boolean; createdAt?: number }
-  user?: { ready?: boolean }
-} | null): WalletStatus {
-  if (!session) return 'pending'
-  if (session.user?.ready === true) return 'active'
-  if (session.wallet?.existsOnStellar === true) return 'active'
+export function getEmbeddedWalletStatus(
+  wallet: Pick<WalletInfo, 'existsOnStellar' | 'provisioning'> | null,
+): WalletStatus {
+  if (!wallet) return 'pending'
+  if (wallet.provisioning === 'READY' || wallet.existsOnStellar === true) return 'active'
   return 'pending'
 }
 

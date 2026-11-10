@@ -77,11 +77,11 @@ export function useWalletPersistence() {
         publicKey: pollar.walletAddress,
         walletId: getEmbeddedWalletId(pollar.session) ?? undefined,
         isEmbedded: true,
-        status: getEmbeddedWalletStatus(pollar.session),
+        status: getEmbeddedWalletStatus(pollar.wallet),
         walletName: 'Pollar',
       })
     }
-  }, [hasRestored, persistWallet, pollar.isAuthenticated, pollar.session, pollar.walletAddress])
+  }, [hasRestored, persistWallet, pollar.isAuthenticated, pollar.session, pollar.wallet, pollar.walletAddress])
 
   useEffect(() => {
     if (!pollar.isAuthenticated || !pollar.walletAddress) {
@@ -96,10 +96,10 @@ export function useWalletPersistence() {
       publicKey: pollar.walletAddress,
       walletId: getEmbeddedWalletId(pollar.session) ?? undefined,
       isEmbedded: true,
-      status: getEmbeddedWalletStatus(pollar.session),
+      status: getEmbeddedWalletStatus(pollar.wallet),
       walletName: 'Pollar',
     })
-  }, [pollar.isAuthenticated, pollar.walletAddress, pollar.session, persistWallet, wallet?.provider])
+  }, [pollar.isAuthenticated, pollar.walletAddress, pollar.wallet, pollar.session, persistWallet, wallet?.provider])
 
   useEffect(() => {
     let cancelled = false

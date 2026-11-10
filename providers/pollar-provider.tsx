@@ -3,35 +3,35 @@
 import {
   createContext,
   useCallback,
-  useEffect,
   useContext,
-  useState,
   useMemo,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
+import { PollarProvider as SDKPollarProvider, usePollar } from '@pollar/react'
 import {
-  PollarProvider as SDKPollarProvider,
-  usePollar,
-  type PollarStyles,
-} from '@pollar/react'
-import type {
-  PollarApplicationConfigContent,
-  PollarLoginOptions,
-  PollarClient,
-  TxHistoryState,
-  WalletBalanceState,
-  WalletType,
-  AuthState,
+  isWalletNotReady,
+  type PollarClient,
+  type PollarLoginOptions,
+  type PollarPersistedSession,
+  type SubmitOutcome,
+  type TxHistoryState,
+  type WalletBalanceState,
+  type WalletInfo,
 } from '@pollar/core'
 
 type PollarSessionValue = {
-  session: PollarApplicationConfigContent | null
+  session: PollarPersistedSession | null
   isLoading: boolean
   isAuthenticated: boolean
+  /** True once Pollar has confirmed the session (not an optimistic restore). */
+  verified: boolean
+  /** True when a publishable key is present and the SDK provider is mounted. */
+  isConfigured: boolean
   /** True when the embedded SDK is mounted (safe to call openLoginModal). */
   isPollarEmbedReady: boolean
+  wallet: WalletInfo | null
   walletAddress: string
-  walletType: WalletType | null
   txHistory: TxHistoryState
   walletBalance: WalletBalanceState
   login: (options: PollarLoginOptions) => void
@@ -50,9 +50,11 @@ const emptyContext: PollarSessionValue = {
   session: null,
   isLoading: false,
   isAuthenticated: false,
+  verified: false,
+  isConfigured: false,
   isPollarEmbedReady: false,
+  wallet: null,
   walletAddress: '',
-  walletType: null,
   txHistory: { step: 'idle' },
   walletBalance: { step: 'idle' },
   login: () => undefined,
@@ -69,19 +71,28 @@ const emptyContext: PollarSessionValue = {
 
 const PollarSessionContext = createContext<PollarSessionValue>(emptyContext)
 
-/**
- * When GET /applications/config fails (wrong origin, key, or network), @pollar/react
- * falls back to empty styles — the login modal then shows only the header/footer with no methods.
- * These defaults ensure users always see signup options; values merge over the empty fetch result.
- * Allowlist your app origin in Pollar Dashboard → Domains so remote branding + config still load.
- */
-const POLLAR_LOGIN_FALLBACK_STYLES: PollarStyles = {
-  emailEnabled: true,
-  embeddedWallets: true,
-  providers: {
-    google: true,
-    github: true,
-  },
+function readAuthenticatedSession(
+  client: PollarClient,
+  isAuthenticated: boolean,
+): PollarPersistedSession | null {
+  if (!isAuthenticated) return null
+  const state = client.getAuthState()
+  return state.step === 'authenticated' ? state.session : null
+}
+
+function hashFromSubmitOutcome(outcome: SubmitOutcome): string {
+  if (outcome.status === 'success' || outcome.status === 'pending') {
+    return outcome.hash
+  }
+  if (outcome.status === 'cosign_pending') {
+    throw new Error('Approve this transaction on your Pollar wallet device to continue.')
+  }
+  if (isWalletNotReady(outcome)) {
+    throw new Error('Pollar is still creating this Stellar account. Try again in a few seconds.')
+  }
+  throw new Error(
+    outcome.message || outcome.details || outcome.code || 'Transaction failed',
+  )
 }
 
 function PollarSessionBridge({ children }: { children: ReactNode }) {
@@ -89,48 +100,38 @@ function PollarSessionBridge({ children }: { children: ReactNode }) {
     login,
     logout,
     openLoginModal,
-    walletAddress,
-    walletType,
+    isAuthenticated,
+    verified,
+    wallet,
     txHistory,
     walletBalance,
     refreshWalletBalance,
     getClient,
+    signAndSubmitTx: sdkSignAndSubmitTx,
   } = usePollar()
-  const [authState, setAuthState] = useState<AuthState>(() => getClient().getAuthState())
-
-  useEffect(() => {
-    const client = getClient()
-    setAuthState(client.getAuthState())
-    return client.onAuthStateChange((state) => setAuthState(state))
-  }, [getClient])
-
-  const session = authState.step === 'authenticated' ? authState.session : null
-  const isAuthenticated = authState.step === 'authenticated'
-  const isLoading =
-    authState.step !== 'idle' &&
-    authState.step !== 'authenticated' &&
-    authState.step !== 'error'
+  const client = getClient()
+  const session = useMemo(
+    () => readAuthenticatedSession(client, isAuthenticated),
+    [client, isAuthenticated, verified, wallet?.address],
+  )
+  const isLoading = isAuthenticated && !verified
+  const walletAddress = wallet?.address ?? ''
 
   const signAndSubmitTx = useCallback(
-    (unsignedXdr: string): Promise<string> => {
-      return new Promise<string>((resolve, reject) => {
-        const client = getClient()
-        const unsubscribe = client.onTransactionStateChange((state) => {
-          if (state.step === 'success') {
-            unsubscribe()
-            resolve(state.hash)
-          } else if (state.step === 'error') {
-            unsubscribe()
-            reject(new Error('Transaction failed'))
-          }
-        })
-        client.signAndSubmitTx(unsignedXdr).catch((err: unknown) => {
-          unsubscribe()
-          reject(err instanceof Error ? err : new Error(String(err)))
-        })
-      })
+    async (unsignedXdr: string): Promise<string> => {
+      if (!verified) {
+        throw new Error('Pollar session is still restoring. Wait a moment and try again.')
+      }
+      if (!wallet?.address) {
+        throw new Error('Pollar wallet is not ready yet.')
+      }
+      if (wallet.provisioning === 'CREATING') {
+        throw new Error('Pollar is still creating this Stellar account. Try again in a few seconds.')
+      }
+      const outcome = await sdkSignAndSubmitTx(unsignedXdr)
+      return hashFromSubmitOutcome(outcome)
     },
-    [getClient],
+    [sdkSignAndSubmitTx, verified, wallet],
   )
 
   const value = useMemo<PollarSessionValue>(
@@ -138,9 +139,11 @@ function PollarSessionBridge({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAuthenticated,
+      verified,
+      isConfigured: true,
       isPollarEmbedReady: true,
+      wallet,
       walletAddress,
-      walletType,
       txHistory,
       walletBalance,
       login,
@@ -154,8 +157,9 @@ function PollarSessionBridge({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAuthenticated,
+      verified,
+      wallet,
       walletAddress,
-      walletType,
       txHistory,
       walletBalance,
       login,
@@ -178,9 +182,13 @@ export function PollarProvider({
   const apiKey = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY
   const network: 'mainnet' | 'testnet' =
     process.env.NEXT_PUBLIC_POLLAR_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'
-  const [clientMounted, setClientMounted] = useState(false)
+  const clientMounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  )
 
-  const sdkConfig = useMemo(
+  const clientConfig = useMemo(
     () =>
       apiKey
         ? {
@@ -191,21 +199,17 @@ export function PollarProvider({
     [apiKey, network],
   )
 
-  useEffect(() => {
-    setClientMounted(true)
-  }, [])
-
-  if (!apiKey || !sdkConfig) {
+  if (!apiKey || !clientConfig) {
     return <PollarSessionContext.Provider value={emptyContext}>{children}</PollarSessionContext.Provider>
   }
 
-  // @pollar/core constructs PollarClient in useState; that runs during RSC prerender and logs a warning.
+  // PollarClient must not be constructed during RSC prerender.
   if (!clientMounted) {
     return <PollarSessionContext.Provider value={emptyContext}>{children}</PollarSessionContext.Provider>
   }
 
   return (
-    <SDKPollarProvider config={sdkConfig} styles={POLLAR_LOGIN_FALLBACK_STYLES}>
+    <SDKPollarProvider client={clientConfig}>
       <PollarSessionBridge>{children}</PollarSessionBridge>
     </SDKPollarProvider>
   )

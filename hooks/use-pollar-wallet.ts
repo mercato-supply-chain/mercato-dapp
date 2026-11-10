@@ -5,44 +5,47 @@ import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { usePollarSession } from '@/providers/pollar-provider'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n/provider'
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
 
 export function usePollarWallet() {
   const supabase = useMemo(() => createClient(), [])
   const pollar = usePollarSession()
   const pollarRef = useRef(pollar)
   pollarRef.current = pollar
+  const { t } = useI18n()
   const router = useRouter()
   const pathname = usePathname()
   const pollarSupabaseSyncCompletedRef = useRef<string | null>(null)
   const pollarSupabaseSyncInFlightRef = useRef<string | null>(null)
 
   const connectPollarWallet = useCallback(async () => {
-    const tryOpen = () => {
-      const latest = pollarRef.current
-      if (latest.isAuthenticated) return
-      latest.openLoginModal()
-    }
-
-    const latest = pollarRef.current
-    if (latest.isAuthenticated) return
-
-    if (latest.isPollarEmbedReady) {
-      tryOpen()
+    if (!process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY) {
+      toast.error(t('auth.pollarUnavailable'))
       return
     }
 
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          tryOpen()
-          resolve()
-        })
-      })
-    })
-  }, [])
+    const deadline = Date.now() + 4000
+    while (Date.now() < deadline) {
+      const latest = pollarRef.current
+      if (latest.isConfigured && latest.isPollarEmbedReady) {
+        if (latest.isAuthenticated) return
+        latest.openLoginModal()
+        return
+      }
+      await wait(50)
+    }
+
+    toast.error(t('auth.pollarUnavailable'))
+  }, [t])
 
   useEffect(() => {
-    if (!pollar.isAuthenticated || !pollar.session || !pollar.walletAddress) return
+    if (!pollar.isAuthenticated || !pollar.verified || !pollar.session || !pollar.walletAddress) return
 
     const accessToken = pollar.session.token?.accessToken
     if (!accessToken) return
@@ -66,10 +69,11 @@ export function usePollarWallet() {
         }
 
         const session = pollar.session!
-        const mail = session.data?.mail?.trim() ?? ''
+        const profile = pollar.getClient().getUserProfile()
+        const mail = profile?.mail?.trim() ?? ''
         const uid = session.userId ?? session.clientSessionId ?? ''
-        const firstName = session.data?.first_name?.trim() ?? ''
-        const lastName = session.data?.last_name?.trim() ?? ''
+        const firstName = profile?.first_name?.trim() ?? ''
+        const lastName = profile?.last_name?.trim() ?? ''
 
         const res = await fetch('/api/auth/pollar-sync', {
           method: 'POST',
@@ -147,6 +151,7 @@ export function usePollarWallet() {
   }, [
     pathname,
     pollar.isAuthenticated,
+    pollar.verified,
     pollar.session,
     pollar.walletAddress,
     router,

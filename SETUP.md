@@ -119,11 +119,11 @@ Open `http://localhost:3000`.
 
 ### Activation path
 
-If the Pollar wallet is `pending`:
+If the Pollar wallet is `pending` (Deferred funding, or the Stellar account is still being created):
 
 1. Use the `Activate embedded wallet` action if shown.
-2. Or call `POST /api/pollar/activate` with the wallet ID from the session.
-3. Success means the wallet status changes to `active` and the balance card updates after refresh.
+2. Or call `POST /api/pollar/activate` with `{ "publicKey": "G…" }` (the connected Pollar Stellar address).
+3. Success means the wallet status changes to `active` and the balance card updates after refresh. Immediate-mode wallets usually become `active` on their own once `wallet.provisioning` is `READY`.
 
 ## 6. What to verify
 

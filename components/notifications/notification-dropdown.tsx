@@ -13,14 +13,16 @@ import { Bell, Package, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatNotificationTime } from '@/lib/notifications'
 import { useMounted } from '@/hooks/use-mounted'
 import { useI18n } from '@/lib/i18n/provider'
-import { useNotifications } from '@/components/notifications/notifications-provider'
+import { useNotificationsContext } from '@/components/notifications/notifications-provider'
 
 export function NotificationDropdown() {
   const { t } = useI18n()
   const mounted = useMounted()
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
-    useNotifications()
   const [isOpen, setIsOpen] = useState(false)
+  const notificationsState = useNotificationsContext()
+  if (!notificationsState) return null
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
+    notificationsState
 
   const trigger = (
     <Button

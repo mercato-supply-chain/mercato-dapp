@@ -151,7 +151,7 @@ Two wallet providers are supported:
 | Provider | ID | Connect path | Signing |
 |----------|-----|--------------|---------|
 | **Stellar Wallets Kit** | `stellar-wallets-kit` | Freighter, Albedo (`hooks/use-external-wallet.ts`) | `lib/trustless/wallet-kit.ts` → `signTransaction` |
-| **Pollar** | `pollar` | Embedded wallet (`hooks/use-pollar-wallet.ts`, `@pollar/react`) | `signAndSubmitTx` via Pollar SDK |
+| **Pollar** | `pollar` | Embedded wallet (`hooks/use-pollar-wallet.ts`, `@pollar/react` 0.12 / SDK API v3) | `signAndSubmitTx` via Pollar SDK |
 
 Unified context: `providers/wallet-provider.tsx` → `hooks/use-wallet.ts`.
 
