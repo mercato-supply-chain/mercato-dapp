@@ -394,7 +394,7 @@ mercato-dapp/
 │
 ├── hooks/                        # use-wallet, use-repayment-escrow, use-deal-detail, useDefindex, …
 ├── providers/                    # wallet-provider, pollar-provider; Privy target provider
-├── middleware.ts                 # Supabase session + locale cookie
+├── proxy.ts                      # Supabase session + locale cookie
 └── supabase/migrations/          # Database schema (source of truth)
 ```
 
@@ -1102,7 +1102,7 @@ sequenceDiagram
   AppRoute->>Supabase: getUser() / queries
 ```
 
-- **`middleware.ts`** runs on every request to keep the Supabase session alive (refreshes tokens via `lib/supabase/proxy.ts`).
+- **`proxy.ts`** runs on every request to keep the Supabase session alive (refreshes tokens via `lib/supabase/proxy.ts`).
 - **Server components** use `lib/supabase/server.ts` (cookie-based SSR client).
 - **API routes** use `requireAuth()` / `requireAuthAndAnchor()` from `lib/ramp-api.ts` for auth checks.
 - **Client components** use `lib/supabase/client.ts` (browser client).

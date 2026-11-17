@@ -1,22 +1,25 @@
 # RWA Testnet lifecycle evidence
 
-> **Status: contracts deployed; lifecycle not verified.** The credit-funding WASM and credit-registry are on Stellar Testnet. No Testnet issuance, two-investor funding, supplier settlement, or two-receiver release has been recorded. Do not treat the tables below as receipts. They are the template a future harness fills from a real run. `scripts/rwa/testnet-lifecycle.ts` is not in the repo.
+> **Status: contracts redeployed; lifecycle not verified.** The 4 KiB-stack credit-funding WASM and credit-registry are on Stellar Testnet. No Testnet issuance, two-investor funding, supplier settlement, or two-receiver release has been recorded. Do not treat the tables below as receipts. They are the template a future harness fills from a real run. `scripts/rwa/testnet-lifecycle.ts` is not in the repo.
 
-### Deployed 2026-11-10
+### Deployed 2026-11-17
+
+This deploy replaces the 2026-11-10 registry (`CD5G343KUP7KN3O22FRH43MMMLEMZKU2DQBHHCGVAPT7S3IUUMMWHXSF`). That contract is still on Testnet and still uses the 1 MiB stack WASM (`7f6e0cc81619d4851c5effd0409fe94eb8924d9f1f00780720323aab2b44b083`). New issuance uses the contract below. Each contract's `build.rs` sets `-zstack-size=4096`. The WASM stack estimator measured a finite peak of 784 bytes on the registry (`assets`) and 864 bytes on the funding pool (`contribute`), so 4,096 bytes is the proposed size. Both rebuilt modules use one 64 KiB memory page.
 
 | Item | Value |
 | --- | --- |
 | Toolchain | stellar-cli 28.1.0, soroban-sdk 29.0.1, rustc 1.96.1, target `wasm32v1-none` |
-| credit-funding WASM hash | `7f6e0cc81619d4851c5effd0409fe94eb8924d9f1f00780720323aab2b44b083` |
-| Funding WASM upload | [607f71451b3bfcd67280a3b9af8b98d2d294a1381c933f0891239e5b14f9b3d8](https://stellar.expert/explorer/testnet/tx/607f71451b3bfcd67280a3b9af8b98d2d294a1381c933f0891239e5b14f9b3d8) |
-| credit-registry WASM hash | `71aa592aab81b29f51077be1aaf0076f62d307c072f3a57af81c12d9edf6136a` |
-| Registry WASM upload | [950c33f6ed841d3e9bf7adec19e97524593925c1d7b67a78f394b8d56c0c59e4](https://stellar.expert/explorer/testnet/tx/950c33f6ed841d3e9bf7adec19e97524593925c1d7b67a78f394b8d56c0c59e4) |
-| Registry deploy | [4d30a4b1a4f51ff83878092ba3620c064ef15077eb42fcfebc0f4ef3fc3d40f1](https://stellar.expert/explorer/testnet/tx/4d30a4b1a4f51ff83878092ba3620c064ef15077eb42fcfebc0f4ef3fc3d40f1) |
-| Registry contract | `CD5G343KUP7KN3O22FRH43MMMLEMZKU2DQBHHCGVAPT7S3IUUMMWHXSF` |
+| Shadow stack | 4,096 bytes (was 1,048,576) |
+| credit-funding WASM hash | `f3e8666900cb9c0748ee04ae2261a8cea53ce96d71d0b3f1f5abe7acb01138e8` |
+| Funding WASM upload | [e666dc1b75e1f5cc48afbaf56b47562c78fa25232a430521c40f84b92d138bed](https://stellar.expert/explorer/testnet/tx/e666dc1b75e1f5cc48afbaf56b47562c78fa25232a430521c40f84b92d138bed) |
+| credit-registry WASM hash | `78551cec026d54fbc16ae60e2a06826325a4454f48178e7db5b65972b243c6b8` |
+| Registry WASM upload | [5214a4836eac8dfac01be88ed67be7c275221c74127f98b500948da0a18ab5de](https://stellar.expert/explorer/testnet/tx/5214a4836eac8dfac01be88ed67be7c275221c74127f98b500948da0a18ab5de) |
+| Registry deploy | [37675b66936537f1ae99f88dc79022fa0dcbca4016ec641c5c3528ffd884b290](https://stellar.expert/explorer/testnet/tx/37675b66936537f1ae99f88dc79022fa0dcbca4016ec641c5c3528ffd884b290) |
+| Registry contract | `CAABHTWL6HWU7GXM2LQT5BG5B7QIKEZLQTOYUBLONE6OY7XPUOJ4SC7O` |
 | Registry admin | `GAGZSSVI7IJ7G4B57SCOPHFYV3YSS76ONOC22XOOEF47SP4OZJPG4BXS` (CLI identity `mercato-rwa-testnet`; secret not in the repo) |
 | USDC SAC | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Circle testnet USDC, issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, decimals 7) |
 
-`assets(0, 1)` on the registry returned `[]` after deploy, so the constructor ran and the registry is empty. This is not a verified-build attestation. The lifecycle tables underneath stay placeholders.
+`assets(0, 1)` on the new registry returned `[]`, so the constructor ran and the registry is empty. This is not a verified-build attestation. The lifecycle tables underneath stay placeholders. The smaller stack was measured on the built WASM and was not executed through a Testnet invocation of every entry point.
 
 The product sequence that the run has to prove, in order:
 

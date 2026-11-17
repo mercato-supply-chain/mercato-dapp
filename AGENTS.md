@@ -135,14 +135,14 @@ Testnet deployment (public ids; secret stays in the local Stellar CLI identity `
 
 | Role | Value |
 |------|--------|
-| Registry | `CD5G343KUP7KN3O22FRH43MMMLEMZKU2DQBHHCGVAPT7S3IUUMMWHXSF` |
+| Registry | `CAABHTWL6HWU7GXM2LQT5BG5B7QIKEZLQTOYUBLONE6OY7XPUOJ4SC7O` |
 | Admin | `GAGZSSVI7IJ7G4B57SCOPHFYV3YSS76ONOC22XOOEF47SP4OZJPG4BXS` |
 | USDC SAC | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
-| Funding WASM | `7f6e0cc81619d4851c5effd0409fe94eb8924d9f1f00780720323aab2b44b083` |
+| Funding WASM | `f3e8666900cb9c0748ee04ae2261a8cea53ce96d71d0b3f1f5abe7acb01138e8` |
 
 A full two-investor funding and redemption run is not recorded. Do not fill [doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md) with invented hashes.
 
-Build and deploy contracts with `stellar contract build` (target `wasm32v1-none`, soroban-sdk 29). Upload `credit_funding.wasm`, then deploy `credit_registry.wasm` with constructor `(admin, funding_wasm_hash, usdc_sac)`.
+Build and deploy contracts with `stellar contract build` (target `wasm32v1-none`, soroban-sdk 29). Each contract `build.rs` reserves a 4,096-byte WASM shadow stack. Upload `credit_funding.wasm`, then deploy `credit_registry.wasm` with constructor `(admin, funding_wasm_hash, usdc_sac)`. The 2026-11-10 registry remains on Testnet and is not the current id.
 
 ## Wallet providers and signing matrix
 
@@ -291,7 +291,7 @@ Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 | Dashboard data | `lib/dashboard/get-dashboard-data.ts` |
 | Investor portfolio | `lib/investments/get-investor-portfolio.ts` |
 | i18n (en/es) | `lib/i18n/` — locale cookie `mercato-locale`, `?lang=` param |
-| Middleware | `middleware.ts` — Supabase session refresh + locale |
+| Proxy | `proxy.ts` — Supabase session refresh + locale |
 
 ## Project layout (abbreviated)
 

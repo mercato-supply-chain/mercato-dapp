@@ -30,7 +30,7 @@ MERCATO is built **on and around Stellar** by composing **many Stellar-focused p
 
 **Opt-in multi-investor financing (wired):**
 
-- **Credit registry + funding pool** — `contracts/credit-registry` and `contracts/credit-funding` (soroban-sdk 29). An admin registers the asset and deploys a pool. Each investor signs `contribute`. The supplier is paid only when confirmed principal equals the target. Positions are contract storage, not SEP-41 tokens. The product cap is two investors. The canonical write-up is [doc/rwa-architecture.md](doc/rwa-architecture.md). The Testnet registry is deployed; a full two-investor lifecycle run is not recorded ([doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md)).
+- **Credit registry + funding pool** — `contracts/credit-registry` and `contracts/credit-funding` (soroban-sdk 29). An admin registers the asset and deploys a pool. Each investor signs `contribute`. The supplier is paid only when confirmed principal equals the target. Positions are contract storage, not SEP-41 tokens. The product cap is two investors. The canonical write-up is [doc/rwa-architecture.md](doc/rwa-architecture.md). The current Testnet registry was deployed on 2026-11-17 with a 4 KiB shadow stack; a full two-investor lifecycle run is not recorded ([doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md)).
 
 **Planned architecture:**
 - **DeFindex capital allocation** — connect a confirmed investor vault withdrawal to either full-order direct funding or an opted-in pool contribution. The withdrawal itself does not fund the deal.
