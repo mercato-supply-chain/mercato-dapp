@@ -120,6 +120,9 @@ export interface Deal {
   rwaLifecycle?: 'open' | 'ready_to_settle' | 'settled' | 'cancelled'
   /** Confirmed principal already in the pool, in whole USDC. */
   confirmedPrincipal?: number
+  reopenCount?: number
+  lastReopenedAt?: string
+  lastReopenedBy?: string
 }
 
 export interface User {

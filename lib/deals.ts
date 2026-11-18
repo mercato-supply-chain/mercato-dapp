@@ -44,6 +44,10 @@ export interface DealRow {
   funding_window_days?: number | null
   extension_count?: number | null
   extended_at?: string | null
+  reopen_count?: number | null
+  last_reopened_at?: string | null
+  last_reopened_by?: string | null
+  reopen_history?: unknown[] | null
   created_at?: string | null
   rwa_opted_in?: boolean | null
   rwa_asset_row_id?: string | null
@@ -186,6 +190,16 @@ export function getDealFundingStatus(
   return 'open'
 }
 
+export function isDealFundingExpired(
+  row: Pick<
+    DealRow,
+    'status' | 'investor_id' | 'funded_at' | 'funding_expires_at' | 'extension_count'
+  >,
+  nowMs = Date.now(),
+): boolean {
+  return getDealFundingStatus(row, nowMs) === 'expired'
+}
+
 /**
  * Map a Supabase deal row (with optional milestones and pyme profile) to the Deal type used by DealCard and the deals browse page.
  */
@@ -302,6 +316,11 @@ export function mapDealFromDb(row: DealRow): Deal {
       ? new Date(row.extended_at).toISOString()
       : undefined,
     rwaOptedIn: Boolean(row.rwa_opted_in),
+    reopenCount: Math.max(0, Number(row.reopen_count ?? 0)),
+    lastReopenedAt: row.last_reopened_at
+      ? new Date(row.last_reopened_at).toISOString()
+      : undefined,
+    lastReopenedBy: row.last_reopened_by ?? undefined,
     yieldAPR: (() => {
       const amount = principal
       const termDays = row.term_days ?? 0
