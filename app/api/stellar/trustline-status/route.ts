@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const server = new Horizon.Server(horizonUrl)
     const loaded = await server.loadAccount(account)
 
-    const allBalances = loaded.balances.map((b) => b as Record<string, unknown>)
+    const allBalances = loaded.balances
     const classicBlendBalances = extractClassicBlendBalances(allBalances)
     const hasClassicBlendUsdc = classicBlendBalances.some((b) => b.code === 'USDC')
 

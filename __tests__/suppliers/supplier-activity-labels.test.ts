@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { getDictionary } from '@/lib/i18n/dictionaries'
+import { enDict } from '@/lib/i18n/dictionaries'
 import {
   buildActivityTableLabels,
   buildCustomerActivityTableLabels,
@@ -10,7 +10,7 @@ import {
   getSupplierActivityStateLabels,
 } from '@/lib/suppliers/supplier-activity-labels'
 
-const m = getDictionary('en').supplierActivity
+const m = enDict.supplierActivity
 
 describe('supplier-activity-labels', () => {
   test('getSupplierActivityStateLabels returns the states map', () => {

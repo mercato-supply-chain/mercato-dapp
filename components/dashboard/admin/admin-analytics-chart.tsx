@@ -17,7 +17,7 @@ export type AnalyticsChartRow = {
   previous: number
 }
 
-type AdminAnalyticsChartProps = {
+export type AdminAnalyticsChartProps = {
   rows: AnalyticsChartRow[]
   /** Accessible description of what the chart shows; the data table below carries the numbers. */
   ariaLabelKey: string

@@ -3,7 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const DEFAULT_POLLAR_BASE_URL = 'https://sdk.api.pollar.xyz/v1'
+const DEFAULT_POLLAR_SERVER_API = 'https://server.api.pollar.xyz/v3'
+const STELLAR_PUBLIC_KEY = /^G[A-Z2-7]{55}$/
+
+function serverApiBase(): string {
+  const raw = (process.env.POLLAR_SERVER_API_URL ?? DEFAULT_POLLAR_SERVER_API).replace(/\/$/, '')
+  if (raw.endsWith('/v3') || raw.endsWith('/v1')) return raw
+  return `${raw}/v3`
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -17,12 +24,21 @@ export async function POST(request: Request) {
   }
 
   const payload = (await request.json().catch(() => null)) as
-    | { walletId?: unknown }
+    | { publicKey?: unknown; walletId?: unknown }
     | null
 
-  const walletId = typeof payload?.walletId === 'string' ? payload.walletId.trim() : ''
-  if (!walletId) {
-    return NextResponse.json({ error: 'walletId is required' }, { status: 400 })
+  const publicKeyCandidate =
+    typeof payload?.publicKey === 'string'
+      ? payload.publicKey.trim()
+      : typeof payload?.walletId === 'string'
+        ? payload.walletId.trim()
+        : ''
+
+  if (!STELLAR_PUBLIC_KEY.test(publicKeyCandidate)) {
+    return NextResponse.json(
+      { error: 'A Stellar public key (G…) is required to fund the Pollar wallet' },
+      { status: 400 },
+    )
   }
 
   const secretKey = process.env.POLLAR_SECRET_KEY
@@ -30,23 +46,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Pollar secret key is not configured' }, { status: 500 })
   }
 
-  const baseUrl = process.env.POLLAR_BASE_URL ?? DEFAULT_POLLAR_BASE_URL
+  const fundUrl = `${serverApiBase()}/wallets/fund`
 
   try {
-    const response = await fetch(`${baseUrl}/wallets/activate`, {
+    const response = await fetch(fundUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${secretKey}`,
+        'x-pollar-api-key': secretKey,
       },
-      body: JSON.stringify({ walletId }),
+      body: JSON.stringify({ publicKey: publicKeyCandidate }),
     })
 
-    if (response.status === 409) {
+    const data = (await response.json().catch(() => null)) as
+      | {
+          status?: string
+          error?: string
+          message?: string
+          code?: string
+          content?: { publicKey?: string; requestId?: string }
+        }
+      | null
+
+    const alreadyFunded = response.status === 409 || data?.code === 'WALLET_ALREADY_FUNDED'
+    if (alreadyFunded) {
       await supabase
         .from('profiles')
         .update({
           wallet_status: 'active',
+          wallet_provider: 'pollar',
+          stellar_public_key: publicKeyCandidate,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id)
@@ -57,20 +86,26 @@ export async function POST(request: Request) {
       })
     }
 
-    const data = (await response.json().catch(() => null)) as
-      | { status?: string; error?: string; message?: string }
-      | null
+    if (response.status === 202) {
+      return NextResponse.json({
+        status: 'pending',
+        message:
+          'Pollar opened the account-creation request. Approve it in the Pollar wallet to finish activation.',
+        requestId: data?.content?.requestId,
+      })
+    }
 
     if (!response.ok) {
       const errorMessage =
         data?.error ||
         data?.message ||
+        data?.code ||
         (response.status === 400
-          ? 'Invalid wallet ID'
+          ? 'Invalid Stellar public key'
           : response.status === 402
             ? 'Wallet activation requires funding'
-            : response.status === 422
-              ? 'Wallet activation failed validation'
+            : response.status === 404
+              ? 'Pollar does not recognize this wallet'
               : 'Failed to activate wallet')
       return NextResponse.json({ error: errorMessage }, { status: response.status })
     }
@@ -80,7 +115,7 @@ export async function POST(request: Request) {
       .update({
         wallet_status: 'active',
         wallet_provider: 'pollar',
-        pollar_wallet_id: walletId,
+        stellar_public_key: publicKeyCandidate,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)

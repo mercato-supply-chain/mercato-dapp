@@ -11,9 +11,7 @@
  *   - Accepted extensions: .csv, .xlsx
  */
 
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
-import { normalizeCategory, normalizeSku, validateProduct } from './product-validation'
+import { validateProduct } from './product-validation'
 import type { NormalizedProduct } from './product-validation'
 
 // ---------------------------------------------------------------------------
@@ -188,12 +186,40 @@ export type ParseFileResult =
   | { ok: true; headers: string[]; rows: ParsedRow[] }
   | { ok: false; error: string }
 
-function toCsvRows(csvText: string): { headers: string[]; rows: ParsedRow[] } | { error: string } {
+/** Dynamic loader for PapaParse - prevents bundling when unused */
+async function getPapa() {
+  const mod = await import('papaparse')
+  return (mod as unknown as { default?: typeof import('papaparse') }).default ?? mod
+}
+
+/** Dynamic loader for SheetJS / XLSX - prevents bundling 1MB+ lib when unused */
+async function getXlsx() {
+  const mod = await import('xlsx')
+  return (mod as unknown as { default?: typeof import('xlsx') }).default ?? mod
+}
+
+async function toCsvRows(
+  csvText: string,
+  signal?: AbortSignal,
+): Promise<{ headers: string[]; rows: ParsedRow[] } | { error: string }> {
+  if (signal?.aborted) {
+    return { error: 'parse.aborted' }
+  }
+
+  const Papa = await getPapa()
+  if (signal?.aborted) {
+    return { error: 'parse.aborted' }
+  }
+
   const result = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
     transformHeader: (h: string) => h.trim(),
   })
+
+  if (signal?.aborted) {
+    return { error: 'parse.aborted' }
+  }
 
   if (result.errors.length > 0 && result.data.length === 0) {
     return { error: 'parse.csvParseError' }
@@ -212,8 +238,20 @@ function toCsvRows(csvText: string): { headers: string[]; rows: ParsedRow[] } | 
   return { headers, rows }
 }
 
-function toXlsxRows(buffer: ArrayBuffer): { headers: string[]; rows: ParsedRow[] } | { error: string } {
+async function toXlsxRows(
+  buffer: ArrayBuffer,
+  signal?: AbortSignal,
+): Promise<{ headers: string[]; rows: ParsedRow[] } | { error: string }> {
+  if (signal?.aborted) {
+    return { error: 'parse.aborted' }
+  }
+
   try {
+    const XLSX = await getXlsx()
+    if (signal?.aborted) {
+      return { error: 'parse.aborted' }
+    }
+
     const workbook = XLSX.read(buffer, { type: 'array' })
     const sheetName = workbook.SheetNames[0]
     if (!sheetName) return { error: 'parse.xlsxEmpty' }
@@ -241,7 +279,11 @@ function toXlsxRows(buffer: ArrayBuffer): { headers: string[]; rows: ParsedRow[]
 }
 
 /** Parse a File into headers + raw rows. Does not validate content. */
-export async function parseFile(file: File): Promise<ParseFileResult> {
+export async function parseFile(file: File, signal?: AbortSignal): Promise<ParseFileResult> {
+  if (signal?.aborted) {
+    return { ok: false, error: 'parse.aborted' }
+  }
+
   if (file.size > IMPORT_MAX_FILE_SIZE_BYTES) {
     return { ok: false, error: 'parse.fileTooLarge' }
   }
@@ -250,14 +292,20 @@ export async function parseFile(file: File): Promise<ParseFileResult> {
 
   if (name.endsWith('.csv')) {
     const text = await file.text()
-    const result = toCsvRows(text)
+    if (signal?.aborted) {
+      return { ok: false, error: 'parse.aborted' }
+    }
+    const result = await toCsvRows(text, signal)
     if ('error' in result) return { ok: false, error: result.error }
     return { ok: true, ...result }
   }
 
   if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
     const buffer = await file.arrayBuffer()
-    const result = toXlsxRows(buffer)
+    if (signal?.aborted) {
+      return { ok: false, error: 'parse.aborted' }
+    }
+    const result = await toXlsxRows(buffer, signal)
     if ('error' in result) return { ok: false, error: result.error }
     return { ok: true, ...result }
   }

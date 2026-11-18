@@ -185,15 +185,17 @@ export function AdminLeadsTable({ leads, eventSlugs, selectedEvent }: AdminLeads
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <h3 className="mb-4 font-semibold">{t('adminLeads.detailTitle')}</h3>
           <dl className="grid gap-4 sm:grid-cols-2">
-            {[
-              ['adminLeads.fields.currentFinancing', expandedLead.current_financing],
-              ['adminLeads.fields.fundingTimeline', expandedLead.funding_timeline],
-              ['adminLeads.fields.supplierPaymentProcess', expandedLead.supplier_payment_process],
-              ['adminLeads.fields.biggestChallenge', expandedLead.biggest_challenge],
-              ['adminLeads.fields.lastFinancingExperience', expandedLead.last_financing_experience],
-              ['adminLeads.fields.phone', expandedLead.phone],
-              ['adminLeads.fields.country', expandedLead.country],
-            ].map(([labelKey, value]) => (
+            {(
+              [
+                ['adminLeads.fields.currentFinancing', expandedLead.current_financing],
+                ['adminLeads.fields.fundingTimeline', expandedLead.funding_timeline],
+                ['adminLeads.fields.supplierPaymentProcess', expandedLead.supplier_payment_process],
+                ['adminLeads.fields.biggestChallenge', expandedLead.biggest_challenge],
+                ['adminLeads.fields.lastFinancingExperience', expandedLead.last_financing_experience],
+                ['adminLeads.fields.phone', expandedLead.phone],
+                ['adminLeads.fields.country', expandedLead.country],
+              ] as Array<[string, string | null]>
+            ).map(([labelKey, value]) => (
               <div key={labelKey}>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t(labelKey)}

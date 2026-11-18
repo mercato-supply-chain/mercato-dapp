@@ -18,7 +18,11 @@ export async function getDashboardData(
   const companyName = profile?.company_name
 
   let deals: DashboardDealRow[] = []
-  let supplierCompanies: { id: string; company_name: string | null }[] = []
+  let supplierCompanies: {
+    id: string
+    company_name: string | null
+    logo_url: string | null
+  }[] = []
   let supplierProductsForCard: DashboardPayload['supplierProductsForCard'] = null
   let adminStats: DashboardPayload['adminStats'] = null
   let adminApprovalPreview: AdminApprovalPreview[] = []

@@ -1,0 +1,15 @@
+[package]
+name = "credit-registry"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+credit-protocol = { path = "../credit-protocol" }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

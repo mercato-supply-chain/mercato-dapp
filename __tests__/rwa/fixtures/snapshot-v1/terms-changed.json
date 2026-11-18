@@ -1,0 +1,29 @@
+{
+  "spec": "rwa-financial-snapshot-v1",
+  "description": "Frozen term changed from 60 to 90 days; the digest must differ from base.json.",
+  "domain": "mercato.rwa.financial_snapshot.v1",
+  "payload": {
+    "snapshot_version": 1,
+    "deal_id": "6b1f2f4c-9b7a-4d0e-8f1a-2c3d4e5f6071",
+    "network": "testnet",
+    "asset_code": "USDC",
+    "asset_issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "asset_decimals": 7,
+    "principal_atomic": "25000000000",
+    "return_numerator": "1500000",
+    "return_denominator": "100000000",
+    "display_yield_bps": 150,
+    "term_days": 90,
+    "maturity_policy": "delivery_relative",
+    "fees": {
+      "platform_fee_bps": 100,
+      "tw_fee_bps": 30,
+      "rounding_policy": "half_up_atomic",
+      "charged_at": "funding"
+    },
+    "issued_at": "2026-10-20T12:34:56.000Z",
+    "issuance_identity": "testnet:CBRWA7GX4RSM2BKTJQ2PNI6Q6DSO5ZMZ6VQJ3G7QKJZ2J4K7Y3F5WXYZ:CRA-0001"
+  },
+  "expected_canonical": "{\"asset_code\":\"USDC\",\"asset_decimals\":7,\"asset_issuer\":\"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5\",\"deal_id\":\"6b1f2f4c-9b7a-4d0e-8f1a-2c3d4e5f6071\",\"display_yield_bps\":150,\"fees\":{\"charged_at\":\"funding\",\"platform_fee_bps\":100,\"rounding_policy\":\"half_up_atomic\",\"tw_fee_bps\":30},\"issuance_identity\":\"testnet:CBRWA7GX4RSM2BKTJQ2PNI6Q6DSO5ZMZ6VQJ3G7QKJZ2J4K7Y3F5WXYZ:CRA-0001\",\"issued_at\":\"2026-10-20T12:34:56.000Z\",\"maturity_policy\":\"delivery_relative\",\"network\":\"testnet\",\"principal_atomic\":\"25000000000\",\"return_denominator\":\"100000000\",\"return_numerator\":\"1500000\",\"snapshot_version\":1,\"term_days\":90}",
+  "expected_hash": "3c2c272418c805bb419d916227858c205d2ff2ee732e4e7ecf7dd53b3574844c"
+}

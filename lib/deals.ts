@@ -49,6 +49,8 @@ export interface DealRow {
   last_reopened_by?: string | null
   reopen_history?: unknown[] | null
   created_at?: string | null
+  rwa_opted_in?: boolean | null
+  rwa_asset_row_id?: string | null
   funded_at?: string | null
   completed_at?: string | null
   milestones?: MilestoneRow[] | null
@@ -109,12 +111,26 @@ function mapRepaymentMilestones(
         Number.isFinite(Number(m.index)) &&
         Number.isFinite(Number(m.amount)),
     )
-    .map((m) => ({
-      index: Number(m.index),
-      description: typeof m.description === 'string' ? m.description : '',
-      amount: Number(m.amount),
-      released: Boolean(m.released),
-    }))
+    .map((m) => {
+      const milestone: RepaymentMilestoneCache = {
+        index: Number(m.index),
+        description: typeof m.description === 'string' ? m.description : '',
+        amount: Number(m.amount),
+        released: Boolean(m.released),
+      }
+      if (typeof m.positionId === 'string') milestone.positionId = m.positionId
+      if (Number.isInteger(m.trancheIndex)) milestone.trancheIndex = Number(m.trancheIndex)
+      if (typeof m.receiver === 'string') milestone.receiver = m.receiver
+      if (typeof m.netAmount === 'number' && Number.isFinite(m.netAmount)) {
+        milestone.netAmount = m.netAmount
+      }
+      if (typeof m.grossAtomic === 'string') milestone.grossAtomic = m.grossAtomic
+      if (typeof m.netAtomic === 'string') milestone.netAtomic = m.netAtomic
+      if (typeof m.scheduleCommitment === 'string') {
+        milestone.scheduleCommitment = m.scheduleCommitment
+      }
+      return milestone
+    })
 }
 
 export interface MilestoneRow {
@@ -299,6 +315,7 @@ export function mapDealFromDb(row: DealRow): Deal {
     extendedAt: row.extended_at
       ? new Date(row.extended_at).toISOString()
       : undefined,
+    rwaOptedIn: Boolean(row.rwa_opted_in),
     reopenCount: Math.max(0, Number(row.reopen_count ?? 0)),
     lastReopenedAt: row.last_reopened_at
       ? new Date(row.last_reopened_at).toISOString()

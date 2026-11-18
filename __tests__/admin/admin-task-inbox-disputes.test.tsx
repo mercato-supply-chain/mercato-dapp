@@ -5,7 +5,7 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { AdminTaskInboxDisputes } from '@/components/dashboard/admin/admin-task-inbox-disputes'
 import { I18nProvider } from '@/lib/i18n/provider'
-import { getDictionary } from '@/lib/i18n/dictionaries'
+import { enDict } from '@/lib/i18n/dictionaries'
 import type { AdminOverviewEscrowRef } from '@/lib/admin/types'
 
 const getEscrowByContractIdsMock = mock<
@@ -46,7 +46,7 @@ const escrows: AdminOverviewEscrowRef[] = [
 
 function renderDisputes(overrides: AdminOverviewEscrowRef[] = escrows) {
   return render(
-    <I18nProvider locale="en" messages={getDictionary('en')}>
+    <I18nProvider locale="en" messages={enDict}>
       <AdminTaskInboxDisputes escrows={overrides} />
     </I18nProvider>,
   )

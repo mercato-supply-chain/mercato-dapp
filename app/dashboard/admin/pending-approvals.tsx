@@ -158,13 +158,25 @@ export function PendingApprovals({
     }
     const item = items.find((i) => i.dealId === params.dealId && i.escrowContractAddress === params.contractId && i.milestoneIndex === params.milestoneIndex)
     try {
-      await releaseRepaymentMilestone({
+    const result = await releaseRepaymentMilestone({
         dealId: params.dealId,
         contractId: params.contractId,
         releaseSigner: walletInfo.address,
         milestoneIndex: params.milestoneIndex,
         provider,
       })
+      if (item?.positionId && item.netAtomic && result && typeof result === 'object' && 'txHash' in result && result.txHash) {
+        await fetch('/api/rwa/repayment/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            positionId: item.positionId,
+            amountAtomic: item.netAtomic,
+            txHash: result.txHash,
+            operationId: `milestone:${item.milestoneIndex}`,
+          }),
+        })
+      }
       toast.success(t('adminPending.releaseSuccess', { title: item?.milestoneTitle ?? '' }))
       await completeCommand()
     } catch (err) {

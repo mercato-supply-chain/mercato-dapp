@@ -1,4 +1,4 @@
-import type { TxHistoryState, WalletType } from '@pollar/core'
+import type { WalletBalanceState, WalletInfo } from '@pollar/core'
 
 export type WalletProviderType = 'stellar-wallets-kit' | 'pollar'
 export type WalletStatus = 'pending' | 'active'
@@ -42,6 +42,48 @@ export const WALLET_STORAGE_KEY = 'mercato_wallet'
 
 export const PollarWalletKitLimitations =
   'Pollar embedded wallets support onboarding, balances, receive flows, and simple Stellar operations, but Trustless Work escrow signing still requires a Stellar Wallets Kit wallet.'
+
+/**
+ * Returns true when the connected wallet provider can sign and submit
+ * classic Stellar USDC transactions (e.g. direct deal funding).
+ *
+ * Both SWK and Pollar support classic tx signing, so this always returns
+ * true for any connected provider. The check exists as an explicit gate so
+ * future providers can set it to false if needed.
+ */
+export function canWalletSignClassicTx(
+  provider: WalletProviderType | null | undefined,
+): boolean {
+  if (!provider) return false
+  // Both 'stellar-wallets-kit' and 'pollar' support classic Stellar tx signing.
+  return provider === 'stellar-wallets-kit' || provider === 'pollar'
+}
+
+/**
+ * Returns true when the connected wallet provider can sign Soroban / Trustless Work
+ * escrow transactions.
+ *
+ * Pollar does not yet support Soroban contract invocations reliably — escrow
+ * deploy and release still require a Stellar Wallets Kit wallet.
+ */
+export function canWalletSignSorobanTx(
+  provider: WalletProviderType | null | undefined,
+): boolean {
+  if (!provider) return false
+  return provider === 'stellar-wallets-kit'
+}
+
+/**
+ * Returns a human-readable description of what this wallet provider
+ * cannot do, if anything. Returns null when the provider supports all
+ * required operations.
+ */
+export function getWalletCapabilityLimitation(
+  provider: WalletProviderType | null | undefined,
+): string | null {
+  if (provider === 'pollar') return PollarWalletKitLimitations
+  return null
+}
 
 export function getStellarNetwork(): 'mainnet' | 'testnet' {
   return process.env.NEXT_PUBLIC_POLLAR_NETWORK === 'mainnet'
@@ -127,39 +169,22 @@ export function saveStoredWallet(wallet: StoredWalletRecord | null): void {
 }
 
 export function normalizePollarWalletBalance(
-  balanceState:
-    | {
-        step: 'idle' | 'loading' | 'error'
-      }
-    | {
-        step: 'loaded'
-        data: {
-          balances: Array<Record<string, unknown> & { balance?: string }>
-        }
-      }
-    | null
-    | undefined,
+  balanceState: WalletBalanceState | null | undefined,
 ): WalletBalanceSummary | null {
   if (!balanceState || balanceState.step !== 'loaded') return null
 
   const records = balanceState.data.balances ?? []
-  // Pollar API returns `code` for the asset identifier (e.g. "XLM", "USDC").
-  // Older paths also checked `asset` / `asset_code` for compatibility.
-  const xlm = records.find((record) => {
-    const value = record as any
-    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
-    return code === 'XLM' || value.type === 'native'
+  const stellarRecords = records.filter((record) => !record.chain || record.chain === 'STELLAR')
+  const xlm = stellarRecords.find((record) => {
+    const code = record.code.toUpperCase()
+    return code === 'XLM' || record.type === 'native'
   })
-  const usdc = records.find((record) => {
-    const value = record as any
-    const code = String(value.code ?? value.asset ?? value.asset_code ?? '').toUpperCase()
-    return code === 'USDC'
-  })
+  const usdc = stellarRecords.find((record) => record.code.toUpperCase() === 'USDC')
 
   return {
-    xlm: (xlm as any)?.balance ?? null,
-    usdc: (usdc as any)?.balance ?? null,
-    records,
+    xlm: xlm?.balance ?? null,
+    usdc: usdc?.balance ?? null,
+    records: stellarRecords as unknown as Array<Record<string, unknown>>,
     source: 'pollar',
     updatedAt: new Date().toISOString(),
   }
@@ -210,19 +235,16 @@ export async function fetchHorizonBalances(publicKey: string): Promise<WalletBal
 export function getEmbeddedWalletId(session: {
   clientSessionId?: string
   userId?: string | null
-  wallet?: { publicKey: string | null; existsOnStellar?: boolean; createdAt?: number }
 } | null): string | null {
   if (!session) return null
-  return session.clientSessionId ?? session.userId ?? null
+  return session.userId ?? session.clientSessionId ?? null
 }
 
-export function getEmbeddedWalletStatus(session: {
-  wallet?: { publicKey: string | null; existsOnStellar?: boolean; createdAt?: number }
-  user?: { ready?: boolean }
-} | null): WalletStatus {
-  if (!session) return 'pending'
-  if (session.user?.ready === true) return 'active'
-  if (session.wallet?.existsOnStellar === true) return 'active'
+export function getEmbeddedWalletStatus(
+  wallet: Pick<WalletInfo, 'existsOnStellar' | 'provisioning'> | null,
+): WalletStatus {
+  if (!wallet) return 'pending'
+  if (wallet.provisioning === 'READY' || wallet.existsOnStellar === true) return 'active'
   return 'pending'
 }
 

@@ -47,6 +47,7 @@ These come from your Supabase project dashboard.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_APP_URL` — canonical site URL (default `https://mercatocapital.xyz`)
 - **DeFindex (Mercato vault)** — `DEFINDEX_API_KEY` (server), `NEXT_PUBLIC_DEFINDEX_VAULT_ADDRESS` (vault `C…` contract), optional `DEFINDEX_API_URL`, `MERCATO_DEFINDEX_VAULT_ADDRESS`, `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default `7`)
+- **RWA credit pool** — leave `RWA_ENABLED=false` unless you are exercising opted-in deals. When enabled, set `RWA_REGISTRY_CONTRACT_ID`, `RWA_USDC_SAC_ADDRESS`, and `RWA_REGISTRY_ADMIN_ADDRESS`. The signer must be the registry constructor admin. Testnet ids are in `env.sample` comments and [doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md). Apply `supabase/migrations/20261110120000_rwa_credit_pool_link.sql` with the rest of the schema. Issuance also requires an existing repayment escrow, verified PyME and supplier, and `deals.rwa_opted_in`.
 
 ## 3. Bootstrap Supabase schema
 
@@ -118,11 +119,11 @@ Open `http://localhost:3000`.
 
 ### Activation path
 
-If the Pollar wallet is `pending`:
+If the Pollar wallet is `pending` (Deferred funding, or the Stellar account is still being created):
 
 1. Use the `Activate embedded wallet` action if shown.
-2. Or call `POST /api/pollar/activate` with the wallet ID from the session.
-3. Success means the wallet status changes to `active` and the balance card updates after refresh.
+2. Or call `POST /api/pollar/activate` with `{ "publicKey": "G…" }` (the connected Pollar Stellar address).
+3. Success means the wallet status changes to `active` and the balance card updates after refresh. Immediate-mode wallets usually become `active` on their own once `wallet.provisioning` is `READY`.
 
 ## 6. What to verify
 

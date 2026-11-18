@@ -56,14 +56,10 @@ export const useDefindex = (options?: UseDefindexOptions) => {
     dfTokens,
     isLoadingBalances,
     balanceError,
-    setWalletBalance,
-    setWalletRawBalance,
-    setVaultBalance,
-    setVaultRawBalance,
-    setDfTokens,
-    setBalanceError,
     getVaultBalance,
     loadUserBalancesRef,
+    invalidateBalanceRequests,
+    resetBalances,
   } = useVaultBalance()
 
   const signAndSubmit = useCallback(
@@ -188,36 +184,38 @@ export const useDefindex = (options?: UseDefindexOptions) => {
 
   const refreshBalances = useCallback(async () => {
     const address = walletInfo?.address
+    // A refresh supersedes older pending balance work even while metadata resolves.
+    invalidateBalanceRequests()
     if (!address) {
-      setVaultBalance(0)
-      setVaultRawBalance(0)
-      setDfTokens(0)
+      resetBalances()
       setVaultMeta(null)
       setVaultInfoError(null)
-      setBalanceError(null)
-      setWalletBalance(0)
-      setWalletRawBalance(0)
       return { vaultBalance: 0, walletBalance: 0 }
     }
 
-    await refreshBalanceRef.current()
-    const meta = vaultMetaRef.current?.assets?.[0]?.address
-      ? vaultMetaRef.current
-      : await fetchVaultMetaRef.current()
+    // The wallet refresh and the vault-metadata resolution are independent:
+    // only the dependent vault/user balance load below needs the resolved asset
+    // address. Start both in the same tick and await them together instead of
+    // awaiting the wallet refresh first, which would create a needless waterfall.
+    const walletRefresh = Promise.resolve(refreshBalanceRef.current())
+    const metaResolution = vaultMetaRef.current?.assets?.[0]?.address
+      ? Promise.resolve(vaultMetaRef.current)
+      : fetchVaultMetaRef.current()
+
+    const [, meta] = await Promise.all([walletRefresh, metaResolution])
     invalidateVaultDataCache(address, meta?.assets?.[0]?.address)
     return loadUserBalancesRef.current(address, meta?.assets?.[0]?.address)
-  }, [walletInfo?.address])
+  }, [invalidateBalanceRequests, resetBalances, setVaultMeta, setVaultInfoError, walletInfo?.address])
 
   /** Load user balance when the Stellar account changes. */
   useEffect(() => {
     const address = walletInfo?.address
+    // Invalidate synchronously before awaiting metadata so the prior account's
+    // in-flight requests cannot commit while the next account is resolving.
+    resetBalances()
     if (!address) {
-      setVaultBalance(0)
-      setVaultRawBalance(0)
-      setDfTokens(0)
-      setBalanceError(null)
-      setWalletBalance(0)
-      setWalletRawBalance(0)
+      setVaultMeta(null)
+      setVaultInfoError(null)
       return
     }
 
@@ -235,7 +233,7 @@ export const useDefindex = (options?: UseDefindexOptions) => {
     return () => {
       cancelled = true
     }
-  }, [walletInfo?.address])
+  }, [resetBalances, setVaultMeta, setVaultInfoError, walletInfo?.address])
 
   const depositToVault = useMemo(
     () =>

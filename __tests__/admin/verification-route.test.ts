@@ -1,14 +1,29 @@
 import { afterEach, beforeEach, expect, mock, test } from 'bun:test'
 
 type RpcCall = { fn: string; args: Record<string, unknown> }
+type RpcResult = { data: string | null; error: { code?: string } | null }
 
-const state = {
+const state: {
+  adminOk: boolean
+  rpcResult: RpcResult
+  rpcCalls: RpcCall[]
+} = {
   adminOk: true,
-  rpcResult: { data: 'audit-1', error: null as { code?: string } | null },
-  rpcCalls: [] as RpcCall[],
+  rpcResult: { data: 'audit-1', error: null },
+  rpcCalls: [],
 }
 
+// Bun's module mocks are process-global, so this mock has to expose the whole
+// module surface. A partial mock leaves the module without `requireAuth`, and
+// any later test file that imports it fails to link.
 mock.module('@/lib/api/route-auth', () => ({
+  requireAuth: async () =>
+    state.adminOk
+      ? { ok: true, userId: 'admin-1', email: 'admin@mercato.xyz' }
+      : {
+          ok: false,
+          response: Response.json({ error: 'Unauthorized' }, { status: 401 }),
+        },
   requireAdmin: async () =>
     state.adminOk
       ? { ok: true, userId: 'admin-1', email: 'admin@mercato.xyz' }

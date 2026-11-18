@@ -3,7 +3,7 @@ import type { RepaymentEscrowActionInput } from '@/lib/trustless/repayment-actio
 
 describe('repayment_action_audit', () => {
   test('deployment_submitted y deployment_succeeded son inserts separados', async () => {
-    let inserts: unknown[][] = []
+    const inserts: unknown[][] = []
     mock.module('@/lib/supabase/client', () => ({
       createClient: () => ({
         from: () => ({
@@ -55,7 +55,6 @@ describe('repayment_action_audit', () => {
       transactionHash: null,
       failureMessage: null,
     }
-    // @ts-expect-error — signature no es parte del tipo
     const withSignature = { ...input, signature: 'sig' } as unknown as RepaymentEscrowActionInput & { signature: string }
     expect(withSignature.signature).toBe('sig')
     // El tipo real no debe contener esos campos — verificación a nivel de tipo:

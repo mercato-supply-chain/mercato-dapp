@@ -225,6 +225,12 @@ export async function getAdminQueueData(
         supplierLogoUrl: deal.supplier?.logo_url ?? null,
         repaymentStatus: deal.repayment_status ?? null,
         remainingToSchedule: remaining,
+        positionId: ms.positionId,
+        trancheIndex: ms.trancheIndex,
+        receiver: ms.receiver,
+        netAmount: ms.netAmount,
+        netAtomic: ms.netAtomic,
+        scheduleCommitment: ms.scheduleCommitment,
         createdAt: deal.created_at ?? undefined,
       })
     }
@@ -275,6 +281,12 @@ export async function getAdminQueueData(
         completedAt: deal.created_at ?? null,
         supplierLogoUrl: deal.supplier?.logo_url ?? null,
         pymeAddress: deal.pyme?.address?.trim() || null,
+        positionId: ms.positionId,
+        trancheIndex: ms.trancheIndex,
+        receiver: ms.receiver,
+        netAmount: ms.netAmount,
+        netAtomic: ms.netAtomic,
+        scheduleCommitment: ms.scheduleCommitment,
       })
     }
   }

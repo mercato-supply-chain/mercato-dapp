@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps) {
   const event = getEventBySlug(slug)
   if (!event) return {}
 
-  const messages = getDictionary(event.defaultLocale)
+  const messages = await getDictionary(event.defaultLocale)
 
   return {
     title: tr(messages, event.titleKey),
@@ -40,7 +40,7 @@ export default async function EventSlugPage({ params }: PageProps) {
   const event = getEventBySlug(slug)
   if (!event) notFound()
 
-  const messages = getDictionary(event.defaultLocale)
+  const messages = await getDictionary(event.defaultLocale)
   const pageSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',

@@ -211,7 +211,7 @@ export async function fetchVaultActivityForAccount(input: {
       break
     }
 
-    nextUrl = page._links!.next!.href
+    nextUrl = page._links?.next?.href ?? null
   }
 
   entries.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))

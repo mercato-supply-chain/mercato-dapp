@@ -66,9 +66,17 @@ export function getVaultAssetTrustlineCopyTargets(
   return targets
 }
 
+/** Minimal structural shape of Horizon classic balance lines. */
+export type HorizonBalanceLike = {
+  asset_type?: string
+  asset_code?: string
+  asset_issuer?: string
+  balance?: string
+}
+
 /** Classic Horizon balances from the Blend pool (faucet credits these). */
 export function extractClassicBlendBalances(
-  balances: Record<string, unknown>[],
+  balances: readonly HorizonBalanceLike[],
 ): ClassicBalanceHint[] {
   return balances
     .filter((b) => b.asset_type !== 'native' && b.asset_type !== 'liquidity_pool_shares')
@@ -86,7 +94,7 @@ export function extractClassicBlendBalances(
  * Vault needs SAC `trust()` on the C… contract (use “Add trustline (sign)”).
  */
 export function horizonIndicatesVaultSacTrust(
-  _balances: Record<string, unknown>[],
+  _balances: readonly HorizonBalanceLike[],
   _vaultAssetContract: string,
 ): boolean {
   return false

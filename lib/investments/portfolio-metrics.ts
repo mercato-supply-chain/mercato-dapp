@@ -70,10 +70,14 @@ function enrichDeal(
   dealFallbackTitle: string,
   openEscrowsBySmb: Record<string, number>,
 ): EnrichedInvestorDeal {
-  const amountNum = Number(d.amount)
+  // Use contribution_amount when available to avoid double-counting in
+  // multi-investor scenarios. Fall back to amount for legacy single-investor deals.
+  const amountNum = Number(d.contribution_amount ?? d.amount)
+  const fullDealAmount = Number(d.amount)
   const apr = Number(d.interest_rate ?? 0)
   const termDays = Number(d.term_days ?? 0)
   const bucket = bucketForStatus(d.status)
+  const shareOfDeal = fullDealAmount > 0 ? amountNum / fullDealAmount : 1
 
   return {
     ...d,
@@ -87,6 +91,7 @@ function enrichDeal(
     accruedYield: bucket === 'active' ? accruedYield(amountNum, apr, d.funded_at, termDays) : 0,
     termProgress: termProgress(d.funded_at, d.term_days),
     openEscrowsWithSmb: d.pyme_id ? (openEscrowsBySmb[d.pyme_id] ?? 0) : 0,
+    shareOfDeal,
   }
 }
 
@@ -141,6 +146,7 @@ export function buildInvestorPortfolio(args: {
       total: args.historyTotal,
       hasMore: args.page * args.pageSize < args.historyTotal,
     },
+    rwaPositions: [],
   }
 }
 

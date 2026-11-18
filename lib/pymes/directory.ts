@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export type PublicPymeProfile = {
@@ -98,3 +99,5 @@ export async function fetchPublicPymeProfile(id: string): Promise<PublicPymeProf
 
   return null
 }
+
+export const getPublicPymeProfile = cache(fetchPublicPymeProfile)

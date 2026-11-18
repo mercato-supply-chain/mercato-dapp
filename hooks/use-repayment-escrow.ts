@@ -24,6 +24,7 @@ import {
 import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { usePollarSession } from '@/providers/pollar-provider'
 import { USDC_TRUSTLINE } from '@/lib/trustless/trustlines'
+import { planPositionPayoutDeploy } from '@/lib/trustless/repayment-position-payout-deploy'
 import {
   MERCATO_PLATFORM_ADDRESS,
   repaymentEscrowRoles,
@@ -290,10 +291,33 @@ export function useRepaymentEscrow() {
               failureMessage: null,
             })
 
-            const payload = toTrustlessWorkDeploymentPayload(params.draft)
-            const engagementId = payload.engagementId
-            const totalGrossed = params.draft.repayment.totalGrossed
-            const firstMilestone = params.draft.milestones[0]
+            const reviewedPayload = toTrustlessWorkDeploymentPayload(params.draft)
+            let payload = reviewedPayload
+            let engagementId = payload.engagementId
+            let totalGrossed = params.draft.repayment.totalGrossed
+            let initialMilestones: RepaymentMilestoneCache[] = params.draft.milestones[0]
+              ? [{
+                  index: 0,
+                  description: params.draft.milestones[0].description,
+                  amount: params.draft.milestones[0].amount,
+                  released: false,
+                }]
+              : []
+            if (params.payoutSchedule) {
+              const planned = planPositionPayoutDeploy({
+                schedule: params.payoutSchedule,
+                dealId: params.dealId,
+                productName: params.draft.title.replace(/^Repayment · /, ''),
+                signer: params.adminAddress,
+                roles: repaymentEscrowRoles(),
+                trustline: { address: USDC_TRUSTLINE.address, symbol: USDC_TRUSTLINE.symbol },
+              })
+              payload = planned.payload
+              engagementId = planned.engagementId
+              totalGrossed = planned.totalGrossed
+              initialMilestones = [...planned.initialMilestones]
+            }
+            const firstMilestone = payload.milestones[0]
             if (!firstMilestone) throw new Error('Reviewed draft has no initial milestone')
             const deployResponse = await deployEscrow(payload, 'multi-release')
             if (deployResponse.status !== 'SUCCESS' || !deployResponse.unsignedTransaction) {
@@ -344,9 +368,6 @@ export function useRepaymentEscrow() {
             if (existingDeal?.escrow_contract_address) {
               throw new Error('Duplicate deployment detected — escrow already assigned')
             }
-            const initialMilestones: RepaymentMilestoneCache[] = [
-              { index: 0, description: firstMilestone.description, amount: firstMilestone.amount, released: false },
-            ]
             const updates: Record<string, unknown> = {
               escrow_id: engagementId,
               escrow_contract_address: contractId,

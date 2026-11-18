@@ -1,10 +1,12 @@
 import { describe, expect, test, mock } from 'bun:test'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getDictionary } from '@/lib/i18n/dictionaries'
+import { enDict } from '@/lib/i18n/dictionaries'
 
-const enMessages = getDictionary('en')
+const enMessages = enDict
 
-function tr(messages: typeof enMessages, key: string): string {
+type Messages = typeof enMessages
+
+function tr(messages: Messages, key: string): string {
   const value = key.split('.').reduce<unknown>((node, part) => {
     if (node == null || typeof node !== 'object') return undefined
     return (node as Record<string, unknown>)[part]
@@ -14,7 +16,7 @@ function tr(messages: typeof enMessages, key: string): string {
 
 mock.module('@/lib/i18n/server', () => ({
   getServerDictionary: async () => enMessages,
-  tr: (messages: typeof enMessages, key: string) => tr(messages, key),
+  tr: (messages: Messages, key: string) => tr(messages, key),
 }))
 
 import { getAdminQueueData } from '@/lib/admin/get-admin-queue-data'

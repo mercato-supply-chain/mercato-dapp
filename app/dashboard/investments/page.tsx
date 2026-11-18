@@ -1,39 +1,37 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import {
   InvestmentsDashboard,
   parseInvestmentsTab,
 } from '@/components/investments/investments-dashboard'
+import { getDashboardSession } from '@/lib/dashboard/get-dashboard-session'
 import { getInvestorPortfolio } from '@/lib/investments/get-investor-portfolio'
 import { getServerDictionary } from '@/lib/i18n/server'
 
-type SearchParams = Promise<{ tab?: string; page?: string }> | { tab?: string; page?: string }
+type InvestmentsSearchParams = { tab?: string; page?: string }
+type SearchParams = Promise<InvestmentsSearchParams> | InvestmentsSearchParams
+
+async function resolveSearchParams(searchParams?: SearchParams): Promise<InvestmentsSearchParams> {
+  return (await searchParams) ?? {}
+}
 
 export default async function DashboardInvestmentsPage({
   searchParams,
 }: {
   searchParams?: SearchParams
 }) {
-  const t = await getServerDictionary()
-  const supabase = await createClient()
+  // The dictionary and search params do not depend on the user, so start them before auth.
+  const dictionaryPromise = getServerDictionary()
+  const paramsPromise = resolveSearchParams(searchParams)
+  // A redirect below can abandon these; observe rejections so none goes unhandled.
+  // Awaiting them later still throws the original error.
+  dictionaryPromise.catch(() => {})
+  paramsPromise.catch(() => {})
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Shared with the dashboard layout through cache(): one auth check and profile query per request.
+  const { supabase, user, profile } = await getDashboardSession()
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('user_type, full_name, company_name, contact_name')
-    .eq('id', user.id)
-    .single()
-
-  const params = searchParams
-    ? typeof (searchParams as Promise<{ tab?: string; page?: string }>).then === 'function'
-      ? await (searchParams as Promise<{ tab?: string; page?: string }>)
-      : (searchParams as { tab?: string; page?: string })
-    : {}
-
+  const [t, params] = await Promise.all([dictionaryPromise, paramsPromise])
   const page = Number(params.page) > 0 ? Number(params.page) : 1
 
   const portfolio = await getInvestorPortfolio(

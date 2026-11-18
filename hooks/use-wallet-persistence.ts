@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { stellarWalletKit } from '@/lib/trustless/wallet-kit'
+import { getStellarWalletKit } from '@/lib/trustless/lazy-wallet-kit'
 import { usePollarSession } from '@/providers/pollar-provider'
 import {
   getEmbeddedWalletId,
@@ -45,7 +45,13 @@ export function useWalletPersistence() {
     if (stored.provider === 'stellar-wallets-kit') {
       const restoreExternal = async () => {
         try {
-          const { address } = await stellarWalletKit.getAddress({
+          const walletKit = await getStellarWalletKit()
+          if (!walletKit) {
+            persistWallet(null)
+            return
+          }
+
+          const { address } = await walletKit.getAddress({
             skipRequestAccess: true,
           })
           if (address) {
@@ -71,11 +77,11 @@ export function useWalletPersistence() {
         publicKey: pollar.walletAddress,
         walletId: getEmbeddedWalletId(pollar.session) ?? undefined,
         isEmbedded: true,
-        status: getEmbeddedWalletStatus(pollar.session),
+        status: getEmbeddedWalletStatus(pollar.wallet),
         walletName: 'Pollar',
       })
     }
-  }, [hasRestored, persistWallet, pollar.isAuthenticated, pollar.session, pollar.walletAddress])
+  }, [hasRestored, persistWallet, pollar.isAuthenticated, pollar.session, pollar.wallet, pollar.walletAddress])
 
   useEffect(() => {
     if (!pollar.isAuthenticated || !pollar.walletAddress) {
@@ -90,10 +96,10 @@ export function useWalletPersistence() {
       publicKey: pollar.walletAddress,
       walletId: getEmbeddedWalletId(pollar.session) ?? undefined,
       isEmbedded: true,
-      status: getEmbeddedWalletStatus(pollar.session),
+      status: getEmbeddedWalletStatus(pollar.wallet),
       walletName: 'Pollar',
     })
-  }, [pollar.isAuthenticated, pollar.walletAddress, pollar.session, persistWallet, wallet?.provider])
+  }, [pollar.isAuthenticated, pollar.walletAddress, pollar.wallet, pollar.session, persistWallet, wallet?.provider])
 
   useEffect(() => {
     let cancelled = false

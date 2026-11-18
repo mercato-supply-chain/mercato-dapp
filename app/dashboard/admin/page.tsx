@@ -60,7 +60,7 @@ export default async function AdminOverviewPage() {
                 <div>
                   <p className="font-medium">{deal.title || deal.supplier_name || '—'}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(Number(deal.amount ?? 0))}
+                    {formatCurrency(Number(deal.amount ?? 0), 'USD', locale)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {tr(m, 'dealDetail.fundingDeadlineLabel')}{' '}

@@ -1,28 +1,9 @@
-import {
-  StellarWalletsKit,
-  WalletNetwork,
-  FREIGHTER_ID,
-  AlbedoModule,
-  FreighterModule,
-} from '@creit.tech/stellar-wallets-kit'
-import { loadStoredWallet, PollarWalletKitLimitations } from '@/lib/mercato-wallet'
+import { WalletNetwork } from '@creit.tech/stellar-wallets-kit'
+import { loadStoredWallet } from '@/lib/mercato-wallet'
+import { getStellarWalletKit as getLazyWalletKit } from '@/lib/trustless/lazy-wallet-kit'
 
 const isTestnet =
   process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK !== 'mainnet'
-
-/**
- * Stellar Wallet Kit configuration for signing transactions.
- * Supports Freighter and Albedo wallets. Only created in the browser to avoid "window is not defined" during SSR.
- * @see https://docs.trustlesswork.com/trustless-work/pt/developer-resources/stellar-wallet-kit-integracao-rapida
- */
-export const stellarWalletKit =
-  typeof window !== 'undefined'
-    ? new StellarWalletsKit({
-        network: isTestnet ? WalletNetwork.TESTNET : WalletNetwork.PUBLIC,
-        selectedWalletId: FREIGHTER_ID,
-        modules: [new FreighterModule(), new AlbedoModule()],
-      })
-    : (null as unknown as InstanceType<typeof StellarWalletsKit>)
 
 export const NETWORK_PASSPHRASE = isTestnet
   ? WalletNetwork.TESTNET
@@ -38,6 +19,8 @@ interface SignTransactionParams {
  * For Pollar embedded wallets use `usePollarSession().signAndSubmitTx` instead,
  * which signs AND submits in one step via Pollar's infrastructure.
  *
+ * The wallet kit SDK is lazily initialized on first call.
+ *
  * @param unsignedTransaction - XDR string of the unsigned transaction
  * @param address - Wallet address that will sign the transaction
  * @returns The signed XDR string
@@ -46,10 +29,6 @@ export const signTransaction = async ({
   unsignedTransaction,
   address,
 }: SignTransactionParams): Promise<string> => {
-  if (!stellarWalletKit) {
-    throw new Error('Wallet kit is not available (e.g. in server context).')
-  }
-
   const activeWallet = loadStoredWallet()
   if (activeWallet?.provider === 'pollar') {
     throw new Error(
@@ -57,7 +36,12 @@ export const signTransaction = async ({
     )
   }
 
-  const { signedTxXdr } = await stellarWalletKit.signTransaction(unsignedTransaction, {
+  const walletKit = await getLazyWalletKit()
+  if (!walletKit) {
+    throw new Error('Wallet kit is not available (e.g. in server context).')
+  }
+
+  const { signedTxXdr } = await walletKit.signTransaction(unsignedTransaction, {
     address,
     networkPassphrase: NETWORK_PASSPHRASE,
   })

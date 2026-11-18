@@ -102,7 +102,7 @@ test('posts the verification with reason and refreshes on confirm', async () => 
 })
 
 test('unverify flow sends verified=false and shows an error toast on failure', async () => {
-  globalThis.fetch = (async () =>
+  globalThis.fetch = (async (_input: RequestInfo | URL, _init?: RequestInit) =>
     Response.json({ error: 'Forbidden' }, { status: 403 })) as typeof fetch
 
   const user = userEvent.setup()

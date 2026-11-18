@@ -60,7 +60,7 @@ export default function DealDetailPage() {
   const ctx = useDealDetail(dealId)
   const { deal, setDeal, isLoading, userId, userType, isSupplier, isPyme, isAdmin,
     indexerEscrow, pymeReputation, supplierReputation, partyReputationsLoading,
-    fetchDeal, supabase, walletInfo, isConnected, handleConnect } = ctx
+    fetchDeal, supabase, walletInfo, isConnected, handleConnect, loadError, retry } = ctx
   const isInvestor = userType === 'investor'
 
   useEffect(() => {
@@ -81,6 +81,24 @@ export default function DealDetailPage() {
   }, [deal, isLoading, userId, searchParams])
 
   if (isLoading) return <DealDetailSkeleton />
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navigation />
+        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+          <div className="text-center">
+            <h1 className="mb-2 text-2xl font-bold">{t('dealDetail.loadError')}</h1>
+            <p className="mb-4 text-muted-foreground">{t('dealDetail.loadErrorHelp')}</p>
+            <div className="flex justify-center gap-2">
+              <Button onClick={retry}>{t('dealDetail.retry')}</Button>
+              <Button asChild variant="outline"><Link href="/deals">{t('common.back')}</Link></Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!deal) {
     return (

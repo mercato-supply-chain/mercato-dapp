@@ -47,10 +47,12 @@ Before opening a PR:
 
 ```bash
 bun lint
+bun typecheck
+bun typecheck:tests
 bun build
 ```
 
-Fix any **lint** and **build** errors unless the issue explicitly says otherwise (for example a tracked follow-up).
+Fix any **lint**, **typecheck**, and **build** errors unless the issue explicitly says otherwise (for example a tracked follow-up).
 
 Database changes must use the Supabase CLI migration workflow. Create new schema changes with `supabase migration new <name>` and commit the generated file under `supabase/migrations/`. Do not add new SQL migrations under `scripts/`.
 
@@ -76,7 +78,7 @@ If you need to fixup during review, **squash or reorganize** commits before merg
 ### Pull request checklist
 
 - [ ] Addresses the issue scope; no unrelated refactors.
-- [ ] `bun lint` and `bun build` pass locally.
+- [ ] `bun lint`, `bun typecheck`, `bun typecheck:tests`, and `bun build` pass locally.
 - [ ] No secrets or `.env` files committed — use `env.sample` for documenting new variables only.
 - [ ] PR description states **what** changed and **why**, and links the issue (`Closes #…` / `Fixes #…` where appropriate).
 

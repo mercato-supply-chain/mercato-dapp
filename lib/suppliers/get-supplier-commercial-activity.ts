@@ -1,6 +1,50 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { SupplierCommercialState } from '@/lib/suppliers/commercial-states'
 
+/** Untyped RPC row shapes — cast boundary until Database types are generated. */
+type CommercialActivityRpcRow = {
+  deal_id: string
+  product_id: string | null
+  product_name: string
+  product_quantity: string | number
+  product_unit_price: string | number
+  amount: string | number
+  category: string
+  commercial_state: string
+  supplier_company_id: string
+  supplier_company_name: string
+  pyme_id: string
+  pyme_name: string
+  investor_id: string | null
+  investor_name: string | null
+  created_at: string
+  funded_at: string | null
+  shipped_at: string | null
+  total_count?: number
+}
+
+type ProductPerformanceRpcRow = {
+  product_id: string
+  product_name: string
+  category: string
+  financing_request_count?: number
+  funded_request_count?: number
+  financing_conversion_rate?: number
+  financed_volume?: number
+  completed_volume?: number
+}
+
+type CustomerActivityRpcRow = {
+  pyme_id: string
+  pyme_name: string
+  products_requested?: string[]
+  financing_request_count?: number
+  financing_request_value?: number
+  funded_request_count?: number
+  awaiting_funding_count?: number
+  most_recent_activity_at: string | null
+}
+
 export type SupplierCommercialFilters = {
   companyId?: string | null
   productId?: string | null
@@ -134,7 +178,7 @@ export async function getSupplierCommercialActivity(
     return null
   }
 
-  const activityRows = activityResult.data ?? []
+  const activityRows = (activityResult.data ?? []) as CommercialActivityRpcRow[]
   const activityTotal = activityRows.length > 0 ? Number(activityRows[0].total_count ?? 0) : 0
 
   return {
@@ -165,17 +209,19 @@ export async function getSupplierCommercialActivity(
       shippedAt: row.shipped_at ?? null,
     })),
     activityTotal,
-    productPerformance: (performanceResult.data ?? []).map((row) => ({
-      productId: row.product_id,
-      productName: row.product_name,
-      category: row.category,
-      financingRequestCount: Number(row.financing_request_count ?? 0),
-      fundedRequestCount: Number(row.funded_request_count ?? 0),
-      financingConversionRate: Number(row.financing_conversion_rate ?? 0),
-      financedVolume: Number(row.financed_volume ?? 0),
-      completedVolume: Number(row.completed_volume ?? 0),
-    })),
-    customerActivity: (customerResult.data ?? []).map((row) => ({
+    productPerformance: ((performanceResult.data ?? []) as ProductPerformanceRpcRow[]).map(
+      (row) => ({
+        productId: row.product_id,
+        productName: row.product_name,
+        category: row.category,
+        financingRequestCount: Number(row.financing_request_count ?? 0),
+        fundedRequestCount: Number(row.funded_request_count ?? 0),
+        financingConversionRate: Number(row.financing_conversion_rate ?? 0),
+        financedVolume: Number(row.financed_volume ?? 0),
+        completedVolume: Number(row.completed_volume ?? 0),
+      }),
+    ),
+    customerActivity: ((customerResult.data ?? []) as CustomerActivityRpcRow[]).map((row) => ({
       pymeId: row.pyme_id,
       pymeName: row.pyme_name,
       productsRequested: row.products_requested ?? [],

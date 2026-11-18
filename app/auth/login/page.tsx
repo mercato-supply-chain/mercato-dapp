@@ -3,21 +3,14 @@
 import type { FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { MercatoLogo } from '@/components/mercato-logo'
 import { useI18n } from '@/lib/i18n/provider'
 import { useWallet } from '@/hooks/use-wallet'
+import { AuthSplitShell } from '@/components/auth/auth-split-shell'
 
 export default function LoginPage() {
   const { t } = useI18n()
@@ -50,130 +43,102 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[400px]">
-          <Link
-            href="/"
-            className="mb-10 flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-mid">
-              <MercatoLogo onBrand className="h-5" />
-            </span>
-            <span>MERCATO</span>
-          </Link>
+    <AuthSplitShell asideTitle={t('auth.loginAsideTitle')} asideBody={t('auth.loginAsideBody')}>
+      <h1 className="font-display text-4xl font-normal tracking-tight text-foreground">
+        {t('auth.loginTitle')}
+      </h1>
+      <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+        {t('auth.loginDescription')}
+      </p>
 
-          <Card className="border-border/80 shadow-lg shadow-black/5">
-            <CardHeader className="space-y-1 pb-6 text-center sm:text-left">
-              <CardTitle className="text-2xl font-semibold tracking-tight">
-                {t('auth.loginTitle')}
-              </CardTitle>
-              <CardDescription className="text-base">
-                {t('auth.loginDescription')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  className="h-11 w-full font-medium"
-                  size="lg"
-                  onClick={() => connectPollarWallet()}
-                >
-                  {t('auth.continueWithPollar')}
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  {t('auth.continueWithPollarShort')}
-                </p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center" aria-hidden>
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-wide">
-                  <span className="bg-card px-2 text-muted-foreground">{t('auth.or')}</span>
-                </div>
-              </div>
-
-              <p className="text-center text-xs text-muted-foreground">{t('auth.signInWithPasswordInstead')}</p>
-
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t('auth.email')}</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    spellCheck={false}
-                    placeholder="you@company.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">{t('auth.password')}</Label>
-                    <Link
-                      href="/auth/forgot-password"
-                      className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground"
-                    >
-                      {t('auth.forgotPassword')}
-                    </Link>
-                  </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-
-                {error && (
-                  <div
-                    className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-                    role="alert"
-                    aria-live="polite"
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="h-11 w-full font-medium"
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? t('auth.signingIn') : t('auth.signIn')}
-                </Button>
-              </form>
-
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                {t('auth.noAccount')}{' '}
-                <Link
-                  href="/auth/sign-up"
-                  className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
-                >
-                  {t('nav.signUp')}
-                </Link>
-              </p>
-            </CardContent>
-          </Card>
-
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            {t('auth.tagline')}
-          </p>
-        </div>
+      <div className="mt-8 space-y-3">
+        <Button
+          type="button"
+          className="h-12 w-full bg-brand-mid text-base font-medium text-white hover:bg-brand-dark"
+          size="lg"
+          onClick={() => connectPollarWallet()}
+        >
+          {t('auth.continueWithPollar')}
+        </Button>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t('auth.continueWithPollarShort')}
+        </p>
       </div>
-    </div>
+
+      <details className="group mt-10 border-t border-border pt-6">
+        <summary className="cursor-pointer list-none rounded-sm text-sm font-medium text-foreground marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+          {t('auth.loginEmailToggle')}
+        </summary>
+
+        <form onSubmit={handleLogin} className="mt-6 space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email">{t('auth.email')}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              spellCheck={false}
+              placeholder="you@company.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-11"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="password">{t('auth.password')}</Label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                {t('auth.forgotPassword')}
+              </Link>
+            </div>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-11"
+            />
+          </div>
+
+          {error ? (
+            <div
+              className="border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
+          ) : null}
+
+          <Button
+            type="submit"
+            variant="outline"
+            className="h-11 w-full font-medium"
+            size="lg"
+            disabled={isLoading}
+          >
+            {isLoading ? t('auth.signingIn') : t('auth.signIn')}
+          </Button>
+        </form>
+      </details>
+
+      <p className="mt-10 text-sm text-muted-foreground">
+        {t('auth.noAccount')}{' '}
+        <Link
+          href="/auth/sign-up"
+          className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+        >
+          {t('nav.signUp')}
+        </Link>
+      </p>
+    </AuthSplitShell>
   )
 }

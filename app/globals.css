@@ -21,6 +21,7 @@
   }
 
   :root {
+    --pollar-brand-overlay-z-index: 80;
     --background: 0 0% 100%;
     --foreground: 150 15% 8%;
     --card: 0 0% 100%;

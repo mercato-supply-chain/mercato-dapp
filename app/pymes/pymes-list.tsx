@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
@@ -108,19 +107,22 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
 
   const hasActiveFilters = searchQuery || selectedCountry !== 'all' || selectedSector !== 'all'
 
+  // Debounce the live-region count so a screen reader hears one settled
+  // announcement per filter change instead of one per keystroke.
+  const [announceCount, setAnnounceCount] = useState(filteredSmbs.length)
+  useEffect(() => {
+    const id = setTimeout(() => setAnnounceCount(filteredSmbs.length), 300)
+    return () => clearTimeout(id)
+  }, [filteredSmbs.length])
+  const announceText =
+    announceCount === 1
+      ? t('pymesPage.foundOne', { count: announceCount })
+      : t('pymesPage.foundMany', { count: announceCount })
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <Navigation />
-
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">{t('pymesPage.title')}</h1>
-          <p className="text-muted-foreground">{t('pymesPage.subtitle')}</p>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <>
+      {/* Filters */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
@@ -162,7 +164,9 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
           </div>
         </div>
 
-        {/* Result count */}
+        {/* Result count — visible count updates per keystroke for sighted
+            users; a sibling sr-only live region announces the debounced
+            settled count so screen readers aren't spammed. */}
         <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Store className="h-4 w-4" aria-hidden />
           <span>
@@ -172,6 +176,9 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
             {hasActiveFilters && t('pymesPage.matchingFilters')}
           </span>
         </div>
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {announceText}
+        </span>
 
         {/* Grid */}
         {filteredSmbs.length === 0 ? (
@@ -297,7 +304,6 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
             ))}
           </div>
         )}
-      </div>
-    </div>
+    </>
   )
 }

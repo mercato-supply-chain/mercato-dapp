@@ -25,18 +25,40 @@ function WaterfallColumn({
   items,
   speed,
   baseOffset,
-  progress,
   scrollPhase,
   colIndex,
+  scrollProgressRef,
 }: {
   items: LandingFeedItem[]
   speed: number
   baseOffset: number
-  progress: number
   scrollPhase: number
   colIndex: number
+  scrollProgressRef: React.MutableRefObject<number>
 }) {
-  const scrollY = progress * speed * 280 - baseOffset
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const updateTransform = () => {
+      const scrollY = scrollProgressRef.current * speed * 280 - baseOffset
+      el.style.transform = `translate3d(0, ${scrollY}px, 0)`
+    }
+
+    // Initial frame
+    updateTransform()
+
+    // Update on every animation frame
+    let raf = requestAnimationFrame(function frame() {
+      updateTransform()
+      raf = requestAnimationFrame(frame)
+    })
+
+    return () => cancelAnimationFrame(raf)
+  }, [speed, baseOffset, scrollProgressRef])
+
   const doubled = [...items, ...items]
 
   return (
@@ -47,7 +69,7 @@ function WaterfallColumn({
         colIndex === 2 && 'hidden lg:flex',
       )}
     >
-      <div style={{ transform: `translate3d(0, ${scrollY}px, 0)` }}>
+      <div ref={ref}>
         <div className="landing-column-drift flex flex-col gap-4 motion-reduce:animate-none md:gap-5">
           {doubled.map((item, i) => {
             const globalIndex = colIndex + i * 3
@@ -71,7 +93,14 @@ function WaterfallColumn({
 
 export function LandingLiveDeals() {
   const { t } = useI18n()
-  const { ref: sectionRef, progress } = useScrollProgress<HTMLElement>()
+  const [scrollPhase, setScrollPhase] = React.useState(0)
+  const [gradientScale, setGradientScale] = React.useState(0.9)
+  const scrollProgressRef = React.useRef(0)
+  const { ref: sectionRef } = useScrollProgress<HTMLElement>((phase, progress) => {
+    scrollProgressRef.current = progress
+    setScrollPhase(phase)
+    setGradientScale(0.9 + progress * 0.15)
+  })
   const { ref: headerRef, visible } = useReveal<HTMLDivElement>(0.15)
   const [deals, setDeals] = React.useState<Deal[]>([])
   const [loaded, setLoaded] = React.useState(false)
@@ -103,7 +132,6 @@ export function LandingLiveDeals() {
     [deals, t],
   )
   const columns = React.useMemo(() => splitIntoColumns(feed, 3), [feed])
-  const scrollPhase = Math.min(6, Math.floor(progress * 8))
   const hasLive = deals.length > 0
 
   return (
@@ -179,7 +207,7 @@ export function LandingLiveDeals() {
               style={{
                 background:
                   'radial-gradient(circle, hsl(var(--brand-light) / 0.1) 0%, transparent 70%)',
-                transform: `translate(-50%, -50%) scale(${0.9 + progress * 0.15})`,
+                transform: `translate(-50%, -50%) scale(${gradientScale})`,
               }}
               aria-hidden
             />
@@ -191,9 +219,9 @@ export function LandingLiveDeals() {
                   items={colItems}
                   speed={COLUMN_SPEEDS[colIndex] ?? 0.45}
                   baseOffset={COLUMN_OFFSETS[colIndex] ?? 0}
-                  progress={progress}
                   scrollPhase={scrollPhase}
                   colIndex={colIndex}
+                  scrollProgressRef={scrollProgressRef}
                 />
               ))}
             </div>

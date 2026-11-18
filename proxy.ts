@@ -2,7 +2,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { type NextRequest } from 'next/server'
 import { isLocale, localeCookieName } from '@/lib/i18n/config'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const lang = searchParams.get('lang') || searchParams.get('locale')
 

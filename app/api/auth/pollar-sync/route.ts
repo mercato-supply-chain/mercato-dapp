@@ -73,12 +73,12 @@ export async function POST(request: Request) {
   const publishableKey = (
     process.env.POLLAR_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY
   )?.trim()
+  const secretKey = process.env.POLLAR_SECRET_KEY?.trim()
 
-  if (!publishableKey) {
+  if (!secretKey) {
     return NextResponse.json(
       {
-        error:
-          'POLLAR_PUBLISHABLE_KEY or NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY must be set for server routes (use the same publishable key as in the browser).',
+        error: 'POLLAR_SECRET_KEY must be set to verify Pollar sessions on the server.',
       },
       { status: 503 },
     )
@@ -88,8 +88,8 @@ export async function POST(request: Request) {
     accessToken,
     publicKey: stellarPublicKey,
     network,
-    publishableApiKey: publishableKey,
-    secretApiKey: process.env.POLLAR_SECRET_KEY?.trim(),
+    publishableApiKey: publishableKey ?? secretKey,
+    secretApiKey: secretKey,
     allowedOrigin: clientOriginFromRequest(request),
   })
 
@@ -98,8 +98,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: verified.message }, { status })
   }
 
+  if ((!email || !isEmailLooksValid(email)) && verified.email && isEmailLooksValid(verified.email)) {
+    email = verified.email.toLowerCase()
+  }
+
   if (!email || !isEmailLooksValid(email)) {
-    email = syntheticEmbeddedEmail(pollarUserId || stellarPublicKey)
+    email = syntheticEmbeddedEmail(verified.userId || pollarUserId || stellarPublicKey)
   }
 
   let admin
@@ -109,10 +113,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Authentication service is not configured' }, { status: 503 })
   }
 
-  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const resolvedFirstName = firstName || verified.firstName || ''
+  const resolvedLastName = lastName || verified.lastName || ''
+  const fullName = [resolvedFirstName, resolvedLastName].filter(Boolean).join(' ').trim()
   const userMetadata: Record<string, unknown> = {
     auth_provider: 'pollar',
-    pollar_user_id: pollarUserId || null,
+    pollar_user_id: verified.userId || pollarUserId || null,
     stellar_public_key: stellarPublicKey,
   }
   if (fullName) userMetadata.full_name = fullName

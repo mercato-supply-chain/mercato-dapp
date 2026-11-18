@@ -10,7 +10,7 @@ import {
 import type { TxHistoryState } from '@pollar/core'
 import { signOutApp } from '@/lib/auth/sign-out-app'
 import { usePollarSession } from '@/providers/pollar-provider'
-import { stellarWalletKit } from '@/lib/trustless/wallet-kit'
+import { getStellarWalletKitSync } from '@/lib/trustless/lazy-wallet-kit'
 import { useWalletPersistence } from '@/hooks/use-wallet-persistence'
 import { useWalletBalance } from '@/hooks/use-wallet-balance'
 import { usePollarWallet } from '@/hooks/use-pollar-wallet'
@@ -71,7 +71,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     try {
-      await stellarWalletKit?.disconnect()
+      // The wallet kit is only disconnected if it was already initialized.
+      // Otherwise, there's nothing to disconnect.
+      const walletKit = getStellarWalletKitSync()
+      if (walletKit) {
+        await walletKit.disconnect()
+      }
     } catch {
       // ignore wallet-kit disconnect failures
     }
