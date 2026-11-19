@@ -29,6 +29,10 @@ export default async function DashboardPage({
     redirect('/auth/login')
   }
 
+  // getDashboardData returns per-section success/error results. Required
+  // section failures are surfaced to DashboardHome (which renders a retry
+  // state) instead of being silently converted into zero KPIs, and optional
+  // section failures are rendered as explicit unavailability.
   const data = await getDashboardData(supabase, user.id, profile, user.email, companyFilterId)
 
   return <DashboardHome data={data} t={t} />

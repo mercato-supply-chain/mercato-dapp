@@ -47,6 +47,12 @@ export default async function DashboardInvestmentsPage({
 
   if (!portfolio) redirect('/dashboard')
 
+  // Required portfolio data failed to load: surface to the route error boundary
+  // instead of rendering misleading zero totals.
+  if ('error' in portfolio && portfolio.error) {
+    throw new Error(`Investor portfolio unavailable: ${portfolio.error}`)
+  }
+
   const tab = parseInvestmentsTab(params.tab)
 
   return <InvestmentsDashboard portfolio={portfolio} tab={tab} t={t} />
