@@ -22,6 +22,7 @@ import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 import { investorFundingTotal } from '@/lib/deals/fees'
+import type { Deal } from '@/lib/types'
 
 function getDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
   const statusConfig = {
@@ -50,14 +51,14 @@ function formatFundingRemaining(ms: number, t: ReturnType<typeof useI18n>['t']):
   return t('deals.fundingTimeDays', { n: Math.floor(hrs / 24) })
 }
 
-export default function DealDetailPage() {
+export default function DealDetailPage({ initialDeal }: { initialDeal: Deal }) {
   const { t } = useI18n()
   const params = useParams()
   const dealId = typeof params.id === 'string' ? params.id : params.id?.[0]
   const searchParams = useSearchParams()
   const hasHandledAction = useRef(false)
 
-  const ctx = useDealDetail(dealId)
+  const ctx = useDealDetail(dealId, initialDeal)
   const { deal, setDeal, isLoading, userId, userType, isSupplier, isPyme, isAdmin,
     indexerEscrow, pymeReputation, supplierReputation, partyReputationsLoading,
     fetchDeal, supabase, walletInfo, isConnected, handleConnect, loadError, retry } = ctx

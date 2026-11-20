@@ -19,7 +19,7 @@ function readDetailPage(route: string): string {
 
 describe('public detail loaders wiring', () => {
   const cases = [
-    { route: 'deals', symbol: 'getDealSummary', module: '@/lib/deals/detail' },
+    { route: 'deals', symbol: 'getDealDetail', module: '@/lib/deals/detail' },
     { route: 'pymes', symbol: 'getPublicPymeProfile', module: '@/lib/pymes/directory' },
     { route: 'suppliers', symbol: 'getPublicSupplier', module: '@/lib/suppliers/directory' },
     { route: 'investors', symbol: 'getPublicInvestorProfile', module: '@/lib/investors/directory' },
@@ -68,11 +68,11 @@ describe('cached loader deduplication', () => {
     mock.module('react', () => ({ cache: keyedMemo }))
     mock.module('@/lib/supabase/server', () => stubServerClient(() => { reads += 1 }))
 
-    const { getDealSummary } = await import('@/lib/deals/detail')
-    await getDealSummary('deal-a')
-    await getDealSummary('deal-a')
+    const { getDealDetail } = await import('@/lib/deals/detail')
+    await getDealDetail('deal-a')
+    await getDealDetail('deal-a')
     expect(reads).toBe(1)
-    await getDealSummary('deal-b')
+    await getDealDetail('deal-b')
     expect(reads).toBe(2)
   })
 
