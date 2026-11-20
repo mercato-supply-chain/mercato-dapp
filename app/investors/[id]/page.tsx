@@ -90,18 +90,12 @@ export default async function InvestorDetailPage({
 
   // Headline stats come from a single-row aggregate query over the account's full
   // history; only the capped recent list transfers deal rows.
-  const [profileResult, dealsList, aggregates, reputation] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, company_name, bio, full_name, contact_name, email, phone, user_type, country, sector, verified, stake_amount')
-      .eq('id', id)
-      .single(),
+  const [profile, dealsList, aggregates, reputation] = await Promise.all([
+    getPublicInvestorProfile(id),
     fetchRecentProfileDeals(supabase, 'investor_id', id),
     getInvestorDealAggregates(supabase, id),
     getReputation(supabase, id),
   ])
-
-  const { data: profile, error: profileError } = profileResult
 
   if (!profile) {
     notFound()

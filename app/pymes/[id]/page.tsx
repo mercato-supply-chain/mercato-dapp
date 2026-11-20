@@ -94,7 +94,7 @@ export default async function SmbDetailPage({
   // Headline stats and reputation inputs come from a single-row aggregate query
   // over the PyME's full history; only the capped recent list transfers deal rows.
   const [profile, dealsList, aggregates, reputation] = await Promise.all([
-    fetchPublicPymeProfile(id),
+    getPublicPymeProfile(id),
     fetchRecentProfileDeals(serviceSupabase, 'pyme_id', id),
     getPymeDealAggregates(serviceSupabase, id),
     getReputation(supabase, id),

@@ -1,6 +1,10 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { afterAll, describe, expect, mock, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+
+// Captured before the dedup tests replace 'react'. Bun shares one module registry across test
+// files, so the stand-in has to be swapped back or every later file that requires React breaks.
+const realReact = await import('react')
 
 const ROOT = join(import.meta.dir, '..')
 
@@ -101,4 +105,8 @@ describe('cached loader deduplication', () => {
     await getPublicPymeProfile('pyme-a')
     expect(reads).toBe(1)
   })
+})
+
+afterAll(() => {
+  mock.module('react', () => realReact)
 })
