@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
 import { LandingHero } from '@/components/landing/landing-hero'
 import { LandingRoles } from '@/components/landing/landing-roles'
@@ -9,6 +8,7 @@ import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
+import { getLandingHeroDeal } from '@/lib/landing/get-hero-deal'
 import { getLandingPlatformStats } from '@/lib/landing/get-platform-stats'
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +41,10 @@ const breadcrumbSchema = {
 }
 
 export default async function HomePage() {
-  const platformStats = await getLandingPlatformStats()
+  const [heroDeal, platformStats] = await Promise.all([
+    getLandingHeroDeal(),
+    getLandingPlatformStats(),
+  ])
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-background">
@@ -49,18 +52,11 @@ export default async function HomePage() {
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero stats={platformStats} />
+      <LandingHero deal={heroDeal} stats={platformStats} />
 
       <LandingRoles />
 
       <LandingRateComparison />
-
-      <div className="flex flex-col items-center py-12 border-t border-border/50">
-        <p className="text-muted-foreground mb-3">Want to understand the full picture?</p>
-       <Link href="/our-story" className="text-primary font-medium underline underline-offset-4">
-  Learn our story →
-</Link>
-      </div>
 
       <section className="border-t border-border/50 bg-background">
         <LandingLiveDeals />
