@@ -183,7 +183,7 @@ export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
       <div
         ref={ref}
         className={cn(
-          'container mx-auto max-w-lg px-4 transition-all duration-700 sm:max-w-xl',
+          'container mx-auto max-w-lg px-4 transition-opacity transition-transform duration-700 sm:max-w-xl motion-reduce:transition-none',
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
         )}
       >
@@ -207,7 +207,7 @@ export function EventDiscoveryForm({ event }: EventDiscoveryFormProps) {
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-brand-mid transition-all duration-300"
+                  className="h-full rounded-full bg-brand-mid transition-opacity transition-transform duration-300"
                   style={{ width: `${((step + 1) / TOTAL_STEPS) * 100}%` }}
                 />
               </div>
