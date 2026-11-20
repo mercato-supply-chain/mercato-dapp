@@ -21,7 +21,7 @@ function EventPageContent({ event }: EventPageProps) {
     <>
       <EventLocaleSync defaultLocale={event.defaultLocale} />
       <EventHeader />
-      <main>
+      <main id="main" tabIndex={-1}>
         <EventHero event={event} />
         <EventProblem />
         <EventHowItWorks />

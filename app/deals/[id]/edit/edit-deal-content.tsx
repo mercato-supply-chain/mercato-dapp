@@ -154,7 +154,7 @@ export default function EditDealContent() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <main className="container mx-auto px-4 py-8 pb-16">
+      <main id="main" tabIndex={-1} className="container mx-auto px-4 py-8 pb-16">
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm">
             <Link href={`/deals/${deal.id}`}>{t('editDeal.backToDeal')}</Link>

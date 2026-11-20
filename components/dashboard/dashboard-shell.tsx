@@ -136,7 +136,7 @@ export function DashboardShell({ userType, children }: DashboardShellProps) {
             <span className="text-sm font-medium text-muted-foreground">{t('dashboardNav.menuHint')}</span>
           </div>
 
-          <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
+          <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
         </div>
       </div>
     </div>
