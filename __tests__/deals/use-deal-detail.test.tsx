@@ -332,4 +332,5 @@ describe('useDealDetail load lifecycle', () => {
       await expect(refresh).resolves.toBeNull()
     })
   })
+
 })

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getDealSummary } from '@/lib/deals/detail'
+import { getDealDetail } from '@/lib/deals/detail'
 import DealDetailPageClient from './deal-detail-view'
 import { JsonLd } from '@/components/seo/json-ld'
 
@@ -9,17 +9,17 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
-  const dbDeal = await getDealSummary(id)
+  const deal = await getDealDetail(id)
 
-  if (!dbDeal) {
+  if (!deal) {
     return {
       title: 'Deal Not Found | Mercato',
     }
   }
 
-  const dealName = dbDeal.product_name || dbDeal.title || 'Supply Chain Deal'
-  const pymeName = dbDeal.pyme?.company_name || dbDeal.pyme?.full_name || dbDeal.pyme?.contact_name || 'PyME'
-  const desc = dbDeal.description || `Supply chain finance deal on Mercato: ${dealName} for ${pymeName}.`
+  const dealName = deal.productName || 'Supply Chain Deal'
+  const pymeName = deal.pymeName || 'PyME'
+  const desc = deal.description || `Supply chain finance deal on Mercato: ${dealName} for ${pymeName}.`
 
   return {
     title: `${dealName} | Mercato Deals`,
@@ -41,13 +41,13 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function DealDetailPage({ params }: PageProps) {
   const { id } = await params
-  const dbDeal = await getDealSummary(id)
+  const deal = await getDealDetail(id)
 
-  if (!dbDeal) {
+  if (!deal) {
     notFound()
   }
 
-  const displayName = dbDeal.product_name || dbDeal.title || 'Deal Detail'
+  const displayName = deal.productName || 'Deal Detail'
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -69,7 +69,7 @@ export default async function DealDetailPage({ params }: PageProps) {
         '@type': 'ListItem',
         'position': 3,
         'name': displayName,
-        'item': `https://mercato.app/deals/${dbDeal.id}`,
+        'item': `https://mercato.app/deals/${deal.id}`,
       },
     ],
   }
@@ -77,7 +77,7 @@ export default async function DealDetailPage({ params }: PageProps) {
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
-      <DealDetailPageClient />
+      <DealDetailPageClient initialDeal={deal} />
     </>
   )
 }
