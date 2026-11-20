@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowDownRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -203,6 +204,7 @@ export function EscrowMilestoneEditor({
               value={overrideText}
               placeholder={generatedReceiver}
               onChange={(e) => setOverrideText(e.target.value)}
+              {...STELLAR_ADDRESS_INPUT_PROPS}
             />
             {overrideText.trim() !== '' && !overrideValid && (
               <p className="text-xs text-destructive">{t('repaymentEscrow.milestoneEditor.invalidAddress')}</p>

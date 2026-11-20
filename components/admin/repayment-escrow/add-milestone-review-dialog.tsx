@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -190,7 +191,7 @@ export function AddMilestoneReviewDialog({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="add-milestone-receiver">{t('repaymentEscrow.addMilestone.newReceiverLabel')}</Label>
-                <Input id="add-milestone-receiver" className="font-mono text-xs" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="G..." />
+                <Input id="add-milestone-receiver" className="font-mono text-xs" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="G..." {...STELLAR_ADDRESS_INPUT_PROPS} />
                 {receiver && !receiverValid && <p className="text-xs text-destructive">{t('repaymentEscrow.addMilestone.invalidReceiver')}</p>}
               </div>
 
