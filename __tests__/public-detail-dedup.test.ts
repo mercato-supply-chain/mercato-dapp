@@ -11,6 +11,10 @@ const ReactOriginal = { ...ReactNamespace }
 const SupabaseServerOriginal = { ...SupabaseServerNamespace }
 const SupabaseServiceOriginal = { ...SupabaseServiceNamespace }
 
+// Captured before the dedup tests replace 'react'. Bun shares one module registry across test
+// files, so the stand-in has to be swapped back or every later file that requires React breaks.
+const realReact = await import('react')
+
 const ROOT = join(import.meta.dir, '..')
 
 function readDetailPage(route: string): string {
@@ -112,11 +116,6 @@ describe('cached loader deduplication', () => {
   })
 })
 
-// Bun's mock.module() registrations are global and persist for the rest of the test
-// process; restore the real modules so later test files import the full React and
-// Supabase implementations instead of these stubs.
 afterAll(() => {
-  mock.module('react', () => ({ ...ReactOriginal }))
-  mock.module('@/lib/supabase/server', () => ({ ...SupabaseServerOriginal }))
-  mock.module('@/lib/supabase/service', () => ({ ...SupabaseServiceOriginal }))
+  mock.module('react', () => realReact)
 })

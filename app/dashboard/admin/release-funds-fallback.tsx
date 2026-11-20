@@ -209,7 +209,7 @@ export function ReleaseFundsFallback({
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href={`/deals/${item.dealId}`}
-                  className="rounded font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="rounded font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {item.dealProductName || item.dealTitle || t('adminPage.fallbackDeal')}
                 </Link>
