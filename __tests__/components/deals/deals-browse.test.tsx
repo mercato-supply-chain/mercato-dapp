@@ -1,6 +1,7 @@
 import { test, expect, mock, afterEach } from 'bun:test'
 import React from 'react'
 import { render, screen, within, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { mockDeals } from '@/__tests__/fixtures/mock-deals'
 
 mock.module('next/link', () => ({
@@ -38,6 +39,7 @@ const originalFetch = globalThis.fetch
 
 afterEach(() => {
   globalThis.fetch = originalFetch
+  window.location.href = 'http://localhost:3000/deals'
   mock.restore()
   cleanup()
 })
@@ -117,4 +119,55 @@ test('result count is a polite live region', () => {
   const status = screen.getByRole('status')
   expect(status.getAttribute('aria-live')).toBe('polite')
   expect(status.getAttribute('aria-atomic')).toBe('true')
+})
+
+test('renders invoice amount, term, and buyer party without decorative icons', () => {
+  const { container } = render(<DealsBrowse {...baseProps} />)
+
+  expect(screen.getByText('TechRetail MX')).toBeTruthy()
+  expect(screen.getByText('Lumina Industries')).toBeTruthy()
+  expect(screen.getByText('$45,000')).toBeTruthy()
+  expect(container.querySelectorAll('svg').length).toBe(0)
+})
+
+test('status filters can be activated by keyboard and stay reflected in the URL', async () => {
+  const user = userEvent.setup()
+  window.location.href = 'http://localhost:3000/deals?lang=es'
+
+  globalThis.fetch = mock(async () =>
+    new Response(
+      JSON.stringify({
+        deals: mockDeals.filter((d) => d.status === 'awaiting_funding'),
+        page: 1,
+        hasMore: false,
+        matchCount: 3,
+        summary: baseProps.initialSummary,
+        categories: baseProps.initialCategories,
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    ),
+  ) as unknown as typeof fetch
+
+  render(<DealsBrowse {...baseProps} />)
+
+  const group = screen.getByRole('group', { name: 'deals.filterStatusAria' })
+  const openButton = within(group).getByRole('button', {
+    name: /deals\.openForFunding/,
+  })
+  const allButton = within(group).getByRole('button', {
+    name: 'deals.allDeals',
+  })
+
+  openButton.focus()
+  expect(document.activeElement).toBe(openButton)
+  await user.keyboard('{Enter}')
+
+  expect(openButton.getAttribute('aria-pressed')).toBe('true')
+  expect(window.location.search).toBe('?lang=es&status=open')
+
+  allButton.focus()
+  await user.keyboard(' ')
+
+  expect(allButton.getAttribute('aria-pressed')).toBe('true')
+  expect(window.location.search).toBe('?lang=es')
 })
