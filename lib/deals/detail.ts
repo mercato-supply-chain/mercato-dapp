@@ -39,12 +39,12 @@ async function fetchDealSummary(id: string): Promise<DealSummary | null> {
     .from('deals')
     .select(
       `
-        *,
-        milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount, address),
-        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
-        supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
-      `,
+      *,
+      milestones(*),
+      pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount, address),
+      investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
+      supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
+    `,
     )
     .eq('id', id)
     .maybeSingle<DealSummaryRow>()
@@ -61,7 +61,8 @@ async function fetchDealSummary(id: string): Promise<DealSummary | null> {
     if (asset) {
       deal.rwaAssetId = String(asset.asset_id)
       deal.rwaLifecycle = asset.lifecycle as Deal['rwaLifecycle']
-      deal.confirmedPrincipal = Number(asset.funded_principal_units) / 10 ** Number(asset.token_decimals ?? 7)
+      deal.confirmedPrincipal =
+        Number(asset.funded_principal_units) / 10 ** Number(asset.token_decimals ?? 7)
     }
   }
   return {
