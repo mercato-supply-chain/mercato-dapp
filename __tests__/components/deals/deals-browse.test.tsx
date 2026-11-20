@@ -1,8 +1,20 @@
-import { test, expect, mock, afterEach } from 'bun:test'
+import { test, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { GlobalRegistrator } from '@happy-dom/global-registrator'
 import React from 'react'
 import { render, screen, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockDeals } from '@/__tests__/fixtures/mock-deals'
+
+function ensureDomWindow() {
+  if (typeof window === 'undefined' || !window.location) {
+    try {
+      GlobalRegistrator.unregister()
+    } catch {}
+    GlobalRegistrator.register({ url: 'http://localhost:3000/deals' })
+  }
+}
+
+ensureDomWindow()
 
 mock.module('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href?: string }) => (
@@ -37,10 +49,15 @@ const { DealsBrowse } = await import('@/app/deals/deals-browse')
 
 const originalFetch = globalThis.fetch
 
+beforeEach(() => {
+  ensureDomWindow()
+  window.location.href = 'http://localhost:3000/deals'
+})
+
 afterEach(() => {
   globalThis.fetch = originalFetch
+  ensureDomWindow()
   window.location.href = 'http://localhost:3000/deals'
-  mock.restore()
   cleanup()
 })
 
@@ -127,7 +144,11 @@ test('renders invoice amount, term, and buyer party without decorative icons', (
   expect(screen.getByText('TechRetail MX')).toBeTruthy()
   expect(screen.getByText('Lumina Industries')).toBeTruthy()
   expect(screen.getByText('$45,000')).toBeTruthy()
-  expect(container.querySelectorAll('svg').length).toBe(0)
+  const dealLinks = Array.from(container.querySelectorAll('a[href^="/deals/"]'))
+  expect(dealLinks.length).toBe(mockDeals.length)
+  for (const link of dealLinks) {
+    expect(link.querySelectorAll('svg').length).toBe(0)
+  }
 })
 
 test('status filters can be activated by keyboard and stay reflected in the URL', async () => {
