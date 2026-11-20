@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { AlertCircle, ArrowLeft, ArrowRight, Wallet } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Info, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,7 +21,7 @@ import { StepIndicator } from '@/components/ui/step-indicator'
 import { VaultToDealAllocator } from '@/components/vault-to-deal-allocator'
 import { useDefindex } from '@/hooks/useDefindex'
 import { useWallet } from '@/hooks/use-wallet'
-import { parseWalletUsdcBalance } from '@/lib/mercato-wallet'
+import { parseWalletUsdcBalance, canWalletSignClassicTx } from '@/lib/mercato-wallet'
 import { getLocalizedCategoryLabel } from '@/lib/categories'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import {
@@ -31,6 +31,13 @@ import {
 } from '@/lib/deals/fees'
 import { formatDate } from '@/lib/date-utils'
 import { formatPercent, formatUSDC } from '@/lib/format'
+import {
+  buildCapacityState,
+  buildContributionPreview,
+  parseContributionInput,
+  validateContributionRules,
+} from '@/lib/rwa'
+import type { RwaContributionPreview } from '@/lib/rwa'
 import type { Deal } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/provider'
 
@@ -44,7 +51,8 @@ type DealFundDialogProps = {
   isConnected: boolean
   walletAddress?: string
   onConnect: () => void
-  onConfirmFund: () => void
+  /** Called with the validated principal amount the investor chose to contribute. */
+  onConfirmFund: (contributionPrincipal: number) => void
   trigger?: React.ReactNode
   triggerSize?: 'default' | 'lg'
 }
@@ -62,7 +70,7 @@ export function DealFundDialog({
   triggerSize = 'lg',
 }: DealFundDialogProps) {
   const { t, messages } = useI18n()
-  const { balances, refreshBalance } = useWallet()
+  const { balances, refreshBalance, provider } = useWallet()
   const { refreshBalances } = useDefindex()
   const refreshBalanceRef = React.useRef(refreshBalance)
   const refreshBalancesRef = React.useRef(refreshBalances)
@@ -70,22 +78,70 @@ export function DealFundDialog({
   refreshBalancesRef.current = refreshBalances
   const [step, setStep] = React.useState(1)
 
+  // Partial contribution amount state
+  const [amountInput, setAmountInput] = React.useState('')
+  const [amountTouched, setAmountTouched] = React.useState(false)
+
   const rate = deal.yieldAPR ?? 0
-  const principal = deal.priceUSDC
-  const fundingTotal =
-    deal.investorFundingTotal || investorFundingTotal(principal)
-  const feeAmount = platformFeeAmount(principal)
-  const { profit, total } = computeInvestorReturns(principal, rate, deal.term)
+  const fullPrincipal = deal.priceUSDC
+  const defaultFundingTotal =
+    deal.investorFundingTotal || investorFundingTotal(fullPrincipal)
   const categoryLabel = deal.category
     ? getLocalizedCategoryLabel(deal.category, messages)
     : null
 
   const walletUsdcBalance = parseWalletUsdcBalance(balances)
-  const hasEnoughFunds = walletUsdcBalance >= fundingTotal
   const progress = (step / TOTAL_STEPS) * 100
 
+  // Build capacity state from deal data (confirmedPrincipal comes from deal or defaults to 0)
+  const confirmedPrincipal = (deal as Deal & { confirmedPrincipal?: number }).confirmedPrincipal ?? 0
+  const capacity = buildCapacityState(fullPrincipal, confirmedPrincipal)
+
+  const terms = {
+    targetPrincipal: fullPrincipal,
+    financingTarget: fullPrincipal,
+    yieldApr: rate,
+    termDays: deal.term,
+    platformFeePercent: deal.platformFeePercent ?? PLATFORM_FEE_PERCENT,
+    fundingExpiresAt: deal.fundingExpiresAt ?? null,
+  }
+
+  // Parse and validate the current input
+  const inputValidation = parseContributionInput(amountInput)
+  const businessError =
+    inputValidation.valid && inputValidation.principalRaw !== null
+      ? validateContributionRules(inputValidation.principalRaw, capacity, walletUsdcBalance)
+      : null
+
+  const hasInputError =
+    amountTouched &&
+    (inputValidation.error !== null ||
+      (businessError !== null && businessError !== 'capacity_stale'))
+
+  const effectivePrincipal =
+    inputValidation.valid && inputValidation.principalRaw !== null && !businessError
+      ? inputValidation.principalRaw
+      : null
+
+  const effectiveFundingTotal = effectivePrincipal
+    ? investorFundingTotal(effectivePrincipal)
+    : defaultFundingTotal
+
+  // Derive preview directly — no effect needed
+  const preview: RwaContributionPreview | null = React.useMemo(() => {
+    if (effectivePrincipal === null) return null
+    return buildContributionPreview(effectivePrincipal, terms, capacity)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectivePrincipal, confirmedPrincipal])
+
+  const hasEnoughFunds = walletUsdcBalance >= effectiveFundingTotal
+
   React.useEffect(() => {
-    if (!open) setStep(1)
+    if (!open) {
+      setStep(1)
+      setAmountInput('')
+      setAmountTouched(false)
+    }
   }, [open])
 
   React.useEffect(() => {
@@ -102,12 +158,22 @@ export function DealFundDialog({
     if (step > 1) setStep((current) => current - 1)
   }
 
+  const canAdvanceFromReview = effectivePrincipal !== null && !hasInputError
   const canAdvanceFromMethod = isConnected && hasEnoughFunds
+
+  const handleConfirm = () => {
+    const principal = effectivePrincipal ?? fullPrincipal
+    onConfirmFund(principal)
+  }
+
+  // Wallet capability check: only SWK-connected wallets can sign classic USDC tx
+  const walletCanFund = canWalletSignClassicTx(provider ?? null)
+  const showWalletCapabilityWarning = isConnected && !walletCanFund
 
   const defaultTrigger = (
     <Button size={triggerSize} className="gap-2 shadow-sm">
       <Wallet className="h-5 w-5" aria-hidden />
-      {t('deals.fundThisDeal')} · {formatUSDC(fundingTotal)}
+      {t('deals.fundThisDeal')} · {formatUSDC(defaultFundingTotal)}
     </Button>
   )
 
@@ -125,20 +191,31 @@ export function DealFundDialog({
         ? t('dealDetail.fundWizardMethodDescription')
         : t('dealDetail.fundWizardConfirmDescription')
 
+  // Compute display values for the current effective contribution
+  const displayPrincipal = effectivePrincipal ?? fullPrincipal
+  const displayFeeAmount = platformFeeAmount(displayPrincipal)
+  const displayFundingTotal = investorFundingTotal(displayPrincipal)
+  const { profit, total } = computeInvestorReturns(displayPrincipal, rate, deal.term)
+
   const moneyBreakdown = (
     <>
+      <DealFactRow label={t('dealDetail.contributionPrincipal')}>
+        <span className="tabular-nums">{formatUSDC(displayPrincipal)}</span>
+      </DealFactRow>
       <DealFactRow label={t('dealDetail.supplierReceives')}>
-        <span className="tabular-nums">{formatUSDC(principal)}</span>
+        <span className="tabular-nums text-muted-foreground text-xs">
+          {t('dealDetail.supplierReceivesNote', { amount: formatUSDC(fullPrincipal) })}
+        </span>
       </DealFactRow>
       <DealFactRow
         label={t('dealDetail.platformFeeLine', {
           percent: PLATFORM_FEE_PERCENT,
         })}
       >
-        <span className="tabular-nums">{formatUSDC(feeAmount)}</span>
+        <span className="tabular-nums">{formatUSDC(displayFeeAmount)}</span>
       </DealFactRow>
       <DealFactRow label={t('dealDetail.youPayTotal')}>
-        <span className="font-semibold tabular-nums">{formatUSDC(fundingTotal)}</span>
+        <span className="font-semibold tabular-nums">{formatUSDC(displayFundingTotal)}</span>
       </DealFactRow>
       <DealFactRow label={t('dealDetail.investorRate')}>
         <span className="text-success tabular-nums">
@@ -159,8 +236,27 @@ export function DealFundDialog({
       <DealFactRow label={t('dealDetail.fundWizardTotalReturn')}>
         <span className="tabular-nums">{formatUSDC(total)}</span>
       </DealFactRow>
+      {preview && (
+        <DealFactRow label={t('dealDetail.yourShareOfDeal')}>
+          <span className="tabular-nums">
+            {(preview.shareOfTarget * 100).toFixed(2)}%
+          </span>
+        </DealFactRow>
+      )}
     </>
   )
+
+  // Error message for amount input
+  const amountErrorMessage = (() => {
+    if (!amountTouched) return null
+    if (inputValidation.error === 'empty') return null
+    if (inputValidation.error === 'invalid_format') return t('dealDetail.contributionAmountInvalidFormat')
+    if (inputValidation.error === 'too_many_decimals') return t('dealDetail.contributionAmountTooManyDecimals')
+    if (businessError === 'below_minimum') return t('dealDetail.contributionAmountBelowMinimum')
+    if (businessError === 'exceeds_capacity') return t('dealDetail.contributionAmountExceedsCapacity', { remaining: formatUSDC(capacity.remainingCapacity) })
+    if (businessError === 'exceeds_balance') return t('dealDetail.contributionAmountExceedsBalance')
+    return null
+  })()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -201,6 +297,66 @@ export function DealFundDialog({
                 )}
               </div>
 
+              {/* Capacity bar */}
+              {!capacity.targetReached && confirmedPrincipal > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{t('dealDetail.fundingProgress')}</span>
+                    <span className="font-medium tabular-nums">
+                      {formatUSDC(confirmedPrincipal)} / {formatUSDC(fullPrincipal)}
+                    </span>
+                  </div>
+                  <Progress
+                    value={(confirmedPrincipal / fullPrincipal) * 100}
+                    className="h-2"
+                    aria-label={t('dealDetail.fundingProgressAriaLabel')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('dealDetail.remainingCapacity', { amount: formatUSDC(capacity.remainingCapacity) })}
+                  </p>
+                </div>
+              )}
+
+              {/* Contribution amount input */}
+              <div className="space-y-2">
+                <Label htmlFor="contribution-amount">
+                  {t('dealDetail.contributionAmountLabel')}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="contribution-amount"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={formatUSDC(capacity.remainingCapacity)}
+                    value={amountInput}
+                    onChange={(e) => {
+                      setAmountInput(e.target.value)
+                      setAmountTouched(true)
+                    }}
+                    onBlur={() => setAmountTouched(true)}
+                    aria-describedby={hasInputError ? 'contribution-amount-error' : 'contribution-amount-hint'}
+                    aria-invalid={hasInputError}
+                    className={hasInputError ? 'border-destructive' : ''}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    USDC
+                  </span>
+                </div>
+
+                {hasInputError && amountErrorMessage ? (
+                  <p id="contribution-amount-error" role="alert" className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
+                    {amountErrorMessage}
+                  </p>
+                ) : (
+                  <p id="contribution-amount-hint" className="text-xs text-muted-foreground">
+                    {t('dealDetail.contributionAmountHint', {
+                      max: formatUSDC(capacity.remainingCapacity),
+                    })}
+                  </p>
+                )}
+              </div>
+
               <div className="rounded-lg border border-border p-1">
                 {moneyBreakdown}
                 <DealFactRow label={t('common.quantity')}>
@@ -219,11 +375,37 @@ export function DealFundDialog({
                   </DealFactRow>
                 )}
               </div>
+
+              {/* Partial funding notice: supplier is paid only when target is reached */}
+              {preview && !preview.fillsTarget && (
+                <div className="flex items-start gap-2 rounded-lg border border-blue-200/80 bg-blue-50 px-3 py-3 text-sm text-blue-900 dark:border-blue-800/50 dark:bg-blue-950/20 dark:text-blue-200">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <p>{t('dealDetail.partialFundingNotice')}</p>
+                </div>
+              )}
+
+              {/* Full-target confirmation */}
+              {preview?.fillsTarget && (
+                <div className="flex items-start gap-2 rounded-lg border border-success/40 bg-success/5 px-3 py-3 text-sm text-success">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <p>{t('dealDetail.fullTargetNotice')}</p>
+                </div>
+              )}
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
+              {showWalletCapabilityWarning && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-3 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/20 dark:text-amber-200"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <p>{t('dealDetail.walletCapabilityUnsupported')}</p>
+                </div>
+              )}
+
               {!isConnected ? (
                 <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center">
                   <Wallet className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden />
@@ -245,7 +427,7 @@ export function DealFundDialog({
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {t('dealDetail.fundWizardRequired', {
-                        amount: formatUSDC(fundingTotal),
+                        amount: formatUSDC(effectiveFundingTotal),
                       })}
                     </p>
                   </div>
@@ -260,14 +442,14 @@ export function DealFundDialog({
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                       <p>
                         {t('dealDetail.fundWizardInsufficientFunds', {
-                          amount: formatUSDC(fundingTotal),
+                          amount: formatUSDC(effectiveFundingTotal),
                         })}
                       </p>
                     </div>
                   )}
 
                   <VaultToDealAllocator
-                    dealAmount={fundingTotal}
+                    dealAmount={effectiveFundingTotal}
                     isFundingOpen
                     disabled={isFunding}
                     onWithdrawComplete={() => void refreshBalances()}
@@ -284,6 +466,14 @@ export function DealFundDialog({
                 <DealFactRow label={t('dealDetail.fundWizardProduct')}>{deal.productName}</DealFactRow>
                 {moneyBreakdown}
               </div>
+
+              {/* Estimates disclaimer */}
+              {preview && (
+                <p className="text-xs text-muted-foreground leading-relaxed flex items-start gap-1.5">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                  {t('dealDetail.estimatesDisclaimer')}
+                </p>
+              )}
 
               <div className="space-y-2">
                 <Label>{t('dealDetail.fundingFrom')}</Label>
@@ -311,14 +501,22 @@ export function DealFundDialog({
             <Button
               type="button"
               onClick={handleNext}
-              disabled={step === 2 && !canAdvanceFromMethod}
+              disabled={
+                (step === 1 && !canAdvanceFromReview) ||
+                (step === 2 && !canAdvanceFromMethod)
+              }
               className="gap-2"
             >
               {t('dealDetail.fundWizardNext')}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Button>
           ) : (
-            <Button type="button" onClick={onConfirmFund} disabled={isFunding || !isConnected} className="gap-2">
+            <Button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isFunding || !isConnected || showWalletCapabilityWarning}
+              className="gap-2"
+            >
               {isFunding ? t('dealDetail.funding') : t('dealDetail.confirmFundDeal')}
             </Button>
           )}

@@ -7,7 +7,7 @@ import {
   FUNDABLE_STATUSES,
 } from '@/lib/deals/repayment-eligibility'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
-import type { RepaymentMilestoneCache } from '@/lib/types'
+import type { Deal, RepaymentMilestoneCache } from '@/lib/types'
 
 const openMilestone: RepaymentMilestoneCache = {
   index: 0,
@@ -16,23 +16,25 @@ const openMilestone: RepaymentMilestoneCache = {
   released: false,
 }
 
-const baseDeal = {
+const baseDeal: Deal = {
   id: 'deal-1',
   productName: 'Test',
   quantity: 1,
   priceUSDC: 1000,
+  investorFundingTotal: 1010,
+  platformFeePercent: 1,
   supplier: 'S',
   supplierAddress: 'G...',
   term: 30,
-  status: 'funded' as const,
-  fundingStatus: 'funded' as const,
+  status: 'funded',
+  fundingStatus: 'funded',
   extensionCount: 0,
   createdAt: '2026-01-01',
   milestones: [],
   pymeName: 'P',
   yieldAPR: 10,
   escrowAddress: 'CESCA...',
-  repaymentStatus: 'escrow_initialized' as const,
+  repaymentStatus: 'escrow_initialized',
   repaymentMilestones: [openMilestone],
 }
 

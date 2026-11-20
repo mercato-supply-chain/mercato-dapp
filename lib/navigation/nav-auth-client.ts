@@ -46,12 +46,13 @@ export function loadNavProfile(
   const pending = inflight.get(userId)
   if (pending) return pending
 
-  const request = client
-    .from('profiles')
-    .select(NAV_PROFILE_COLUMNS)
-    .eq('id', userId)
-    .maybeSingle()
-    .then(({ data, error }) => {
+  const request = (async () => {
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select(NAV_PROFILE_COLUMNS)
+        .eq('id', userId)
+        .maybeSingle()
       if (error) {
         console.error('[nav-auth] failed to load navigation profile', error)
         return cached?.profile ?? null
@@ -59,10 +60,10 @@ export function loadNavProfile(
       const profile = (data as NavProfile | null) ?? null
       primeNavProfile(userId, profile)
       return profile
-    })
-    .finally(() => {
+    } finally {
       inflight.delete(userId)
-    })
+    }
+  })()
 
   inflight.set(userId, request)
   return request

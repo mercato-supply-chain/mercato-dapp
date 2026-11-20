@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "contracts/credit-funding",
+    "contracts/credit-protocol",
+    "contracts/credit-registry",
+]
+resolver = "2"
+
+[workspace.dependencies]
+soroban-sdk = "29.0.1"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true

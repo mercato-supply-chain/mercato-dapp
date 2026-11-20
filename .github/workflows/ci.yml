@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+# Pinned Bun version — keep in sync with package.json "packageManager".
+env:
+  BUN_VERSION: 1.3.14
+  # Build-time placeholders only — no secrets. Replace via repository secrets
+  # when a real integration is exercised in CI. See env.sample for the full list.
+  NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  NEXT_PUBLIC_TRUSTLESS_NETWORK: testnet
+  NEXT_PUBLIC_TRUSTLESS_WORK_API_KEY: ci-placeholder
+  NEXT_PUBLIC_MERCATO_PLATFORM_ADDRESS: GCIP placeholder
+  NEXT_PUBLIC_TRUSTLESSLINE_ADDRESS: GCIP placeholder
+
+jobs:
+  gates:
+    name: typecheck / lint / test / build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (app)
+        run: bun typecheck
+
+      - name: Typecheck (tests)
+        run: bun typecheck:tests
+
+      - name: Lint
+        run: bun lint
+
+      - name: Test
+        run: bun test
+
+      - name: Build
+        run: bun build

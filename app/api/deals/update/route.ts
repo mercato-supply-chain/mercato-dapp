@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { PLATFORM_FEE_PERCENT } from '@/lib/deals/fees'
+import { isDealFundingExpired } from '@/lib/deals'
+import { buildDealReopenUpdate } from '@/lib/deals/reopen'
 import { validateCatalogProductForDeal } from '@/lib/deals/validate-catalog-product'
 import { calculateYieldAPR } from '@/lib/yield'
 
@@ -24,13 +26,6 @@ type UpdateDealBody = {
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0
 }
-
-const TERMINAL_STATUSES = [
-  'fully_funded',
-  'supplier_release_ready',
-  'supplier_released',
-  'completed',
-]
 
 export async function PATCH(request: Request) {
   const supabase = await createClient()
@@ -62,7 +57,10 @@ export async function PATCH(request: Request) {
   }
 
   if (body.action === 'reopen') {
-    // ----- Reopen expired opportunity -----
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const fundingWindowDays = Number(body.fundingWindowDays)
     if (!isPositiveInteger(fundingWindowDays)) {
       return NextResponse.json({ error: 'fundingWindowDays must be a positive integer' }, { status: 400 })
@@ -71,7 +69,7 @@ export async function PATCH(request: Request) {
     const { data: existingDeal, error: existingError } = await supabase
       .from('deals')
       .select(
-        'id, pyme_id, status, investor_id, funded_at, funding_window_days, funding_expires_at, reopen_count, last_reopened_at, last_reopened_by, reopen_history'
+        'id, pyme_id, status, investor_id, funded_at, funding_window_days, funding_expires_at, extension_count, reopen_count, last_reopened_at, last_reopened_by, reopen_history'
       )
       .eq('id', body.dealId)
       .single()
@@ -80,71 +78,55 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
     }
 
-    if (!isAdmin && existingDeal.pyme_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const terminal = TERMINAL_STATUSES.includes(existingDeal.status)
     const funded = existingDeal.investor_id || existingDeal.funded_at
-    if (terminal || funded || existingDeal.status !== 'expired') {
-      return NextResponse.json({ error: 'Only expired opportunities that are not fully funded can be reopened' }, { status: 400 })
+    if (
+      funded ||
+      existingDeal.status !== 'seeking_funding' ||
+      !isDealFundingExpired(existingDeal)
+    ) {
+      return NextResponse.json(
+        { error: 'Only expired opportunities that are not fully funded can be reopened' },
+        { status: 400 },
+      )
     }
 
-    // Lock core commercial fields during a reopen
-    const lockedFields = ['productId', 'supplierId', 'quantity', 'termDays', 'yieldBonusApr', 'supplierName', 'supplierContact']
+    const lockedFields = [
+      'productId',
+      'supplierId',
+      'quantity',
+      'termDays',
+      'yieldBonusApr',
+      'supplierName',
+      'supplierContact',
+    ]
     for (const field of lockedFields) {
       if (body[field as keyof UpdateDealBody] != null) {
-        return NextResponse.json({ error: `Field ${field} cannot be modified during reopen` }, { status: 400 })
+        return NextResponse.json(
+          { error: `Field ${field} cannot be modified during reopen` },
+          { status: 400 },
+        )
       }
     }
 
-    const nowIso = new Date().toISString()
-    const nextExpiration = new Date(
-      Date.now() + fundingWindowDays * 24 * 60 * 60 * 1000,
-    ).toISSString()
-
-    const previousHistory = Array.isArray(existingDeal.reopen_history)
-      ? existingDeal.reopen_history
-      : []
-    const reopenCount = (existingDeal.reopen_count ?? 0) + 1
-    const historyEntry = {
-      sequence: reopenCount,
-      previous_expiration_at: existingDeal.funding_expires_at ?? null,
-      new_expiration_at: nextExpiration,
-      reopened_at: nowIso,
-      reopened_by: user.id,
-      funding_window_days: fundingWindowDays,
-    }
-    const reopenHistory = [...previousHistory, historyEntry]
-
-    const updatePayload: Record<string, unknown> = {
-      status: 'seeking_funding',
-      funding_expires_at: nextExpiration,
-      funding_window_days: fundingWindowDays,
-      reopen_count: reopenCount,
-      last_reopened_at: nowIso,
-      last_reopened_by: user.id,
-      reopen_history: reopenHistory,
-      updated_at: nowIso,
-    }
+    const updatePayload: Record<string, unknown> = buildDealReopenUpdate(
+      existingDeal,
+      fundingWindowDays,
+      user.id,
+    )
 
     if (body.description != null) {
       updatePayload.description = body.description.trim()
     }
 
-    let query = supabase
+    const { data: updated, error: dealError } = await supabase
       .from('deals')
       .update(updatePayload)
       .eq('id', body.dealId)
-      .eq('status', 'expired')
+      .eq('status', 'seeking_funding')
       .is('investor_id', null)
       .is('funded_at', null)
-
-    if (!isAdmin) {
-      query = query.eq('pyme_id', user.id)
-    }
-
-    const { data: updated, error: dealError } = await query.select('id').single()
+      .select('id')
+      .single()
 
     if (dealError || !updated) {
       return NextResponse.json({ error: 'Deal could not be reopened' }, { status: 400 })
@@ -235,7 +217,7 @@ export async function PATCH(request: Request) {
     .eq('id', company.owner_id)
     .single()
 
-  const nowIso = new Date().toISString()
+  const nowIso = new Date().toISOString()
   const previousWindow =
     body.previousFundingWindowDays ?? existingDeal.funding_window_days ?? null
   const windowChanged = previousWindow == null || previousWindow !== fundingWindowDays
@@ -264,7 +246,7 @@ export async function PATCH(request: Request) {
   if (windowChanged) {
     updatePayload.funding_expires_at = new Date(
       Date.now() + fundingWindowDays * 24 * 60 * 60 * 1000,
-    ).toISSString()
+    ).toISOString()
   }
 
   let query = supabase

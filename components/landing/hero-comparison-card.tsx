@@ -1,6 +1,6 @@
 'use client'
 
-import { useI18n } from '@/lib/i18n/provider'
+import { useI18nNamespace } from '@/lib/i18n/provider'
 import { cn } from '@/lib/utils'
 
 type ComparisonRow = {
@@ -11,29 +11,29 @@ type ComparisonRow = {
 }
 
 export function HeroComparisonCard({ className }: { className?: string }) {
-  const { t } = useI18n()
+  const { t } = useI18nNamespace('landing')
 
   const rows: ComparisonRow[] = [
     {
-      provider: t('landing.rates.options.bank.label'),
-      rate: t('landing.rates.options.bank.rate'),
-      access: t('landing.rates.options.bank.requirements'),
+      provider: t('rates.options.bank.label'),
+      rate: t('rates.options.bank.rate'),
+      access: t('rates.options.bank.requirements'),
     },
     {
-      provider: t('landing.rates.options.mercato.label'),
-      rate: t('landing.rates.options.mercato.rate'),
-      access: t('landing.rates.options.mercato.requirements'),
+      provider: t('rates.options.mercato.label'),
+      rate: t('rates.options.mercato.rate'),
+      access: t('rates.options.mercato.requirements'),
       highlight: true,
     },
     {
-      provider: t('landing.hero.comparison.fintech'),
-      rate: t('landing.rates.options.fintech.rate'),
-      access: t('landing.rates.options.fintech.requirements'),
+      provider: t('hero.comparison.fintech'),
+      rate: t('rates.options.fintech.rate'),
+      access: t('rates.options.fintech.requirements'),
     },
     {
-      provider: t('landing.hero.comparison.informal'),
-      rate: t('landing.rates.options.informal.rate'),
-      access: t('landing.rates.options.informal.requirements'),
+      provider: t('hero.comparison.informal'),
+      rate: t('rates.options.informal.rate'),
+      access: t('rates.options.informal.requirements'),
     },
   ]
 
@@ -51,16 +51,16 @@ export function HeroComparisonCard({ className }: { className?: string }) {
         id="hero-comparison-title"
         className="mb-2 font-mono text-[7px] font-semibold uppercase leading-[1.35] tracking-[0.1em] text-muted-foreground dark:text-white/65"
       >
-        {t('landing.hero.comparison.title')}
+        {t('hero.comparison.title')}
       </h2>
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[8px] leading-tight">
           <thead>
             <tr className="border-b border-border/50 text-[6.5px] uppercase tracking-wider text-muted-foreground dark:border-white/[0.08] dark:text-white/45">
-              <th className="pb-1 pr-1 font-medium">{t('landing.hero.comparison.colProvider')}</th>
-              <th className="pb-1 pr-1 font-medium">{t('landing.hero.comparison.colRate')}</th>
-              <th className="pb-1 font-medium">{t('landing.hero.comparison.colAccess')}</th>
+              <th className="pb-1 pr-1 font-medium">{t('hero.comparison.colProvider')}</th>
+              <th className="pb-1 pr-1 font-medium">{t('hero.comparison.colRate')}</th>
+              <th className="pb-1 font-medium">{t('hero.comparison.colAccess')}</th>
             </tr>
           </thead>
           <tbody>

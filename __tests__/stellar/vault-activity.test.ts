@@ -169,7 +169,7 @@ test('fetchVaultActivityForAccount: paging_token becomes nextCursor, hasMore ref
     Promise.resolve(mockPage(
       [makeOp({ id: '1', paging_token: 'p-next' })],
       true,
-    ))) as typeof globalThis.fetch
+    ))) as unknown as typeof globalThis.fetch
 
   const result = await fetchVaultActivityForAccount({
     accountId: ACC, vaultContractId: CID, limit: 5, cursor: null,
@@ -188,7 +188,7 @@ test('fetchVaultActivityForAccount: hasMore is false when _links.next is absent'
     Promise.resolve(mockPage(
       [makeOp({ id: '1', paging_token: 'p-last' })],
       false,
-    ))) as typeof globalThis.fetch
+    ))) as unknown as typeof globalThis.fetch
 
   const result = await fetchVaultActivityForAccount({
     accountId: ACC, vaultContractId: CID, limit: 5, cursor: null,
@@ -209,7 +209,7 @@ test('fetchVaultActivityForAccount: entries ordered by createdAt descending', as
   ]
 
   globalThis.fetch = (() =>
-    Promise.resolve(mockPage(ops, false))) as typeof globalThis.fetch
+    Promise.resolve(mockPage(ops, false))) as unknown as typeof globalThis.fetch
 
   const result = await fetchVaultActivityForAccount({
     accountId: ACC, vaultContractId: CID, limit: 10,
@@ -230,7 +230,7 @@ test('fetchVaultActivityForAccount: limit clamped to 1 when 0 is passed', async 
     Promise.resolve(mockPage(
       [makeOp({ id: '1', paging_token: 'p1' })],
       false,
-    ))) as typeof globalThis.fetch
+    ))) as unknown as typeof globalThis.fetch
 
   const result = await fetchVaultActivityForAccount({
     accountId: ACC, vaultContractId: CID, limit: 0,
@@ -253,7 +253,7 @@ test('fetchVaultActivityForAccount: limit clamped to 200 when 500 is passed', as
   )
 
   globalThis.fetch = (() =>
-    Promise.resolve(mockPage(ops, false))) as typeof globalThis.fetch
+    Promise.resolve(mockPage(ops, false))) as unknown as typeof globalThis.fetch
 
   const result = await fetchVaultActivityForAccount({
     accountId: ACC, vaultContractId: CID, limit: 500,

@@ -28,9 +28,12 @@ export function useCreateDealInit(options?: { redirectIfUnauthenticated?: boolea
       try {
         const res = await fetch('/api/catalog?page=1&pageSize=50')
         if (res.ok) {
-          const json: any = await res.json()
-          if (json && Array.isArray(json.data)) {
-            products = json.data as SupplierProductRow[]
+          const json: unknown = await res.json()
+          if (json && typeof json === 'object' && 'data' in json) {
+            const rows = (json as { data?: unknown }).data
+            if (Array.isArray(rows)) {
+              products = rows as SupplierProductRow[]
+            }
           } else if (Array.isArray(json)) {
             products = json as SupplierProductRow[]
           }
@@ -47,7 +50,8 @@ export function useCreateDealInit(options?: { redirectIfUnauthenticated?: boolea
           .order('category')
           .order('name')
           .range(0, 49)
-        products = ((productsResult.data as SupplierProductRow[]) || [])
+        // Untyped Supabase select — normalize to the catalog row contract.
+        products = ((productsResult.data ?? []) as unknown as SupplierProductRow[])
       }
       setSupplierProducts(products)
       setIsReady(true)

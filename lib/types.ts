@@ -31,6 +31,20 @@ export interface RepaymentMilestoneCache {
   description: string
   amount: number
   released: boolean
+  /** RWA only: frozen position this milestone services. */
+  positionId?: string
+  /** RWA only: zero-based tranche within the position. */
+  trancheIndex?: number
+  /** RWA only: receiver captured at funding time. */
+  receiver?: string
+  /** RWA only: exact net entitlement after release deductions. */
+  netAmount?: number
+  /** RWA only: exact atomic gross obligation. */
+  grossAtomic?: string
+  /** RWA only: exact atomic net entitlement. */
+  netAtomic?: string
+  /** RWA only: canonical reviewed schedule commitment. */
+  scheduleCommitment?: string
 }
 
 export type UserRole = 'pyme' | 'investor' | 'supplier' | 'admin'
@@ -99,6 +113,16 @@ export interface Deal {
   fundingExpiresAt?: string
   extensionCount: number
   extendedAt?: string
+  /** Opted into multi-investor RWA funding. Legacy investor_id stays unused. */
+  rwaOptedIn?: boolean
+  /** Registry asset id once issuance has created the funding pool. */
+  rwaAssetId?: string
+  rwaLifecycle?: 'open' | 'ready_to_settle' | 'settled' | 'cancelled'
+  /** Confirmed principal already in the pool, in whole USDC. */
+  confirmedPrincipal?: number
+  reopenCount?: number
+  lastReopenedAt?: string
+  lastReopenedBy?: string
 }
 
 export interface User {

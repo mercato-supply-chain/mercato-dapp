@@ -11,7 +11,7 @@ import { useI18n } from '@/lib/i18n/provider'
 import { PollarWalletKitLimitations } from '@/lib/mercato-wallet'
 
 function formatBalance(value: string | null): string {
-  if (!value) return '0'
+  if (value == null) return '—'
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return value
   return parsed.toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -22,7 +22,6 @@ export function WalletStatusCard() {
   const {
     provider,
     publicKey,
-    walletId,
     status,
     isConnected,
     isEmbedded,
@@ -57,7 +56,7 @@ export function WalletStatusCard() {
   }
 
   const handleActivate = async () => {
-    if (!walletId) {
+    if (!publicKey) {
       toast.error(t('walletStatus.activateUnavailable'))
       return
     }
@@ -67,7 +66,7 @@ export function WalletStatusCard() {
       const response = await fetch('/api/pollar/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletId }),
+        body: JSON.stringify({ publicKey }),
       })
       const data = (await response.json()) as { error?: string; status?: string }
       if (!response.ok) throw new Error(data.error || t('walletStatus.activateFailed'))
@@ -207,7 +206,7 @@ export function WalletStatusCard() {
         </div>
 
         {provider === 'pollar' && status !== 'active' && (
-          <Button onClick={handleActivate} disabled={activating || !walletId} className="w-full gap-2">
+          <Button onClick={handleActivate} disabled={activating || !publicKey} className="w-full gap-2">
             {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheckBig className="h-4 w-4" />}
             {t('walletStatus.activateEmbedded')}
           </Button>

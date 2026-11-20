@@ -105,7 +105,6 @@ describe('validateCreateVaultParams', () => {
   })
 
   test('rejects a non-boolean upgradable', () => {
-    // @ts-expect-error intentional bad shape for the test
     expect(validateCreateVaultParams({ ...validConfig(), upgradable: 'true' }).ok).toBe(false)
   })
 })

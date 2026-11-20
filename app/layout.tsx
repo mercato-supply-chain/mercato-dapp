@@ -78,7 +78,9 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const locale = await getServerLocale()
-  const messages = getDictionary(locale)
+  // Only serialize the active dictionary across the server/client boundary
+  // when it is not the default (English) — the client already holds `enDict`.
+  const messages = locale === 'en' ? undefined : await getDictionary(locale)
   const navAuth = await getNavAuth()
 
   return (

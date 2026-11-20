@@ -4,15 +4,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
-import { defaultLocale, isLocale, localeCookieName, type Locale } from './config'
-import { getDictionary, type Messages } from './dictionaries'
-
-type Replacements = Record<string, string | number>
+import { isLocale, localeCookieName, type Locale } from './config'
+import { getDictionary, enDict, type Messages } from './dictionaries'
+import { translate, scopedMessages, type Replacements } from './messages'
 
 type I18nContextValue = {
   locale: Locale
@@ -21,25 +22,14 @@ type I18nContextValue = {
   setLocale: (locale: Locale) => void
 }
 
+type PendingLocale = {
+  locale: Locale
+  messages: Messages
+  /** Server messages the switch was made against; new server props supersede it. */
+  basis: Messages
+}
+
 const I18nContext = createContext<I18nContextValue | null>(null)
-
-function lookup(messages: Messages, key: string): string | undefined {
-  const value = key.split('.').reduce<unknown>((node, part) => {
-    if (node == null || typeof node !== 'object') return undefined
-    return (node as Record<string, unknown>)[part]
-  }, messages as unknown)
-
-  return typeof value === 'string' ? value : undefined
-}
-
-function interpolate(value: string, replacements?: Replacements) {
-  if (!replacements) return value
-  return Object.entries(replacements).reduce(
-    (text, [key, replacement]) =>
-      text.replaceAll(`{${key}}`, String(replacement)),
-    value,
-  )
-}
 
 export function I18nProvider({
   children,
@@ -48,32 +38,39 @@ export function I18nProvider({
 }: {
   children: ReactNode
   locale: Locale
-  messages: Messages
+  messages?: Messages
 }) {
   const router = useRouter()
   const [activeLocale, setActiveLocale] = useState(locale)
-  const [activeMessages, setActiveMessages] = useState(messages)
+  const [activeMessages, setActiveMessages] = useState(messages ?? enDict)
+  const requestIdRef = useRef(0)
 
   const changeLocale = useCallback(
-    (nextLocale: Locale) => {
+    async (nextLocale: Locale) => {
       if (!isLocale(nextLocale)) return
+      const requestId = ++requestIdRef.current
       document.cookie = `${localeCookieName}=${nextLocale}; path=/; max-age=31536000; samesite=lax`
       document.documentElement.lang = nextLocale
-      setActiveLocale(nextLocale)
-      setActiveMessages(getDictionary(nextLocale))
-      router.refresh()
+      try {
+        const dict = await getDictionary(nextLocale)
+        if (requestId !== requestIdRef.current) return // superseded by newer toggle
+        setActiveLocale(nextLocale)
+        setActiveMessages(dict)
+        router.refresh()
+      } catch {
+        if (requestId !== requestIdRef.current) return
+        // Loading failure: keep locale choice but fall back to English messages
+        setActiveLocale(nextLocale)
+        setActiveMessages(enDict)
+        router.refresh()
+      }
     },
-    [router],
+    [locale, messages, router],
   )
 
   const t = useCallback(
     (key: string, replacements?: Replacements) =>
-      interpolate(
-        lookup(activeMessages, key) ??
-          lookup(getDictionary(defaultLocale), key) ??
-          key,
-        replacements,
-      ),
+      translate(activeMessages, enDict, key, replacements),
     [activeMessages],
   )
 
@@ -96,4 +93,15 @@ export function useI18n() {
     throw new Error('useI18n must be used within I18nProvider')
   }
   return context
+}
+
+/** Namespace-scoped access: `t('hero.titleLine1')` resolves `landing.hero.titleLine1`. */
+export function useI18nNamespace(namespace: string) {
+  const { messages, t } = useI18n()
+  const scoped = useMemo(() => scopedMessages(messages, namespace), [messages, namespace])
+  const namespaceT = useCallback(
+    (key: string, replacements?: Replacements) => t(namespace ? `${namespace}.${key}` : key, replacements),
+    [t, namespace],
+  )
+  return { messages: scoped, t: namespaceT }
 }

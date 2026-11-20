@@ -24,6 +24,8 @@ export default function EditDealContent() {
   const {
     deal,
     isLoading: isDealLoading,
+    loadError,
+    retry,
     userId,
     isPyme,
     isAdmin,
@@ -89,8 +91,28 @@ export default function EditDealContent() {
     }
   }
 
-  if (isDealLoading || !isCatalogReady) {
+  if (isDealLoading || (!isCatalogReady && !loadError)) {
     return <DealDetailSkeleton />
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navigation />
+        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+          <div className="text-center">
+            <h1 className="mb-2 text-2xl font-bold">{t('dealDetail.loadError')}</h1>
+            <p className="mb-4 text-muted-foreground">{t('dealDetail.loadErrorHelp')}</p>
+            <div className="flex justify-center gap-2">
+              <Button onClick={retry}>{t('dealDetail.retry')}</Button>
+              <Button asChild variant="outline">
+                <Link href="/deals">{t('common.back')}</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!deal) {

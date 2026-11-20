@@ -62,7 +62,7 @@ export async function generateMetadata({
 }) {
   const { id } = await params
   const locale = await getServerLocale()
-  const m = getDictionary(locale)
+  const m = await getDictionary(locale)
   const profile = await getPublicInvestorProfile(id)
   if (!profile) {
     return { title: tr(m, 'investorDetail.metaTitle') }

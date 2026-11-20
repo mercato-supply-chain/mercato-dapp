@@ -44,7 +44,13 @@ export interface DealRow {
   funding_window_days?: number | null
   extension_count?: number | null
   extended_at?: string | null
+  reopen_count?: number | null
+  last_reopened_at?: string | null
+  last_reopened_by?: string | null
+  reopen_history?: unknown[] | null
   created_at?: string | null
+  rwa_opted_in?: boolean | null
+  rwa_asset_row_id?: string | null
   funded_at?: string | null
   completed_at?: string | null
   milestones?: MilestoneRow[] | null
@@ -105,12 +111,26 @@ function mapRepaymentMilestones(
         Number.isFinite(Number(m.index)) &&
         Number.isFinite(Number(m.amount)),
     )
-    .map((m) => ({
-      index: Number(m.index),
-      description: typeof m.description === 'string' ? m.description : '',
-      amount: Number(m.amount),
-      released: Boolean(m.released),
-    }))
+    .map((m) => {
+      const milestone: RepaymentMilestoneCache = {
+        index: Number(m.index),
+        description: typeof m.description === 'string' ? m.description : '',
+        amount: Number(m.amount),
+        released: Boolean(m.released),
+      }
+      if (typeof m.positionId === 'string') milestone.positionId = m.positionId
+      if (Number.isInteger(m.trancheIndex)) milestone.trancheIndex = Number(m.trancheIndex)
+      if (typeof m.receiver === 'string') milestone.receiver = m.receiver
+      if (typeof m.netAmount === 'number' && Number.isFinite(m.netAmount)) {
+        milestone.netAmount = m.netAmount
+      }
+      if (typeof m.grossAtomic === 'string') milestone.grossAtomic = m.grossAtomic
+      if (typeof m.netAtomic === 'string') milestone.netAtomic = m.netAtomic
+      if (typeof m.scheduleCommitment === 'string') {
+        milestone.scheduleCommitment = m.scheduleCommitment
+      }
+      return milestone
+    })
 }
 
 export interface MilestoneRow {
@@ -168,6 +188,16 @@ export function getDealFundingStatus(
   if (extensionCount > 0) return 'extended'
 
   return 'open'
+}
+
+export function isDealFundingExpired(
+  row: Pick<
+    DealRow,
+    'status' | 'investor_id' | 'funded_at' | 'funding_expires_at' | 'extension_count'
+  >,
+  nowMs = Date.now(),
+): boolean {
+  return getDealFundingStatus(row, nowMs) === 'expired'
 }
 
 /**
@@ -285,6 +315,12 @@ export function mapDealFromDb(row: DealRow): Deal {
     extendedAt: row.extended_at
       ? new Date(row.extended_at).toISOString()
       : undefined,
+    rwaOptedIn: Boolean(row.rwa_opted_in),
+    reopenCount: Math.max(0, Number(row.reopen_count ?? 0)),
+    lastReopenedAt: row.last_reopened_at
+      ? new Date(row.last_reopened_at).toISOString()
+      : undefined,
+    lastReopenedBy: row.last_reopened_by ?? undefined,
     yieldAPR: (() => {
       const amount = principal
       const termDays = row.term_days ?? 0

@@ -1,0 +1,13 @@
+{
+  "spec": "rwa-document-commitment-v1",
+  "description": "Document commitment vector: only the hash of the private document is committed, never its bytes or location.",
+  "domain": "mercato.rwa.document.v1",
+  "payload": {
+    "doc_kind": "financing_agreement",
+    "content_hash": "9f2c1b7d4e6a8c0b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b",
+    "byte_length": "18432",
+    "canonicalization": "JCS-RFC8785"
+  },
+  "expected_canonical": "{\"byte_length\":\"18432\",\"canonicalization\":\"JCS-RFC8785\",\"content_hash\":\"9f2c1b7d4e6a8c0b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b\",\"doc_kind\":\"financing_agreement\"}",
+  "expected_hash": "dd94786e3705d81ec3278c330f36ecde670af90af38b0c5153ee2f003ebaba39"
+}

@@ -18,7 +18,10 @@ async function fetchNotifications(userId: string): Promise<Notification[]> {
     .limit(NOTIFICATIONS_LIMIT)
 
   if (error) throw error
-  return (data ?? []).map(mapNotificationFromDb)
+  // Explicit column list omits metadata; default it so mapNotificationFromDb stays total.
+  return (data ?? []).map((row) =>
+    mapNotificationFromDb({ ...row, metadata: null }),
+  )
 }
 
 export const notificationsRequest = createDedupedFetcher(

@@ -12,8 +12,13 @@ import { SupplierProductCatalog } from './supplier-product-catalog'
 import { SupplierFirstCompany } from './supplier-first-company'
 import { SupplierProfileDialogs } from './supplier-profile-dialogs'
 import { SupplierReferralCard } from './supplier-referral-card'
-import { SupplierInventoryImportDialog } from './supplier-inventory-import-dialog'
+import dynamic from 'next/dynamic'
 import type { CompanyFieldsValues } from './supplier-company-fields'
+
+const SupplierInventoryImportDialog = dynamic(
+  () => import('./supplier-inventory-import-dialog').then((mod) => mod.SupplierInventoryImportDialog),
+  { ssr: false },
+)
 
 export function SupplierProfilePage() {
   const { t } = useI18n()
@@ -174,12 +179,14 @@ export function SupplierProfilePage() {
       onUpdateProduct={sp.handleUpdateProduct}
       onConfirmDelete={sp.handleDeleteProduct}
     />
-    <SupplierInventoryImportDialog
-      open={sp.importDialogOpen}
-      onOpenChange={sp.setImportDialogOpen}
-      products={sp.products}
-      onImport={sp.importProducts}
-    />
+    {sp.importDialogOpen && (
+      <SupplierInventoryImportDialog
+        open={sp.importDialogOpen}
+        onOpenChange={sp.setImportDialogOpen}
+        products={sp.products}
+        onImport={sp.importProducts}
+      />
+    )}
   </>
   )
 }

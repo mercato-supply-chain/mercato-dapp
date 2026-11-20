@@ -1,6 +1,15 @@
 import { afterAll, describe, expect, mock, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import * as ReactNamespace from 'react'
+import * as SupabaseServerNamespace from '@/lib/supabase/server'
+import * as SupabaseServiceNamespace from '@/lib/supabase/service'
+
+// Snapshot the real exports before any mock.module() call: module namespace objects are
+// live bindings, so by afterAll time they would already reflect the stubs below.
+const ReactOriginal = { ...ReactNamespace }
+const SupabaseServerOriginal = { ...SupabaseServerNamespace }
+const SupabaseServiceOriginal = { ...SupabaseServiceNamespace }
 
 // Captured before the dedup tests replace 'react'. Bun shares one module registry across test
 // files, so the stand-in has to be swapped back or every later file that requires React breaks.

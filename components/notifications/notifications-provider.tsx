@@ -243,3 +243,8 @@ export function useNotifications() {
   }
   return ctx
 }
+
+/** Same context, but `null` when the tree has not mounted a provider yet (HMR). */
+export function useNotificationsContext() {
+  return useContext(NotificationsContext)
+}

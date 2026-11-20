@@ -26,7 +26,16 @@ export type InvestorDeal = {
   title: string
   product_name: string | null
   status: string
+  /** Full deal principal (whole invoice amount). Use contribution_amount for per-investor exposure. */
   amount: number
+  /**
+   * This investor's confirmed contribution amount.
+   * When set, portfolio metrics must use this value, not `amount`, to prevent
+   * double-counting in multi-investor scenarios.
+   * Falls back to `amount` only for legacy single-investor deals where the
+   * investor funded 100% of the deal.
+   */
+  contribution_amount: number | null
   interest_rate: number | null
   term_days: number | null
   created_at: string | null
@@ -42,6 +51,7 @@ export type EnrichedInvestorDeal = InvestorDeal & {
   bucket: PortfolioBucket
   displayTitle: string
   smbName: string
+  /** The canonical per-investor exposure: contribution_amount if set, else amount. */
   amountNum: number
   apr: number
   termDays: number
@@ -54,6 +64,8 @@ export type EnrichedInvestorDeal = InvestorDeal & {
     maturityDate: Date | null
   }
   openEscrowsWithSmb: number
+  /** Share of total deal principal this investor contributed (0–1). */
+  shareOfDeal: number
 }
 
 export type AllocationSlice = {
@@ -84,4 +96,15 @@ export type InvestorPortfolio = {
   openEscrowsBySmb: Record<string, number>
   displayName: string | null
   history: InvestorHistoryPage
+  rwaPositions: RwaPortfolioPosition[]
+}
+
+export type RwaPortfolioPosition = {
+  id: string
+  creditAssetId: string
+  principalAtomic: string
+  unitsAtomic: string
+  settledAtomic: string
+  state: string
+  wallet: string
 }

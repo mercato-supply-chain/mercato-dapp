@@ -9,9 +9,20 @@ import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hoo
 import type { GetEscrowsFromIndexerResponse } from '@trustless-work/escrow'
 import { useWallet } from '@/hooks/use-wallet'
 
+type DealLoadState =
+  | { status: 'loading'; dealId: string }
+  | { status: 'success'; dealId: string; deal: Deal }
+  | { status: 'not-found'; dealId: string }
+  | { status: 'error'; dealId: string }
+
+type DealLoadResult =
+  | { kind: 'found'; deal: Deal }
+  | { kind: 'not-found' }
+  | { kind: 'error' }
+
 export function useDealDetail(dealId: string | undefined) {
-  const [deal, setDeal] = useState<Deal | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(null)
+  const [reloadCounter, setReloadCounter] = useState(0)
   const [userType, setUserType] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
@@ -22,25 +33,80 @@ export function useDealDetail(dealId: string | undefined) {
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { walletInfo, isConnected, handleConnect } = useWallet()
   const supabase = useMemo(() => createClient(), [])
+  const activeDealIdRef = useRef<string | undefined>(undefined)
+  const requestSequenceRef = useRef(0)
+  const lastCommittedSequenceRef = useRef(0)
+  const dealRequestSequencesRef = useRef(new WeakMap<Deal, number>())
 
-  const fetchDeal = useCallback(async () => {
+  const loadDeal = useCallback(async (id: string): Promise<DealLoadResult> => {
+    try {
+      const { data, error } = await supabase
+        .from('deals')
+        .select(
+          `
+          *,
+          milestones(*),
+          pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount, address),
+          investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
+          supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
+        `,
+        )
+        .eq('id', id)
+        .single()
+      if (error) {
+        const noRows = error.code === 'PGRST116' && /contains 0 rows/i.test(error.details)
+        return noRows ? { kind: 'not-found' } : { kind: 'error' }
+      }
+      if (!data) return { kind: 'not-found' }
+      const deal = mapDealFromDb(data as DealRow)
+      const assetRowId = (data as DealRow).rwa_asset_row_id
+      if (assetRowId) {
+        const { data: asset } = await supabase
+          .from('rwa_assets')
+          .select('asset_id, lifecycle, funded_principal_units, token_decimals')
+          .eq('id', assetRowId)
+          .maybeSingle()
+        if (asset) {
+          const decimals = Number(asset.token_decimals ?? 7)
+          deal.rwaAssetId = String(asset.asset_id)
+          deal.rwaLifecycle = asset.lifecycle as Deal['rwaLifecycle']
+          deal.confirmedPrincipal = Number(asset.funded_principal_units) / 10 ** decimals
+        }
+      }
+      return { kind: 'found', deal }
+    } catch {
+      return { kind: 'error' }
+    }
+  }, [supabase])
+
+  const fetchDeal = useCallback(async (): Promise<Deal | null> => {
     if (!dealId) return null
-    const { data, error } = await supabase
-      .from('deals')
-      .select(
-        `
-        *,
-        milestones(*),
-        pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount, address),
-        investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name),
-        supplier:supplier_companies(company_name, full_name, contact_name, owner_id, address)
-      `,
-      )
-      .eq('id', dealId)
-      .single()
-    if (error || !data) return null
-    return mapDealFromDb(data as DealRow)
-  }, [dealId, supabase])
+    const sequence = ++requestSequenceRef.current
+    try {
+      const result = await loadDeal(dealId)
+      if (result.kind !== 'found') return null
+      dealRequestSequencesRef.current.set(result.deal, sequence)
+      return result.deal
+    } catch {
+      return null
+    }
+  }, [dealId, loadDeal])
+
+  const setDeal = useCallback((next: Deal) => {
+    const activeDealId = activeDealIdRef.current
+    if (!activeDealId || next.id !== activeDealId) return
+    const sequence =
+      dealRequestSequencesRef.current.get(next) ?? ++requestSequenceRef.current
+    if (sequence < lastCommittedSequenceRef.current) return
+    lastCommittedSequenceRef.current = sequence
+    setDealLoadState({ status: 'success', dealId: activeDealId, deal: next })
+  }, [])
+
+  const retry = useCallback(() => {
+    if (!dealId) return
+    setDealLoadState({ status: 'loading', dealId })
+    setReloadCounter((counter) => counter + 1)
+  }, [dealId])
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -64,15 +130,43 @@ export function useDealDetail(dealId: string | undefined) {
   }, [supabase])
 
   useEffect(() => {
-    if (!dealId) {
-      setIsLoading(false)
-      return
+    activeDealIdRef.current = dealId
+    return () => {
+      if (activeDealIdRef.current === dealId) activeDealIdRef.current = undefined
     }
-    fetchDeal().then((d) => {
-      setDeal(d)
-      setIsLoading(false)
+  }, [dealId])
+
+  useEffect(() => {
+    if (!dealId) return
+    let cancelled = false
+    const sequence = ++requestSequenceRef.current
+    void loadDeal(dealId).then((result) => {
+      if (
+        cancelled ||
+        activeDealIdRef.current !== dealId ||
+        sequence < lastCommittedSequenceRef.current
+      ) {
+        return
+      }
+      if (result.kind === 'found') {
+        dealRequestSequencesRef.current.set(result.deal, sequence)
+        lastCommittedSequenceRef.current = sequence
+        setDealLoadState({ status: 'success', dealId, deal: result.deal })
+      } else {
+        setDealLoadState({ status: result.kind, dealId })
+      }
     })
-  }, [dealId, fetchDeal])
+    return () => {
+      cancelled = true
+    }
+  }, [dealId, loadDeal, reloadCounter])
+
+  const matchingLoadState = dealLoadState?.dealId === dealId ? dealLoadState : null
+  const deal = matchingLoadState?.status === 'success' ? matchingLoadState.deal : null
+  const isLoading = Boolean(
+    dealId && (!matchingLoadState || matchingLoadState.status === 'loading'),
+  )
+  const loadError = matchingLoadState?.status === 'error'
 
   useEffect(() => {
     const pymeId = deal?.pymeId
@@ -138,6 +232,8 @@ export function useDealDetail(dealId: string | undefined) {
     deal,
     setDeal,
     isLoading,
+    loadError,
+    retry,
     userId,
     userType,
     isSupplier,

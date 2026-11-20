@@ -106,7 +106,7 @@ export function DealsBrowse({
     requestIdRef.current = requestId
     setIsLoading(true)
     try {
-      const payload: DealsBrowseResponse = await fetchDealsBrowse(next)
+      const payload: DealsBrowseResponse = await fetchDealsBrowse.fetch(next)
       if (requestId !== requestIdRef.current) return
       setDeals((prev) => (append ? [...prev, ...payload.deals] : payload.deals))
       setPage(payload.page)
@@ -227,12 +227,17 @@ export function DealsBrowse({
         {/* Filters */}
         <div className="mb-6 space-y-4">
           {/* Status quick-filter pills */}
-          <div className="flex flex-wrap gap-2">
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label={t('deals.filterStatusAria')}
+          >
             {STATUS_PILLS.map((pill) => (
               <button
                 key={pill.value}
                 type="button"
                 onClick={() => setStatusFilter(pill.value)}
+                aria-pressed={statusFilter === pill.value}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-[color,background-color,border-color,transform,box-shadow] duration-200 ease-out active:scale-[0.98] motion-reduce:active:scale-100 ${
                   statusFilter === pill.value
                     ? 'bg-foreground text-background'
@@ -262,7 +267,9 @@ export function DealsBrowse({
                 aria-hidden
               />
               <Input
+                type="search"
                 placeholder={t('deals.searchPlaceholder')}
+                aria-label={t('deals.searchAria')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -270,7 +277,10 @@ export function DealsBrowse({
             </div>
 
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger
+                className="w-full sm:w-[180px]"
+                aria-label={t('deals.filterCategoryAria')}
+              >
                 <SelectValue placeholder={t('common.category')} />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +297,10 @@ export function DealsBrowse({
               value={sortBy}
               onValueChange={(v) => setSortBy(v as DealBrowseSort)}
             >
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger
+                className="w-full sm:w-[180px]"
+                aria-label={t('deals.filterSortAria')}
+              >
                 <SelectValue placeholder={t('deals.sortBy')} />
               </SelectTrigger>
               <SelectContent>
@@ -350,8 +363,14 @@ export function DealsBrowse({
           </div>
         )}
 
-        {/* Result count */}
-        <p className="mb-4 text-sm text-muted-foreground">
+        {/* Result count — polite live region announces the new total after each
+            settled filter/sort change, not on every keystroke. */}
+        <p
+          className="mb-4 text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {isLoading && deals.length === 0
             ? t('deals.loadingDeals')
             : `${matchCount} ${
@@ -361,7 +380,10 @@ export function DealsBrowse({
 
         {/* Deal grid */}
         {isLoading && deals.length === 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div
+            className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+            aria-busy="true"
+          >
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
@@ -371,7 +393,10 @@ export function DealsBrowse({
           </div>
         ) : deals.length > 0 ? (
           <>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div
+              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+              aria-busy={isLoading}
+            >
               {deals.map((deal, index) => (
                 <DealCard key={deal.id} deal={deal} listIndex={index} />
               ))}

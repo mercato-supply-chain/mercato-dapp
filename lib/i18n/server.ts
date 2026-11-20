@@ -1,20 +1,12 @@
 import { cookies } from 'next/headers'
 import { defaultLocale, isLocale, localeCookieName, type Locale } from './config'
-import { getDictionary, type Messages } from './dictionaries'
+import { getDictionary, enDict, type Messages } from './dictionaries'
+import { translate } from './messages'
 
 export async function getServerLocale(): Promise<Locale> {
   const store = await cookies()
   const value = store.get(localeCookieName)?.value
   return isLocale(value) ? value : defaultLocale
-}
-
-function lookup(messages: Messages, key: string): string | undefined {
-  const value = key.split('.').reduce<unknown>((node, part) => {
-    if (node == null || typeof node !== 'object') return undefined
-    return (node as Record<string, unknown>)[part]
-  }, messages as unknown)
-
-  return typeof value === 'string' ? value : undefined
 }
 
 /** Server-side translate + `{placeholder}` interpolation (same rules as client `t`). */
@@ -23,13 +15,7 @@ export function tr(
   key: string,
   replacements?: Record<string, string | number>,
 ): string {
-  let text = lookup(messages, key) ?? lookup(getDictionary(defaultLocale), key) ?? key
-  if (replacements) {
-    for (const [k, v] of Object.entries(replacements)) {
-      text = text.replaceAll(`{${k}}`, String(v))
-    }
-  }
-  return text
+  return translate(messages, enDict, key, replacements)
 }
 
 export function formatMoneyServer(locale: Locale, value: number): string {

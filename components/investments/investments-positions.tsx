@@ -52,6 +52,8 @@ export function InvestmentsPositions({
 
   const otherCount = portfolio.metrics.dealCount - portfolio.metrics.activeCount - portfolio.metrics.completedCount
 
+  const creditPositions = portfolio.rwaPositions ?? []
+
   const counts: Record<PositionsTab, number> = {
     all: portfolio.metrics.dealCount,
     active: portfolio.metrics.activeCount,
@@ -73,6 +75,22 @@ export function InvestmentsPositions({
 
   return (
     <section className="space-y-6">
+      {creditPositions.length > 0 ? (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Credit positions</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {creditPositions.map((position) => (
+              <li key={position.id} className="flex flex-wrap justify-between gap-2">
+                <span className="font-mono text-xs">{position.id.slice(0, 8)}</span>
+                <span>Principal {position.principalAtomic}</span>
+                <span>Share {position.unitsAtomic}</span>
+                <span>Settled {position.settledAtomic}</span>
+                <span className="capitalize">{position.state}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link

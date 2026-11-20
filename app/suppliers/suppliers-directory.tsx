@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Navigation } from '@/components/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,22 +58,9 @@ export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirect
   } = useSuppliersDirectoryFilters(suppliers)
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Navigation />
-
-      <div className="container mx-auto px-4 py-10">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/20">
-            <Building2 className="h-3 w-3" aria-hidden />
-            {t('suppliersPage.eyebrow')}
-          </div>
-          <h1 className="mb-2 text-4xl font-bold tracking-tight">{t('suppliersPage.title')}</h1>
-          <p className="max-w-xl text-lg text-muted-foreground">{t('suppliersPage.description')}</p>
-        </div>
-
-        {/* Stat tiles */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
+    <>
+      {/* Stat tiles */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
           <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
               <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden />
@@ -107,12 +93,17 @@ export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirect
         {/* Filters */}
         <div className="mb-6 space-y-4">
           {/* Category pills */}
-          <div className="flex flex-wrap gap-2">
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label={t('suppliersPage.categoryGroupAria')}
+          >
             {FILTER_CATEGORY_VALUES.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
+                aria-pressed={selectedCategory === cat}
                 className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   selectedCategory === cat
                     ? 'bg-foreground text-background'
@@ -132,7 +123,9 @@ export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirect
                 aria-hidden
               />
               <Input
+                type="search"
                 placeholder={t('suppliersPage.searchPlaceholder')}
+                aria-label={t('suppliersPage.searchAria')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -231,8 +224,14 @@ export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirect
           </div>
         )}
 
-        {/* Result count */}
-        <p className="mb-4 text-sm text-muted-foreground">
+        {/* Result count — polite live region announces the new total
+            after a filter settles, not on every keystroke. */}
+        <p
+          className="mb-4 text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {filteredSuppliers.length}{' '}
           {filteredSuppliers.length === 1
             ? t('suppliersPage.supplierOne')
@@ -278,7 +277,6 @@ export default function SuppliersDirectory({ initialSuppliers }: SuppliersDirect
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </>
   )
 }
