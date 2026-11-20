@@ -71,7 +71,15 @@ mock.module('@/providers/pollar-provider', () => ({
 }))
 mock.module('@/hooks/use-wallet', () => ({
   ...realUseWallet,
-  useWallet: () => (active ? { provider: 'stellar-wallets-kit' } : original.useWallet()),
+  useWallet: () =>
+    active
+      ? {
+          walletInfo: { address: 'GINVESTOR', walletName: 'Freighter' },
+          isConnected: true,
+          handleConnect: async () => undefined,
+          provider: 'stellar-wallets-kit',
+        }
+      : original.useWallet(),
 }))
 // No other test imports the fund dialog, and importing the real one pulls in the DeFindex vault
 // hooks that other test files mock, so this stub is not routed through the real module.
@@ -88,17 +96,29 @@ mock.module('@/lib/i18n/provider', () => ({
 }))
 
 function makeSupabase() {
-  const eqResult = { error: null, single: async () => ({ data: { user_type: 'investor' } }) }
-  const chain = { select: () => chain, update: () => chain, eq: () => eqResult }
+  const selectChain = {
+    eq: () => ({ single: async () => ({ data: { user_type: 'investor' }, error: null }) }),
+  }
+  const updateChain = {
+    eq: () => updateChain,
+    is: () => ({
+      select: () => ({
+        maybeSingle: async () => ({ data: { id: 'deal-1' }, error: null }),
+      }),
+    }),
+    then: (resolve: (value: { error: null }) => unknown) =>
+      Promise.resolve({ error: null }).then(resolve),
+  }
   return {
     auth: { getUser: async () => ({ data: { user: { id: 'investor-1' } } }) },
-    from: () => chain,
+    from: () => ({ select: () => selectChain, update: () => updateChain }),
   }
 }
 
 const baseDeal = {
   id: 'deal-1',
   status: 'awaiting_funding',
+  fundingStatus: 'open',
   supplierAddress: 'GSUPPLIER',
   priceUSDC: 100,
   investorFundingTotal: 101,
@@ -106,23 +126,25 @@ const baseDeal = {
 } as unknown as Deal
 
 async function renderPanel(deal: Deal) {
-  const { DealFundingPanel } = await import('@/components/deals/deal-funding-panel')
+  const [{ DealFundingPanel }, { InvestorFundActions }] = await Promise.all([
+    import('@/components/deals/deal-funding-panel'),
+    import('@/components/deals/actions/investor-fund-actions'),
+  ])
   const onDealUpdate = mock(() => {})
   render(
     <DealFundingPanel
       deal={deal}
       isFundingOpen
-      isPyme={false}
-      userType="investor"
-      isConnected
-      walletAddress="GINVESTOR"
-      onConnect={() => {}}
-      canFund
-      showMobileBar={false}
-      supabase={makeSupabase() as never}
-      fetchDeal={async () => ({ ...deal, status: 'funded' }) as Deal}
-      onDealUpdate={onDealUpdate}
-      userId="investor-1"
+      actions={
+        <InvestorFundActions
+          deal={deal}
+          isFundingOpen
+          supabase={makeSupabase() as never}
+          fetchDeal={async () => ({ ...deal, status: 'funded', investorId: 'investor-1' }) as Deal}
+          onDealUpdate={onDealUpdate}
+          userId="investor-1"
+        />
+      }
     />,
   )
   return { onDealUpdate }

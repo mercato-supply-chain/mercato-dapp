@@ -1,28 +1,24 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowRight, Clock, Lock, Wallet } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Clock, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { computeInvestorReturns } from '@/lib/deals/investor-metrics'
 import { investorFundingTotal } from '@/lib/deals/fees'
 import { formatUSDC } from '@/lib/format'
-import type { Deal } from '@/lib/types'
-import type { Reputation } from '@/lib/types'
+import type { Deal, Reputation } from '@/lib/types'
 import { DealPartyTrust } from '@/components/deals/deal-party-trust'
 import { useI18n } from '@/lib/i18n/provider'
 
-type DealInvestorHeroProps = {
+export interface DealInvestorHeroProps {
   deal: Deal
   fundingRemainingMs: number | null
   isFundingOpen: boolean
-  canFund: boolean
-  userType: string | null
   pymeReputation: Reputation | null
   supplierReputation: Reputation | null
   reputationsLoading?: boolean
-  fundDialog: React.ReactNode
-  onConnectWallet?: () => void
+  /** Role-scoped funding action or status notice composed by the parent deal view. */
+  actions?: ReactNode
 }
 
 function formatFundingRemaining(
@@ -41,13 +37,10 @@ export function DealInvestorHero({
   deal,
   fundingRemainingMs,
   isFundingOpen,
-  canFund,
-  userType,
   pymeReputation,
   supplierReputation,
   reputationsLoading,
-  fundDialog,
-  onConnectWallet,
+  actions,
 }: DealInvestorHeroProps) {
   const { t } = useI18n()
   const rate = deal.yieldAPR ?? 0
@@ -107,32 +100,9 @@ export function DealInvestorHero({
           </p>
         </div>
 
-        <div className="w-full shrink-0 space-y-2 lg:max-w-xs">
-          {canFund ? (
-            <div className="w-full [&_button]:w-full">{fundDialog}</div>
-          ) : userType === 'investor' && !deal.supplierAddress ? (
-            <p className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
-              {t('dealDetail.supplierAddressMissing')}
-            </p>
-          ) : userType ? (
-            <p className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
-              {t('dealDetail.onlyInvestorsFund')}
-            </p>
-          ) : (
-            <Button asChild size="lg" className="w-full gap-2">
-              <Link href="/auth/login">
-                <Wallet className="h-5 w-5" aria-hidden />
-                {t('dealDetail.signInToFund')}
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </Button>
-          )}
-          {!userType && onConnectWallet && (
-            <Button type="button" variant="ghost" size="sm" className="w-full" onClick={onConnectWallet}>
-              {t('dealDetail.connectStellarWallet')}
-            </Button>
-          )}
-        </div>
+        {actions ? (
+          <div className="w-full shrink-0 space-y-2 lg:max-w-xs">{actions}</div>
+        ) : null}
       </div>
     </section>
   )
