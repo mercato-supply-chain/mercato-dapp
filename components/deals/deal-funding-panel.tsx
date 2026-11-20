@@ -20,18 +20,17 @@ import type { Deal } from '@/lib/types'
 import type { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import { useI18n } from '@/lib/i18n/provider'
-import { buildUsdcSplitPaymentXdr } from '@/lib/stellar/build-usdc-split-payment'
-import { buildAssembledSorobanInvoke, bytes32, addressVal } from '@/lib/stellar/build-soroban-invoke'
-import { nativeToScVal } from '@stellar/stellar-sdk'
-import { getAppStellarNetwork } from '@/lib/stellar/network-config'
-import { submitSignedTransaction } from '@/lib/stellar-submit'
-import { signTransaction } from '@/lib/trustless/wallet-kit'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 import { investorFundingTotal } from '@/lib/deals/fees'
 import { usePollarSession } from '@/providers/pollar-provider'
 import { useWallet } from '@/hooks/use-wallet'
 
 type Supabase = ReturnType<typeof createClient>
+
+// These modules pull in @stellar/stellar-sdk. They are loaded only when an investor funds, so the
+// deal page does not ship the SDK to visitors who only read the terms.
+const loadSignAndSubmit = () =>
+  Promise.all([import('@/lib/trustless/wallet-kit'), import('@/lib/stellar-submit')])
 
 interface DealFundingPanelProps {
   deal: Deal
@@ -110,6 +109,17 @@ export function DealFundingPanel({
         contractId: string
         args: { investor: string; principalUnits: string; nonce: string; contributionRef: string }
       }
+      const [
+        { buildAssembledSorobanInvoke, bytes32, addressVal },
+        { nativeToScVal },
+        { getAppStellarNetwork },
+        [{ signTransaction }, { submitSignedTransaction }],
+      ] = await Promise.all([
+        import('@/lib/stellar/build-soroban-invoke'),
+        import('@stellar/stellar-sdk'),
+        import('@/lib/stellar/network-config'),
+        loadSignAndSubmit(),
+      ])
       const unsignedXdr = await buildAssembledSorobanInvoke({
         sourceAddress: walletAddress,
         contractId: call.contractId,
@@ -220,6 +230,7 @@ export function DealFundingPanel({
         return
       }
 
+      const { buildUsdcSplitPaymentXdr } = await import('@/lib/stellar/build-usdc-split-payment')
       const unsignedXdr = await buildUsdcSplitPaymentXdr({
         sourceAddress: walletAddress,
         supplierAddress: deal.supplierAddress,
@@ -232,6 +243,7 @@ export function DealFundingPanel({
       if (provider === 'pollar') {
         fundingTxHash = await pollar.signAndSubmitTx(unsignedXdr)
       } else {
+        const [{ signTransaction }, { submitSignedTransaction }] = await loadSignAndSubmit()
         const signedXdr = await signTransaction({
           unsignedTransaction: unsignedXdr,
           address: walletAddress,
