@@ -2519,14 +2519,34 @@
   "landing": {
     "hero": {
       "badge": "We fund real production",
-      "titleLine1": "Capital to produce.",
-      "titleLine2": "Growth for everyone.",
-      "description": "We connect SMEs, suppliers, and investors to finance real orders with secure, transparent payments at every stage.",
+      "titleLine1": "Fund a real order.",
+      "titleLine2": "Get repaid with yield.",
+      "description": "An SME needs inventory. Investors pay the supplier's invoice up front, and the SME repays principal plus yield through an on-chain escrow.",
       "primaryCta": "Explore opportunities",
       "secondaryCta": "Fund an order",
-      "trust1": "Milestone-protected payments",
-      "trust2": "Transparent at every stage",
-      "trust3": "No personal guarantees",
+      "deal": {
+        "ariaLabel": "Featured deal",
+        "statusOpen": "Open for funding",
+        "statusSample": "Example deal",
+        "reference": "Deal {ref}",
+        "units": "{count} units",
+        "buyer": "Buyer (SME)",
+        "supplier": "Supplier",
+        "invoice": "Invoice amount",
+        "invoiceHint": "Paid to the supplier when the deal is funded",
+        "investorReceives": "Investor receives",
+        "investorHint": "{principal} principal + {yield} yield after {days} days",
+        "rateHint": "{rate}% for the term",
+        "settlement": "Repaid through on-chain escrow on Stellar",
+        "sampleNote": "Illustrative terms. An open deal appears here when one is live.",
+        "ctaLive": "Review this deal",
+        "ctaSample": "Browse open deals",
+        "sample": {
+          "product": "Cotton yarn",
+          "buyer": "Manufacturas del Norte",
+          "supplier": "Hilados del Bajío"
+        }
+      },
       "liveDeal": {
         "centerTagline": "We mediate so agreements are honored.",
         "order": {
