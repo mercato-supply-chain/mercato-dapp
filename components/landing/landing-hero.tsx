@@ -2,8 +2,7 @@
 
 import Image from 'next/image'
 import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
-import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
-import type { LandingPlatformStats } from '@/lib/landing/platform-stats'
+import type { ReactNode } from 'react'
 import { useI18n } from '@/lib/i18n/provider'
 import { BadgeCheck, Eye, ShieldCheck } from 'lucide-react'
 
@@ -13,7 +12,7 @@ const TRUST_ITEMS = [
 ] as const
 
 type LandingHeroProps = {
-  stats: LandingPlatformStats
+  stats: ReactNode
 }
 
 export function LandingHero({ stats }: LandingHeroProps) {
@@ -75,7 +74,7 @@ export function LandingHero({ stats }: LandingHeroProps) {
       <div className="hero-ref-bases-band hero-stats-band relative z-20 w-full">
         <div className="hero-ref-bases-bar hero-stats-bar relative border-y border-border/60 bg-white dark:border-white/[0.08] dark:bg-[hsl(0_0%_4%/0.94)] dark:backdrop-blur-md">
           <div className="hero-ref-bases-inner relative z-[1] mx-auto py-3 md:py-4">
-            <HeroStatsBar stats={stats} />
+            {stats}
           </div>
         </div>
       </div>
