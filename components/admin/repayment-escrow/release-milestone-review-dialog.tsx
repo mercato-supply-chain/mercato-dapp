@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useState, useMemo } from 'react'
 import { AlertTriangle, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
@@ -42,7 +43,7 @@ export function ReleaseMilestoneReviewDialog({
   onRelease,
   triggerDisabled = false,
 }: ReleaseMilestoneReviewDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -119,14 +120,14 @@ export function ReleaseMilestoneReviewDialog({
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{t('repaymentEscrow.release.milestone')}</p>
               <p className="font-medium">#{item.milestoneIndex + 1} · {item.milestoneTitle}</p>
-              <p className="font-medium tabular-nums">{item.milestoneAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC · {item.milestonePercentage}%</p>
+              <p className="font-medium tabular-nums">{formatAmount(locale, item.milestoneAmount)} USDC · {item.milestonePercentage}%</p>
               {milestone?.status && <Badge variant="secondary" className="text-[10px]">{milestone.status}</Badge>}
               {alreadyApproved && <Badge className="ml-1 bg-primary/10 text-[10px] text-primary">{t('repaymentEscrow.approve.alreadyApproved')}</Badge>}
               {alreadyReleased && <Badge className="ml-1 bg-success/10 text-[10px] text-success">{t('adminPending.releasedBadge')}</Badge>}
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{t('repaymentEscrow.release.balance')}</p>
-              <p className="font-medium tabular-nums">{balance.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</p>
+              <p className="font-medium tabular-nums">{formatAmount(locale, balance)} USDC</p>
               <p className="text-xs text-muted-foreground">{t('repaymentEscrow.release.releaseSigner')}: <code className="font-mono" title={signerAddress}>{signerAddress.slice(0, 8)}…{signerAddress.slice(-4)}</code></p>
             </div>
           </div>
@@ -135,15 +136,15 @@ export function ReleaseMilestoneReviewDialog({
             <p className="text-xs font-semibold">{t('repaymentEscrow.release.feesTitle')}</p>
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="text-muted-foreground">{t('repaymentEscrow.release.mercatoFee')}</span>
-              <span className="tabular-nums">-{feePreview.platformFee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+              <span className="tabular-nums">-{formatAmount(locale, feePreview.platformFee)} USDC</span>
             </div>
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="text-muted-foreground">{t('repaymentEscrow.release.twFee')}</span>
-              <span className="tabular-nums">-{feePreview.protocolFee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+              <span className="tabular-nums">-{formatAmount(locale, feePreview.protocolFee)} USDC</span>
             </div>
             <div className="flex items-baseline justify-between gap-2 border-t border-border pt-1 text-xs font-medium">
               <span>{t('repaymentEscrow.release.net')}</span>
-              <span className="tabular-nums">{feePreview.net.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+              <span className="tabular-nums">{formatAmount(locale, feePreview.net)} USDC</span>
             </div>
             <p className="text-[11px] text-muted-foreground">{t('repaymentEscrow.release.feeNote')}</p>
           </div>
