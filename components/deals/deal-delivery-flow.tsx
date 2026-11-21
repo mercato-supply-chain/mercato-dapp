@@ -1,118 +1,32 @@
 'use client'
 
-import { useState } from 'react'
-import { toast } from 'sonner'
+import type { ReactNode } from 'react'
 import { Package, Truck, CheckCircle2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import type { Deal } from '@/lib/types'
-import type { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 
-type Supabase = ReturnType<typeof createClient>
-
-interface DealDeliveryFlowProps {
+export interface DealDeliveryFlowProps {
   deal: Deal
-  isSupplier: boolean
-  isPyme: boolean
-  isAdmin: boolean
-  supabase: Supabase
-  fetchDeal: () => Promise<Deal | null>
-  onDealUpdate: (deal: Deal) => void
+  /** Role-specific delivery action slot (e.g. SupplierShipActions or PymeConfirmDeliveryActions). */
+  actions?: ReactNode
+  /** Optional read-only status hint for viewers who cannot act on the current step. */
+  statusNotice?: ReactNode
 }
 
 export function DealDeliveryFlow({
   deal,
-  isSupplier,
-  isPyme,
-  isAdmin,
-  supabase,
-  fetchDeal,
-  onDealUpdate,
+  actions,
+  statusNotice,
 }: DealDeliveryFlowProps) {
   const { t } = useI18n()
-  const [trackingId, setTrackingId] = useState(deal.trackingId ?? '')
-  const [busy, setBusy] = useState(false)
 
   if (deal.status === 'awaiting_funding') return null
 
   const isShipped = Boolean(deal.shippedAt)
   const isDelivered = Boolean(deal.deliveredAt)
-  const canShip =
-    (isSupplier || isAdmin) && !isShipped && deal.status !== 'completed'
-  const canConfirmDelivery =
-    (isPyme || isAdmin) && isShipped && !isDelivered && deal.repaymentStatus === 'none'
-
-  const refresh = async () => {
-    const updated = await fetchDeal()
-    if (updated) onDealUpdate(updated)
-  }
-
-  const handleConfirmShipment = async () => {
-    if (!isSupplier && !isAdmin) {
-      toast.error(t('dealDetail.deliveryShipOnlySupplierOrAdmin'))
-      return
-    }
-    const trimmed = trackingId.trim()
-    if (!trimmed) {
-      toast.error(t('dealDetail.deliveryTrackingRequired'))
-      return
-    }
-    setBusy(true)
-    try {
-      const { error } = await supabase
-        .from('deals')
-        .update({
-          tracking_id: trimmed,
-          shipped_at: new Date().toISOString(),
-          status: 'in_progress',
-        })
-        .eq('id', deal.id)
-      if (error) throw error
-      await refresh()
-      toast.success(t('dealDetail.deliveryShippedSuccess'))
-    } catch (err) {
-      console.error(err)
-      toast.error(
-        err instanceof Error ? err.message : t('dealDetail.deliveryShippedFail'),
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleConfirmDelivery = async () => {
-    setBusy(true)
-    try {
-      const deliveredAt = new Date()
-      const repaymentDueAt = new Date(deliveredAt)
-      repaymentDueAt.setDate(repaymentDueAt.getDate() + Math.max(1, deal.term))
-
-      const { error } = await supabase
-        .from('deals')
-        .update({
-          delivered_at: deliveredAt.toISOString(),
-          repayment_status: 'order_confirmed',
-          repayment_due_at: repaymentDueAt.toISOString(),
-          status: 'in_progress',
-        })
-        .eq('id', deal.id)
-      if (error) throw error
-      await refresh()
-      toast.success(t('dealDetail.deliveryReceivedSuccess'))
-    } catch (err) {
-      console.error(err)
-      toast.error(
-        err instanceof Error ? err.message : t('dealDetail.deliveryReceivedFail'),
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
 
   let statusLabel = t('dealDetail.deliveryStatusAwaitingShipment')
   let statusVariant: 'outline' | 'secondary' | 'default' = 'outline'
@@ -216,65 +130,8 @@ export function DealDeliveryFlow({
           </li>
         </ol>
 
-        {canShip ? (
-          <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="shipment-tracking-id">
-                {t('dealDetail.deliveryTrackingLabel')}
-              </Label>
-              <Input
-                id="shipment-tracking-id"
-                value={trackingId}
-                onChange={(e) => setTrackingId(e.target.value)}
-                placeholder={t('dealDetail.deliveryTrackingPlaceholder')}
-                autoComplete="off"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('dealDetail.deliveryTrackingHint')}
-              </p>
-            </div>
-            <Button
-              type="button"
-              onClick={handleConfirmShipment}
-              disabled={busy}
-              className="w-full"
-            >
-              {busy
-                ? t('dealDetail.deliveryShipping')
-                : t('dealDetail.deliveryConfirmShipCta')}
-            </Button>
-          </div>
-        ) : null}
-
-        {canConfirmDelivery ? (
-          <div className="space-y-2">
-            <Button
-              type="button"
-              onClick={handleConfirmDelivery}
-              disabled={busy}
-              className="w-full"
-            >
-              {busy
-                ? t('dealDetail.deliveryConfirming')
-                : t('dealDetail.deliveryConfirmReceivedCta')}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              {t('dealDetail.deliveryConfirmReceivedHint', { days: deal.term })}
-            </p>
-          </div>
-        ) : null}
-
-        {!isShipped && !isSupplier && !isAdmin ? (
-          <p className="text-sm text-muted-foreground">
-            {t('dealDetail.deliveryAwaitingSupplier')}
-          </p>
-        ) : null}
-
-        {isShipped && !isDelivered && !isPyme && !isAdmin ? (
-          <p className="text-sm text-muted-foreground">
-            {t('dealDetail.deliveryAwaitingBuyer')}
-          </p>
-        ) : null}
+        {actions}
+        {statusNotice}
       </CardContent>
     </Card>
   )

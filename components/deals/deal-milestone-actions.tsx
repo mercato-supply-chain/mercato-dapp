@@ -1,116 +1,34 @@
 'use client'
 
-import { useState } from 'react'
-import { toast } from 'sonner'
-import type { ChangeMilestoneStatusPayload } from '@trustless-work/escrow'
-import { Button } from '@/components/ui/button'
+import type { ReactNode } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2 } from 'lucide-react'
 import type { Deal } from '@/lib/types'
-import type { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
+import { isShipmentMilestone } from '@/components/deals/actions/milestone-role-actions'
 
-type Supabase = ReturnType<typeof createClient>
-
-function isShipmentMilestone(name: string, index: number, total: number): boolean {
-  const n = (name || '').toLowerCase().trim()
-  if (n.includes('shipment')) return true
-  if (n.includes('delivery')) return false
-  return total === 2 && index === 0
-}
-
-function isDeliveryMilestone(name: string, index: number, total: number): boolean {
-  const n = (name || '').toLowerCase().trim()
-  if (n.includes('delivery')) return true
-  if (n.includes('shipment')) return false
-  return total === 2 && index === 1
-}
-
-interface DealMilestoneActionsProps {
+export interface DealMilestoneActionsProps {
   deal: Deal
-  isSupplier: boolean
-  isPyme: boolean
-  isAdmin: boolean
-  isConnected: boolean
-  walletAddress: string | undefined
-  signAndSend: (unsignedTransaction: string, address: string) => Promise<void>
-  changeMilestoneStatus: (
-    payload: ChangeMilestoneStatusPayload,
-    type: string,
-  ) => Promise<{ status: string; unsignedTransaction?: string }>
-  supabase: Supabase
-  fetchDeal: () => Promise<Deal | null>
-  onDealUpdate: (deal: Deal) => void
-  onOpenProofDialog: (index: number, milestoneId: string) => void
+  /** Composed role-specific action renderer for pending milestones. */
+  renderMilestoneAction?: (
+    milestone: Deal['milestones'][number],
+    index: number,
+    total: number,
+  ) => ReactNode
 }
 
 export function DealMilestoneActions({
   deal,
-  isSupplier,
-  isPyme,
-  isAdmin,
-  isConnected,
-  walletAddress,
-  signAndSend,
-  changeMilestoneStatus,
-  supabase,
-  fetchDeal,
-  onDealUpdate,
-  onOpenProofDialog,
+  renderMilestoneAction,
 }: DealMilestoneActionsProps) {
   const { t } = useI18n()
-  const [acceptingMilestoneId, setAcceptingMilestoneId] = useState<string | null>(null)
 
   const completedMilestones = deal.milestones.filter((m) => m.status === 'completed').length
-  const progressPercentage = (completedMilestones / deal.milestones.length) * 100
-
-  const handleAcceptOrder = async (milestoneIndex: number, milestoneId: string) => {
-    if (!deal.escrowAddress || !walletAddress) {
-      toast.error(t('dealDetail.toastMissingWallet'))
-      return
-    }
-    if (!isConnected) {
-      toast.error(t('dealDetail.toastConnectWalletAccept'))
-      return
-    }
-    setAcceptingMilestoneId(milestoneId)
-    try {
-      const payload: ChangeMilestoneStatusPayload = {
-        contractId: deal.escrowAddress,
-        milestoneIndex: String(milestoneIndex),
-        newStatus: 'release_requested',
-        newEvidence: 'Order accepted by supplier',
-        serviceProvider: walletAddress,
-      }
-      const response = await changeMilestoneStatus(payload, 'multi-release')
-      if (response.status !== 'SUCCESS' || !response.unsignedTransaction) {
-        throw new Error(t('dealDetail.errorMilestoneStatusTx'))
-      }
-      await signAndSend(response.unsignedTransaction, walletAddress)
-      const { error: updateError } = await supabase
-        .from('milestones')
-        .update({
-          status: 'in_progress',
-          proof_notes: 'Order accepted by supplier',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', milestoneId)
-      if (updateError) throw updateError
-      const updated = await fetchDeal()
-      if (updated) onDealUpdate(updated)
-      toast.success(t('dealDetail.toastOrderAccepted'))
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t('dealDetail.toastAcceptOrderFail')
-      console.error('Accept order error:', err)
-      toast.error(message)
-    } finally {
-      setAcceptingMilestoneId(null)
-    }
-  }
+  const progressPercentage =
+    deal.milestones.length > 0 ? (completedMilestones / deal.milestones.length) * 100 : 0
 
   return (
     <Card>
@@ -139,6 +57,13 @@ export function DealMilestoneActions({
             const isActive = milestone.status === 'in_progress'
             const isDisputed = milestone.status === 'disputed'
             const total = deal.milestones.length
+            const pendingAction =
+              milestone.status === 'pending' &&
+              deal.status !== 'awaiting_funding' &&
+              deal.escrowAddress &&
+              renderMilestoneAction
+                ? renderMilestoneAction(milestone, index, total)
+                : null
 
             return (
               <div
@@ -214,41 +139,7 @@ export function DealMilestoneActions({
                       </p>
                     )}
 
-                    {milestone.status === 'pending' &&
-                      deal.status !== 'awaiting_funding' &&
-                      deal.escrowAddress && (
-                        <div className="mt-3">
-                          {isDeliveryMilestone(milestone.name, index, total) && isSupplier && (
-                            <p className="text-xs text-muted-foreground">
-                              {t('dealDetail.pymeWillConfirmMilestone')}
-                            </p>
-                          )}
-                          {isShipmentMilestone(milestone.name, index, total) && isSupplier && (
-                            <Button
-                              size="sm"
-                              type="button"
-                              onClick={() => handleAcceptOrder(index, milestone.id)}
-                              disabled={acceptingMilestoneId === milestone.id}
-                            >
-                              {acceptingMilestoneId === milestone.id
-                                ? t('dealDetail.accepting')
-                                : t('dealDetail.acceptOrderRelease')}
-                            </Button>
-                          )}
-                          {isDeliveryMilestone(milestone.name, index, total) &&
-                            (isPyme || isAdmin) && (
-                              <Button
-                                size="sm"
-                                variant={isPyme ? 'default' : 'outline'}
-                                type="button"
-                                onClick={() => onOpenProofDialog(index, milestone.id)}
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                                {t('dealDetail.confirmDeliveryBtn')}
-                              </Button>
-                            )}
-                        </div>
-                      )}
+                    {pendingAction ? <div className="mt-3">{pendingAction}</div> : null}
                   </div>
                 </div>
               </div>

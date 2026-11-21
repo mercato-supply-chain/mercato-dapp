@@ -1,17 +1,43 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import React from 'react'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import * as EscrowHooksNamespace from '@trustless-work/escrow/hooks'
 import type { DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
+
+const realSupabaseClientPath: string = '@/lib/supabase/client.ts?actual'
+const realUseWalletPath: string = '@/hooks/use-wallet.ts?actual'
+
+const SupabaseClientOriginal = (await import(
+  realSupabaseClientPath
+)) as typeof import('@/lib/supabase/client')
+const UseWalletOriginal = (await import(
+  realUseWalletPath
+)) as typeof import('@/hooks/use-wallet')
+const EscrowHooksOriginal = { ...EscrowHooksNamespace }
 
 type DealQueryResult = {
   data: DealRow | null
   error: { code: string; details: string } | null
 }
 
+type ProfileQueryResult = {
+  data: { user_type: string | null } | null
+  error: null
+}
+
+type AuthStateCallback = (
+  event: string,
+  session: { user: { id: string } } | null,
+) => void
+
 type TestGlobals = typeof globalThis & {
   __dealResponses?: Map<string, Array<Promise<DealQueryResult>>>
   __dealCalls?: string[]
+  __authUser?: { id: string } | null
+  __authStateCallback?: AuthStateCallback | null
+  __profileResponses?: Map<string, Array<Promise<ProfileQueryResult>>>
+  __profileCalls?: string[]
 }
 
 function deferred<T>() {
@@ -49,6 +75,12 @@ function enqueueDealResponse(id: string, response: Promise<DealQueryResult>) {
   globals.__dealResponses?.set(id, [...queue, response])
 }
 
+function enqueueProfileResponse(userId: string, response: Promise<ProfileQueryResult>) {
+  const globals = globalThis as TestGlobals
+  const queue = globals.__profileResponses?.get(userId) ?? []
+  globals.__profileResponses?.set(userId, [...queue, response])
+}
+
 function resolvedDeal(id: string, productName?: string): Promise<DealQueryResult> {
   return Promise.resolve({ data: dealRow(id, productName), error: null })
 }
@@ -58,11 +90,16 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 mock.module('@/lib/supabase/client', () => ({
+  ...SupabaseClientOriginal,
   createClient: () => {
     const globals = globalThis as TestGlobals
     return {
       auth: {
-        getUser: async () => ({ data: { user: null }, error: null }),
+        getUser: async () => ({ data: { user: globals.__authUser ?? null }, error: null }),
+        onAuthStateChange: (cb: AuthStateCallback) => {
+          globals.__authStateCallback = cb
+          return { data: { subscription: { unsubscribe: () => undefined } } }
+        },
       },
       from: (table: string) => ({
         select: () => {
@@ -73,7 +110,11 @@ mock.module('@/lib/supabase/client', () => ({
               return builder
             },
             single: async () => {
-              if (table === 'profiles') return { data: null, error: null }
+              if (table === 'profiles') {
+                globals.__profileCalls?.push(recordId)
+                const profileResp = globals.__profileResponses?.get(recordId)?.shift()
+                return profileResp ?? { data: null, error: null }
+              }
               globals.__dealCalls?.push(recordId)
               const response = globals.__dealResponses?.get(recordId)?.shift()
               return response ?? {
@@ -90,22 +131,32 @@ mock.module('@/lib/supabase/client', () => ({
 }))
 
 mock.module('@/hooks/use-wallet', () => ({
-  useWallet: () => ({ walletInfo: null, isConnected: false, handleConnect: () => {} }),
+  ...UseWalletOriginal,
+  useWallet: () => ({
+    walletInfo: null,
+    isConnected: false,
+    handleConnect: async () => undefined,
+  }),
 }))
 
 mock.module('@trustless-work/escrow/hooks', () => ({
+  ...EscrowHooksOriginal,
   useGetEscrowFromIndexerByContractIds: () => ({
     getEscrowByContractIds: async () => [],
   }),
 }))
 
-import { useDealDetail } from '@/hooks/use-deal-detail'
+const { useDealDetail } = await import('@/hooks/use-deal-detail')
 
 const globals = globalThis as TestGlobals
 
 beforeEach(() => {
   globals.__dealResponses = new Map()
   globals.__dealCalls = []
+  globals.__authUser = null
+  globals.__authStateCallback = null
+  globals.__profileResponses = new Map()
+  globals.__profileCalls = []
 })
 
 afterEach(() => {
@@ -113,6 +164,16 @@ afterEach(() => {
   mock.restore()
   delete globals.__dealResponses
   delete globals.__dealCalls
+  delete globals.__authUser
+  delete globals.__authStateCallback
+  delete globals.__profileResponses
+  delete globals.__profileCalls
+})
+
+afterAll(() => {
+  mock.module('@/lib/supabase/client', () => ({ ...SupabaseClientOriginal }))
+  mock.module('@/hooks/use-wallet', () => ({ ...UseWalletOriginal }))
+  mock.module('@trustless-work/escrow/hooks', () => ({ ...EscrowHooksOriginal }))
 })
 
 describe('useDealDetail load lifecycle', () => {
@@ -331,5 +392,65 @@ describe('useDealDetail load lifecycle', () => {
       failedRefresh.reject(new Error('refresh failed'))
       await expect(refresh).resolves.toBeNull()
     })
+  })
+
+  test('[P1-2] does not resurrect admin role when initial profile query resolves after SIGNED_OUT', async () => {
+    globals.__authUser = { id: 'admin-1' }
+    enqueueDealResponse('A', resolvedDeal('A'))
+    const staleAdminProfile = deferred<ProfileQueryResult>()
+    enqueueProfileResponse('admin-1', staleAdminProfile.promise)
+
+    const hook = renderHook(() => useDealDetail('A'), { wrapper: TestWrapper })
+    await waitFor(() => expect(globals.__profileCalls).toEqual(['admin-1']))
+
+    await act(async () => {
+      globals.__authStateCallback?.('SIGNED_OUT', null)
+    })
+    await waitFor(() => expect(hook.result.current.isLoading).toBe(false))
+    expect(hook.result.current.userId).toBeNull()
+    expect(hook.result.current.userType).toBeNull()
+    expect(hook.result.current.isAdmin).toBe(false)
+
+    await act(async () => {
+      staleAdminProfile.resolve({ data: { user_type: 'admin' }, error: null })
+      await staleAdminProfile.promise
+    })
+    expect(hook.result.current.userId).toBeNull()
+    expect(hook.result.current.userType).toBeNull()
+    expect(hook.result.current.isAdmin).toBe(false)
+    expect(hook.result.current.isLoading).toBe(false)
+  })
+
+  test('[P1-2] ignores late-resolving profile for user A after switching to user B', async () => {
+    globals.__authUser = { id: 'user-A' }
+    enqueueDealResponse('A', resolvedDeal('A'))
+    const profileA = deferred<ProfileQueryResult>()
+    const profileB = deferred<ProfileQueryResult>()
+    enqueueProfileResponse('user-A', profileA.promise)
+    enqueueProfileResponse('user-B', profileB.promise)
+
+    const hook = renderHook(() => useDealDetail('A'), { wrapper: TestWrapper })
+    await waitFor(() => expect(globals.__profileCalls).toEqual(['user-A']))
+
+    await act(async () => {
+      globals.__authStateCallback?.('SIGNED_IN', { user: { id: 'user-B' } })
+    })
+    await waitFor(() => expect(globals.__profileCalls).toEqual(['user-A', 'user-B']))
+
+    await act(async () => {
+      profileB.resolve({ data: { user_type: 'investor' }, error: null })
+      await profileB.promise
+    })
+    await waitFor(() => expect(hook.result.current.userId).toBe('user-B'))
+    expect(hook.result.current.userType).toBe('investor')
+    expect(hook.result.current.isAdmin).toBe(false)
+
+    await act(async () => {
+      profileA.resolve({ data: { user_type: 'admin' }, error: null })
+      await profileA.promise
+    })
+    expect(hook.result.current.userId).toBe('user-B')
+    expect(hook.result.current.userType).toBe('investor')
+    expect(hook.result.current.isAdmin).toBe(false)
   })
 })
