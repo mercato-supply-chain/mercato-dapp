@@ -66,7 +66,6 @@ export function DashboardOverview({ data, t }: DashboardOverviewProps) {
         userType={userType}
         title={t.dashboard.handyActions}
         actions={vm.actions}
-        openLabel={vm.dealsLabels.openLabel}
       />
 
       {showSupplierCatalog && (
