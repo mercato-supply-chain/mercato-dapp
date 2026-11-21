@@ -13,7 +13,7 @@ import { Bell, Package, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatNotificationTime } from '@/lib/notifications'
 import { useMounted } from '@/hooks/use-mounted'
 import { useI18n } from '@/lib/i18n/provider'
-import { useNotificationsContext } from '@/components/notifications/notifications-provider'
+import { useNotificationsContext } from '@/components/notifications/notifications-context'
 
 export function NotificationDropdown() {
   const { t } = useI18n()
