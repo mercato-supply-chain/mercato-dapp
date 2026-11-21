@@ -6,7 +6,8 @@ import { AlertCircle, ArrowRight, Building2, Clock, ExternalLink, Plus, User } f
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatDate } from '@/lib/date-utils'
+import { formatLocalizedDate, formatMoney } from '@/lib/i18n/format'
+import { useI18n } from '@/lib/i18n/provider'
 import type { DashboardDealRow } from '@/lib/dashboard/types'
 import { cn } from '@/lib/utils'
 
@@ -210,6 +211,7 @@ function DealCardMobile({
   labels: DashboardDealsPanelProps['labels']
   columns: DashboardDealsPanelProps['columns']
 }) {
+  const { locale } = useI18n()
   const milestones = deal.milestones ?? []
   const pending = milestones.filter((m) => m.status === 'in_progress').length
   const hasPending = pending > 0
@@ -226,7 +228,7 @@ function DealCardMobile({
           {statusLabel}
         </Badge>
       </div>
-      <p className="text-lg font-bold tabular-nums">${Number(deal.amount).toLocaleString()}</p>
+      <p className="text-lg font-bold tabular-nums">{formatMoney(locale, Number(deal.amount))}</p>
       {columns.showSmb && (
         <div className="mt-1 text-xs text-muted-foreground">
           <PartyWithLogo p={deal.pyme} fallbackIcon={User} />
@@ -254,6 +256,7 @@ function DealTableRow({
   labels: DashboardDealsPanelProps['labels']
   columns: DashboardDealsPanelProps['columns']
 }) {
+  const { locale } = useI18n()
   const milestones = deal.milestones ?? []
   const completed = milestones.filter((m) => m.status === 'completed').length
   const pending = milestones.filter((m) => m.status === 'in_progress').length
@@ -278,7 +281,7 @@ function DealTableRow({
       <td className="p-4">
         <Badge variant={statusBadgeVariant(deal.status)}>{statusLabel}</Badge>
       </td>
-      <td className="p-4 text-right font-medium tabular-nums">${Number(deal.amount).toLocaleString()}</td>
+      <td className="p-4 text-right font-medium tabular-nums">{formatMoney(locale, Number(deal.amount))}</td>
       {columns.showCompany && (
         <td className="hidden p-4 text-xs text-muted-foreground lg:table-cell">
           <PartyWithLogo p={deal.supplier} />
@@ -301,12 +304,12 @@ function DealTableRow({
       )}
       {columns.showFunded && (
         <td className="hidden p-4 text-xs text-muted-foreground xl:table-cell">
-          {deal.funded_at ? formatDate(deal.funded_at) : '—'}
+          {deal.funded_at ? formatLocalizedDate(deal.funded_at, locale) : '—'}
         </td>
       )}
       {columns.showCreated && (
         <td className="hidden p-4 text-xs text-muted-foreground lg:table-cell">
-          {deal.created_at ? formatDate(deal.created_at) : '—'}
+          {deal.created_at ? formatLocalizedDate(deal.created_at, locale) : '—'}
         </td>
       )}
       <td className="hidden p-4 text-center sm:table-cell">

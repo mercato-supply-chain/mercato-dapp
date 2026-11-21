@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -55,7 +56,7 @@ export function EscrowMilestoneEditor({
   onAmountChange,
   onReceiverOverride,
 }: EscrowMilestoneEditorProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [percentText, setPercentText] = useState(() => String(percent))
   const [amountText, setAmountText] = useState(() => String(milestoneAmount))
   const [overrideText, setOverrideText] = useState('')
@@ -172,10 +173,7 @@ export function EscrowMilestoneEditor({
           {t('repaymentEscrow.milestoneEditor.remaining')}
         </span>
         <span className="font-medium tabular-nums">
-          {remaining.toLocaleString('es-MX', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{' '}
+          {formatAmount(locale, remaining)}{' '}
           USDC
         </span>
       </div>
