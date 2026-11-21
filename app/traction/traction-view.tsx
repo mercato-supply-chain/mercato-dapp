@@ -85,7 +85,7 @@ export function TractionView({ users, leads, eventSlugs, summary }: TractionView
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="container mx-auto max-w-6xl space-y-8 px-4 py-10">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-6xl space-y-8 px-4 py-10">
         <header>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" aria-hidden />

@@ -181,7 +181,7 @@ export default async function SupplierDetailPage({
       ))}
       <div className="flex min-h-screen flex-col">
         <Navigation />
-      <div className="container mx-auto px-4 py-10">
+      <main id="main" tabIndex={-1} className="container mx-auto px-4 py-10">
         {/* Breadcrumb */}
         <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/suppliers" className="flex items-center gap-1 hover:text-foreground">
@@ -404,7 +404,7 @@ export default async function SupplierDetailPage({
             </Card>
           </div>
         </div>
-      </div>
+      </main>
     </div>
     </>
   )

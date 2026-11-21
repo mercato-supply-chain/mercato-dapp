@@ -86,7 +86,7 @@ export default function DealDetailPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('dealDetail.loadError')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.loadErrorHelp')}</p>
@@ -95,7 +95,7 @@ export default function DealDetailPage() {
               <Button asChild variant="outline"><Link href="/deals">{t('common.back')}</Link></Button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -104,13 +104,13 @@ export default function DealDetailPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('deals.noDeals')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.notFoundHelp')}</p>
             <Button asChild><Link href="/deals">{t('common.back')}</Link></Button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -152,7 +152,7 @@ export default function DealDetailPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <div className={`container mx-auto px-4 py-10${showInvestorPitch && canFund ? ' pb-24 lg:pb-10' : ''}`}>
+      <main id="main" tabIndex={-1} className={`container mx-auto px-4 py-10${showInvestorPitch && canFund ? ' pb-24 lg:pb-10' : ''}`}>
         <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/deals" className="flex items-center gap-1 hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden />{t('deals.title')}
@@ -251,7 +251,7 @@ export default function DealDetailPage() {
             <DealDetailSidebar deal={deal} isFundingOpen={isFundingOpen} pymeReputation={pymeReputation} />
           )}
         </div>
-      </div>
+      </main>
       {showInvestorPitch && canFund ? (
         <DealFundingPanel {...fundingProps} showMobileBar />
       ) : null}

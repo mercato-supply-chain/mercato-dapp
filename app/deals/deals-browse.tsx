@@ -169,7 +169,7 @@ export function DealsBrowse({
     <div className="flex min-h-screen flex-col">
       <Navigation />
 
-      <div className="container mx-auto px-4 py-10">
+      <main id="main" tabIndex={-1} className="container mx-auto px-4 py-10">
         {/* Page header */}
         <div className="mb-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent/20">
@@ -425,7 +425,7 @@ export function DealsBrowse({
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

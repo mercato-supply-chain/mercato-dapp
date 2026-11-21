@@ -92,7 +92,7 @@ export function OurStoryView() {
         </div>
       </section>
 
-      <main className="container mx-auto max-w-5xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-5xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
         <section className="mb-16">
           <Card className="overflow-hidden border-emerald-500/15 bg-gradient-to-br from-emerald-50/70 via-card to-card shadow-sm dark:from-emerald-950/25">
             <CardContent className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">

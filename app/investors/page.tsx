@@ -46,7 +46,7 @@ export default async function InvestorsPage() {
       <JsonLd data={breadcrumbSchema} />
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto max-w-7xl px-4 py-8">
+        <main id="main" tabIndex={-1} className="container mx-auto max-w-7xl px-4 py-8">
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold tracking-tight">
               {tr(messages, 'investorsPage.title')}
@@ -56,7 +56,7 @@ export default async function InvestorsPage() {
           <Suspense fallback={<InvestorsSkeleton />}>
             <InvestorsData />
           </Suspense>
-        </div>
+        </main>
       </div>
     </>
   )

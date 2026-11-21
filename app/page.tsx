@@ -49,26 +49,28 @@ export default async function HomePage() {
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero stats={platformStats} />
+      <main id="main" tabIndex={-1} className="flex-1">
+        <LandingHero stats={platformStats} />
 
-      <LandingRoles />
+        <LandingRoles />
 
-      <LandingRateComparison />
+        <LandingRateComparison />
 
-      <div className="flex flex-col items-center py-12 border-t border-border/50">
-        <p className="text-muted-foreground mb-3">Want to understand the full picture?</p>
-       <Link href="/our-story" className="text-primary font-medium underline underline-offset-4">
-  Learn our story →
-</Link>
-      </div>
+        <div className="flex flex-col items-center py-12 border-t border-border/50">
+          <p className="text-muted-foreground mb-3">Want to understand the full picture?</p>
+          <Link href="/our-story" className="text-primary font-medium underline underline-offset-4">
+            Learn our story →
+          </Link>
+        </div>
 
-      <section className="border-t border-border/50 bg-background">
-        <LandingLiveDeals />
-      </section>
+        <section className="border-t border-border/50 bg-background">
+          <LandingLiveDeals />
+        </section>
 
-      <LandingFaq />
+        <LandingFaq />
 
-      <LandingPartnersStrip />
+        <LandingPartnersStrip />
+      </main>
 
       <LandingFooter />
     </div>
