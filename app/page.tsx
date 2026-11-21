@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
 import { LandingHero } from '@/components/landing/landing-hero'
@@ -9,7 +10,8 @@ import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
-import { getLandingPlatformStats } from '@/lib/landing/get-platform-stats'
+import { LandingStats } from '@/components/landing/landing-stats'
+import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,16 +42,18 @@ const breadcrumbSchema = {
   ],
 }
 
-export default async function HomePage() {
-  const platformStats = await getLandingPlatformStats()
-
+export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-background">
       <JsonLd data={breadcrumbSchema} />
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero stats={platformStats} />
+      <LandingHero stats={
+        <Suspense fallback={<HeroStatsBar />}>
+          <LandingStats />
+        </Suspense>
+      } />
 
       <LandingRoles />
 
