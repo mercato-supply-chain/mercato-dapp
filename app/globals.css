@@ -758,16 +758,7 @@
 }
 
 /* ─── Landing live-deals waterfall ───────────────────────── */
-@keyframes landing-column-drift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, -50%, 0); }
-}
-.landing-column-drift {
-  animation: landing-column-drift 52s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing-column-drift { animation: none; }
-}
+/* Continuous scroll animation removed - static list now */
 
 .landing-waterfall-mask {
   mask-image: linear-gradient(
