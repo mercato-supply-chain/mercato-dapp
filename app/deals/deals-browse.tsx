@@ -379,7 +379,7 @@ export function DealsBrowse({
         </p>
 
         {/* Deal grid */}
-        {isLoading && deals.length === 0 ? (
+        {isLoading && deals.length === 0 && initialDeals.length === 0 ? (
           <div
             className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
             aria-busy="true"
