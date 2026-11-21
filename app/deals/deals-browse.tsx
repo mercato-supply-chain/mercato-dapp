@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigation } from '@/components/navigation'
 import { DealCard } from '@/components/deal-card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -167,8 +166,6 @@ export function DealsBrowse({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navigation />
-
       <div className="container mx-auto px-4 py-10">
         {/* Page header */}
         <div className="mb-8">

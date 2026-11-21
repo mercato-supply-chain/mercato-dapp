@@ -99,7 +99,6 @@ export default async function DealsPage({
       >
         <DealCardList deals={page.deals} />
         <DealsBrowse
-          initialDeals={page.deals}
           initialPage={page.page}
           initialHasMore={page.hasMore}
           initialMatchCount={page.matchCount}
