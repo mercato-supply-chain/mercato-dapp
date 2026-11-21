@@ -383,12 +383,9 @@ export async function fetchDealsBrowsePage(
     return { deals: [], page: filters.page, hasMore: false, matchCount: 0 }
   }
 
-  // Untyped Supabase row shape — mapDealFromDb is the typed boundary.
   const rows = (pageResult.data ?? []) as unknown as DealRow[]
-  return {
-    deals: rows.slice(0, DEALS_PAGE_SIZE).map(mapDealFromDb),
-    page: filters.page,
-    hasMore: rows.length > DEALS_PAGE_SIZE,
-    matchCount,
-  }
+  const hasMore = rows.length > DEALS_PAGE_SIZE
+  const deals = rows.slice(0, DEALS_PAGE_SIZE).map((row) => mapDealFromDb(row))
+
+  return { deals, page: filters.page, hasMore, matchCount }
 }
