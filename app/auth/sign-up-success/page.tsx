@@ -7,7 +7,7 @@ import { CheckCircle2, Mail } from 'lucide-react'
 export default function SignUpSuccessPage() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <main id="main" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           <Link
             href="/"
@@ -57,7 +57,7 @@ export default function SignUpSuccessPage() {
             Supply chain finance for PyMEs, investors, and suppliers
           </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

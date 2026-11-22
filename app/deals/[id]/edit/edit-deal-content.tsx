@@ -99,7 +99,7 @@ export default function EditDealContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('dealDetail.loadError')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.loadErrorHelp')}</p>
@@ -110,7 +110,7 @@ export default function EditDealContent() {
               </Button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -119,7 +119,7 @@ export default function EditDealContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('deals.noDeals')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.notFoundHelp')}</p>
@@ -127,7 +127,7 @@ export default function EditDealContent() {
               <Link href="/deals">{t('common.back')}</Link>
             </Button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -136,7 +136,7 @@ export default function EditDealContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="max-w-md text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('editDeal.notAllowedTitle')}</h1>
             <p className="mb-4 text-muted-foreground">
@@ -146,7 +146,7 @@ export default function EditDealContent() {
               <Link href={`/deals/${deal.id}`}>{t('editDeal.backToDeal')}</Link>
             </Button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }

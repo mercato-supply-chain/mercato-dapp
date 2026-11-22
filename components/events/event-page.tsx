@@ -19,7 +19,9 @@ type EventPageProps = {
 function EventPageContent({ event }: EventPageProps) {
   return (
     <>
-      <EventLocaleSync defaultLocale={event.defaultLocale} />
+      <Suspense fallback={null}>
+        <EventLocaleSync defaultLocale={event.defaultLocale} />
+      </Suspense>
       <EventHeader />
       <main id="main" tabIndex={-1}>
         <EventHero event={event} />
@@ -39,9 +41,7 @@ function EventPageContent({ event }: EventPageProps) {
 export function EventPage({ event }: EventPageProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Suspense fallback={null}>
-        <EventPageContent event={event} />
-      </Suspense>
+      <EventPageContent event={event} />
     </div>
   )
 }

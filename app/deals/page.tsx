@@ -90,9 +90,9 @@ export default async function DealsPage({
       <Suspense
         fallback={
           <div className="flex min-h-screen flex-col">
-            <div className="container mx-auto px-4 py-8">
+            <main id="main" tabIndex={-1} className="container mx-auto px-4 py-8">
               <p className="text-muted-foreground">{dict.deals.loadingDeals}</p>
-            </div>
+            </main>
           </div>
         }
       >

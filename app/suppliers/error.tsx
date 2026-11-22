@@ -13,7 +13,7 @@ export default function SuppliersError({
   const { t } = useI18n()
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <main id="main" tabIndex={-1} className="container mx-auto px-4 py-8">
       <LocalizedErrorBoundary
         error={error}
         reset={reset}
@@ -22,6 +22,6 @@ export default function SuppliersError({
         actionLabel={t('errorBoundary.retry')}
         variant="card"
       />
-    </div>
+    </main>
   )
 }

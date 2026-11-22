@@ -36,23 +36,37 @@ describe('root skip link and document color-scheme (#286)', () => {
     expect(css).toMatch(/\.dark\s*\{[\s\S]*?color-scheme:\s*dark;/)
   })
 
-  test('public and app routes provide matching <main id="main" tabIndex={-1}> landmarks without duplicate skip links', () => {
+  test('public, auth, loading, error, and app routes provide matching <main id="main" tabIndex={-1}> landmarks without duplicate skip links', () => {
     const landmarkFiles = [
       'app/page.tsx',
+      'app/deals/page.tsx',
       'app/deals/deals-browse.tsx',
+      'app/deals/error.tsx',
+      'app/deals/[id]/deal-detail-view.tsx',
+      'app/deals/[id]/edit/edit-deal-content.tsx',
+      'app/create-deal/page.tsx',
       'app/create-deal/create-deal-content.tsx',
       'app/suppliers/page.tsx',
       'app/suppliers/[id]/page.tsx',
       'app/suppliers/loading.tsx',
+      'app/suppliers/error.tsx',
       'app/investors/page.tsx',
       'app/investors/[id]/page.tsx',
       'app/investors/loading.tsx',
+      'app/investors/error.tsx',
       'app/pymes/page.tsx',
       'app/pymes/[id]/page.tsx',
       'app/pymes/loading.tsx',
+      'app/pymes/error.tsx',
       'app/settings/page.tsx',
       'app/how-it-works/how-it-works-view.tsx',
-      'app/deals/[id]/deal-detail-view.tsx',
+      'app/traction/traction-view.tsx',
+      'app/auth/forgot-password/page.tsx',
+      'app/auth/sign-up-success/page.tsx',
+      'app/auth/update-password/page.tsx',
+      'components/auth/auth-split-shell.tsx',
+      'components/dashboard/dashboard-shell.tsx',
+      'components/deals/deal-detail-skeleton.tsx',
       'components/our-story/our-story-view.tsx',
       'components/blog/blog-views.tsx',
       'components/events/event-page.tsx',
@@ -61,6 +75,20 @@ describe('root skip link and document color-scheme (#286)', () => {
     for (const file of landmarkFiles) {
       expect(readRepoFile(file)).toContain('<main id="main" tabIndex={-1}')
     }
+
+    // /auth/login and /auth/sign-up inherit <main id="main" tabIndex={-1}> from AuthSplitShell
+    expect(readRepoFile('app/auth/login/page.tsx')).toContain('<AuthSplitShell')
+    expect(readRepoFile('app/auth/sign-up/sign-up-form.tsx')).toContain('<AuthSplitShell')
+
+    // All 4 render states of /deals/[id]/edit (3 early returns + main form) provide main#main
+    const editDealMatches = readRepoFile('app/deals/[id]/edit/edit-deal-content.tsx').match(
+      /<main id="main" tabIndex=\{-1\}/g,
+    )
+    expect(editDealMatches?.length).toBe(4)
+
+    // Dashboard error boundaries render inside DashboardShell's <main id="main"> and must not nest <main>
+    expect(readRepoFile('app/dashboard/error.tsx')).not.toContain('<main')
+    expect(readRepoFile('app/dashboard/admin/error.tsx')).not.toContain('<main')
 
     expect(readRepoFile('app/create-deal/create-deal-content.tsx')).not.toContain('Skip to main content')
   })
