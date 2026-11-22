@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { enDict, getDictionary } from '@/lib/i18n/dictionaries'
+import { SkipLinkView } from '@/components/a11y/skip-link'
 
 const ROOT = join(import.meta.dir, '..')
 
@@ -16,17 +18,46 @@ afterEach(() => {
 })
 
 describe('root skip link and document color-scheme (#286)', () => {
-  test('app/layout.tsx renders a single :focus-visible skip link targeting #main before AppProviders', () => {
+  test('app/layout.tsx renders localized <SkipLink /> as the first child inside AppProviders', () => {
     const layout = readRepoFile('app/layout.tsx')
+    const skipLink = readRepoFile('components/a11y/skip-link.tsx')
 
-    expect(layout).toContain('href="#main"')
-    expect(layout).toContain('Skip to content')
-    expect(layout).toContain('focus-visible:not-sr-only')
-
-    const skipIndex = layout.indexOf('href="#main"')
     const providersIndex = layout.indexOf('<AppProviders')
-    expect(skipIndex).toBeGreaterThan(-1)
-    expect(providersIndex).toBeGreaterThan(skipIndex)
+    const skipIndex = layout.indexOf('<SkipLink />')
+    const gateIndex = layout.indexOf('<UserTypeGate />')
+    const childrenIndex = layout.indexOf('{children}')
+
+    expect(providersIndex).toBeGreaterThan(-1)
+    expect(skipIndex).toBeGreaterThan(providersIndex)
+    expect(gateIndex).toBeGreaterThan(skipIndex)
+    expect(childrenIndex).toBeGreaterThan(skipIndex)
+
+    expect(skipLink).toContain('href="#main"')
+    expect(skipLink).toContain("t('nav.skipToContent')")
+    expect(skipLink).toContain('focus-visible:not-sr-only')
+    expect(skipLink).toContain('focus-visible:ring-offset-background')
+  })
+
+  test('skip link and 404 copy are localized in both en and es dictionaries', async () => {
+    const esDict = await getDictionary('es')
+
+    expect(enDict.nav.skipToContent).toBe('Skip to content')
+    expect(esDict.nav.skipToContent).toBe('Saltar al contenido')
+
+    expect(enDict.notFound.title).toBe('Page not found')
+    expect(esDict.notFound.title).toBe('Página no encontrada')
+    expect(enDict.notFound.description.length).toBeGreaterThan(0)
+    expect(esDict.notFound.description.length).toBeGreaterThan(0)
+    expect(enDict.notFound.backHome.length).toBeGreaterThan(0)
+    expect(esDict.notFound.backHome.length).toBeGreaterThan(0)
+    expect(enDict.notFound.browseDeals.length).toBeGreaterThan(0)
+    expect(esDict.notFound.browseDeals.length).toBeGreaterThan(0)
+
+    const notFoundSource = readRepoFile('app/not-found.tsx')
+    expect(notFoundSource).toContain("t('notFound.title')")
+    expect(notFoundSource).toContain("t('notFound.description')")
+    expect(notFoundSource).toContain("t('notFound.backHome')")
+    expect(notFoundSource).toContain("t('notFound.browseDeals')")
   })
 
   test('app/globals.css sets color-scheme: light in :root and color-scheme: dark in .dark', () => {
@@ -77,6 +108,10 @@ describe('root skip link and document color-scheme (#286)', () => {
       expect(readRepoFile(file)).toContain('<main id="main" tabIndex={-1}')
     }
 
+    // /our-story wraps its hero <h1> inside <main id="main">
+    const ourStory = readRepoFile('components/our-story/our-story-view.tsx')
+    expect(ourStory.indexOf('<main id="main" tabIndex={-1}')).toBeLessThan(ourStory.indexOf('<h1'))
+
     // /auth/login and /auth/sign-up inherit <main id="main" tabIndex={-1}> from AuthSplitShell
     expect(readRepoFile('app/auth/login/page.tsx')).toContain('<AuthSplitShell')
     expect(readRepoFile('app/auth/sign-up/sign-up-form.tsx')).toContain('<AuthSplitShell')
@@ -94,40 +129,39 @@ describe('root skip link and document color-scheme (#286)', () => {
     expect(readRepoFile('app/create-deal/create-deal-content.tsx')).not.toContain('Skip to main content')
   })
 
-  test('first Tab focuses "Skip to content" and main#main accepts programmatic focus', async () => {
-    const user = userEvent.setup()
+  test('first Tab focuses localized SkipLinkView in en and es and main#main accepts programmatic focus', async () => {
+    const esDict = await getDictionary('es')
 
-    render(
-      createElement(
-        'div',
-        null,
+    for (const label of [enDict.nav.skipToContent, esDict.nav.skipToContent]) {
+      const user = userEvent.setup()
+
+      render(
         createElement(
-          'a',
-          {
-            href: '#main',
-            className:
-              'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-[100]',
-          },
-          'Skip to content',
+          'div',
+          null,
+          createElement(SkipLinkView, { label }),
+          createElement('header', null, createElement('a', { href: '/deals' }, 'Deals')),
+          createElement(
+            'main',
+            { id: 'main', tabIndex: -1 },
+            createElement('button', { type: 'button' }, 'Main action'),
+          ),
         ),
-        createElement('header', null, createElement('a', { href: '/deals' }, 'Deals')),
-        createElement(
-          'main',
-          { id: 'main', tabIndex: -1 },
-          createElement('button', { type: 'button' }, 'Main action'),
-        ),
-      ),
-    )
+      )
 
-    await user.tab()
+      await user.tab()
 
-    const skipLink = screen.getByRole('link', { name: 'Skip to content' })
-    expect(document.activeElement).toBe(skipLink)
-    expect(skipLink.getAttribute('href')).toBe('#main')
+      const skipLink = screen.getByRole('link', { name: label })
+      expect(document.activeElement).toBe(skipLink)
+      expect(skipLink.getAttribute('href')).toBe('#main')
+      expect(skipLink.className).toContain('focus-visible:ring-offset-background')
 
-    const mainEl = document.getElementById('main')
-    expect(mainEl).not.toBeNull()
-    mainEl!.focus()
-    expect(document.activeElement).toBe(mainEl)
+      const mainEl = document.getElementById('main')
+      expect(mainEl).not.toBeNull()
+      mainEl!.focus()
+      expect(document.activeElement).toBe(mainEl)
+
+      cleanup()
+    }
   })
 })

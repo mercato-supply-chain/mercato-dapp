@@ -57,42 +57,43 @@ export function OurStoryView() {
 
   return (
     <BlogLayout>
-      <section className="border-b border-border/60 bg-gradient-to-b from-emerald-50/50 via-muted/20 to-transparent dark:from-emerald-950/20">
-        <div className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 md:py-16">
-          <BlogBreadcrumbs
-            items={[{ label: 'Home', href: '/' }, { label: story.hero.eyebrow }]}
-          />
+      <main id="main" tabIndex={-1}>
+        <section className="border-b border-border/60 bg-gradient-to-b from-emerald-50/50 via-muted/20 to-transparent dark:from-emerald-950/20">
+          <div className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 md:py-16">
+            <BlogBreadcrumbs
+              items={[{ label: 'Home', href: '/' }, { label: story.hero.eyebrow }]}
+            />
 
-          <div className="mx-auto max-w-4xl pt-4 text-center">
-          <Badge variant="secondary" className="mb-5 gap-1.5 rounded-full px-3 py-1">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
-            {story.hero.eyebrow}
-          </Badge>
+            <div className="mx-auto max-w-4xl pt-4 text-center">
+            <Badge variant="secondary" className="mb-5 gap-1.5 rounded-full px-3 py-1">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+              {story.hero.eyebrow}
+            </Badge>
 
-          <h1 className="font-display mx-auto mb-5 max-w-3xl text-4xl font-normal tracking-tight text-balance sm:text-5xl md:text-[3.25rem] md:leading-[1.08]">
-            {story.hero.title}
-          </h1>
+            <h1 className="font-display mx-auto mb-5 max-w-3xl text-4xl font-normal tracking-tight text-balance sm:text-5xl md:text-[3.25rem] md:leading-[1.08]">
+              {story.hero.title}
+            </h1>
 
-          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            {story.hero.subtitle}
-          </p>
+            <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              {story.hero.subtitle}
+            </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {heroPills.map(({ icon: Icon, label }) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm"
-              >
-                <Icon className="h-3.5 w-3.5" aria-hidden />
-                {label}
-              </span>
-            ))}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {heroPills.map(({ icon: Icon, label }) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm"
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  {label}
+                </span>
+              ))}
+            </div>
+            </div>
           </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <main id="main" tabIndex={-1} className="container mx-auto max-w-5xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
+        <div className="container mx-auto max-w-5xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
         <section className="mb-16">
           <Card className="overflow-hidden border-emerald-500/15 bg-gradient-to-br from-emerald-50/70 via-card to-card shadow-sm dark:from-emerald-950/25">
             <CardContent className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
@@ -217,6 +218,7 @@ export function OurStoryView() {
         </section>
 
         <StoryEndCta />
+        </div>
       </main>
     </BlogLayout>
   )
