@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/provider'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 type SupplierLogoUploadProps = {
   value: string | null
@@ -90,9 +91,11 @@ export function SupplierLogoUpload({ value, onChange, companyId }: SupplierLogoU
       <div className="flex items-center gap-4">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-muted/30">
           {value ? (
-            <img
+            <Image
               src={value}
               alt={t('supplierProfile.logoCurrentAlt')}
+              width={80}
+              height={80}
               className="h-full w-full object-cover"
             />
           ) : (
