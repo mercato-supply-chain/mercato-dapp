@@ -739,12 +739,15 @@
     "refreshBalance": "Refresh balance",
     "copyAddress": "Copy address",
     "viewExplorer": "View explorer",
+    "viewExplorerAriaLabel": "View explorer (opens in a new tab)",
+    "balanceRefreshed": "Balance refreshed",
     "disconnect": "Disconnect",
     "activateEmbedded": "Activate embedded wallet",
     "defaultWalletName": "Wallet"
   },
   "notifications": {
     "ariaLabel": "Notifications",
+    "loading": "Loading notifications",
     "unreadCount": "{count} unread",
     "title": "Notifications",
     "markAllRead": "Mark all read",
