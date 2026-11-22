@@ -39,6 +39,7 @@ describe('root skip link and document color-scheme (#286)', () => {
   test('public, auth, loading, error, and app routes provide matching <main id="main" tabIndex={-1}> landmarks without duplicate skip links', () => {
     const landmarkFiles = [
       'app/page.tsx',
+      'app/not-found.tsx',
       'app/deals/page.tsx',
       'app/deals/deals-browse.tsx',
       'app/deals/error.tsx',
