@@ -83,11 +83,6 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
   return (
     <Link
       href={`/deals/${deal.id}`}
-      style={
-        staggerMs != null
-          ? { animationDelay: `${staggerMs}ms` }
-          : undefined
-      }
       className={cn(
         'group flex flex-col rounded-2xl border-2 border-border bg-card',
         'transition-[transform,box-shadow,border-color] duration-200 ease-out motion-reduce:transition-colors',
@@ -97,6 +92,11 @@ export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }
         listIndex != null &&
           'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 motion-safe:ease-out motion-safe:fill-mode-backwards',
       )}
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0px 420px',
+        ...(staggerMs != null ? { animationDelay: `${staggerMs}ms` } : undefined),
+      }}
     >
       {/* Header */}
       <div className="flex-1 p-5">

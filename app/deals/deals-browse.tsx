@@ -396,6 +396,7 @@ export function DealsBrowse({
             <div
               className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
               aria-busy={isLoading}
+              style={{ contain: 'content' }}
             >
               {deals.map((deal, index) => (
                 <DealCard key={deal.id} deal={deal} listIndex={index} />
