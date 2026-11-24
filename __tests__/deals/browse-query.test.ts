@@ -12,6 +12,7 @@ import {
   parseDealsBrowseParams,
   sanitizeSearchTerm,
 } from '@/lib/deals/browse'
+import { buildDealsBrowseUrl } from '@/lib/deals/browse-client'
 
 const NOW = '2026-09-25T06:00:00.000Z'
 
@@ -242,5 +243,44 @@ describe('dealBrowseCacheKey', () => {
     expect(dealBrowseCacheKey({ ...base, category: 'Textiles' })).not.toBe(
       dealBrowseCacheKey(base),
     )
+  })
+})
+
+describe('buildDealsBrowseUrl', () => {
+  const base = {
+    status: 'all' as const,
+    category: null,
+    q: '',
+    sort: 'newest' as const,
+    page: 1,
+  }
+
+  test('omits default filters for a clean /deals path', () => {
+    expect(buildDealsBrowseUrl('/deals', '', base)).toBe('/deals')
+  })
+
+  test('serializes active status, category, query, and sort into the URL', () => {
+    expect(
+      buildDealsBrowseUrl('/deals', '', {
+        status: 'open',
+        category: 'Electronics',
+        q: 'LED',
+        sort: 'highest_amount',
+        page: 1,
+      }),
+    ).toBe('/deals?status=open&category=Electronics&q=LED&sort=highest_amount')
+  })
+
+  test('preserves unrelated params like lang and removes legacy filter alias', () => {
+    expect(
+      buildDealsBrowseUrl('/deals', '?lang=es&filter=awaiting_funding', {
+        ...base,
+        status: 'active',
+      }),
+    ).toBe('/deals?lang=es&status=active')
+
+    expect(
+      buildDealsBrowseUrl('/deals', '?lang=es&status=active', base),
+    ).toBe('/deals?lang=es')
   })
 })
