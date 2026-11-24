@@ -20,9 +20,24 @@ type DealLoadResult =
   | { kind: 'not-found' }
   | { kind: 'error' }
 
-export function useDealDetail(dealId: string | undefined) {
-  const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(null)
-  const [reloadCounter, setReloadCounter] = useState(0)
+export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
+  const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(() =>
+    initialDeal && initialDeal.id === dealId
+      ? { status: 'success', dealId: initialDeal.id, deal: initialDeal }
+      : null,
+  )
+  const [previousInitialDeal, setPreviousInitialDeal] = useState(initialDeal)
+  // A new RSC snapshot replaces the previous route's state before it is rendered.
+  if (initialDeal !== previousInitialDeal) {
+    setPreviousInitialDeal(initialDeal)
+    if (initialDeal && initialDeal.id === dealId) {
+      setDealLoadState({ status: 'success', dealId: initialDeal.id, deal: initialDeal })
+    }
+  }
+  const [reloadRequest, setReloadRequest] = useState<{
+    dealId: string
+    initialDeal: Deal | undefined
+  } | null>(null)
   const [userType, setUserType] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
@@ -105,8 +120,8 @@ export function useDealDetail(dealId: string | undefined) {
   const retry = useCallback(() => {
     if (!dealId) return
     setDealLoadState({ status: 'loading', dealId })
-    setReloadCounter((counter) => counter + 1)
-  }, [dealId])
+    setReloadRequest({ dealId, initialDeal })
+  }, [dealId, initialDeal])
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -138,6 +153,14 @@ export function useDealDetail(dealId: string | undefined) {
 
   useEffect(() => {
     if (!dealId) return
+    // The RSC payload already contains the same row used by metadata. Explicit
+    // retries and post-action refreshes still read the latest browser-visible row.
+    if (
+      initialDeal?.id === dealId &&
+      (reloadRequest?.dealId !== dealId || reloadRequest.initialDeal !== initialDeal)
+    ) {
+      return
+    }
     let cancelled = false
     const sequence = ++requestSequenceRef.current
     void loadDeal(dealId).then((result) => {
@@ -159,9 +182,13 @@ export function useDealDetail(dealId: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [dealId, loadDeal, reloadCounter])
+  }, [dealId, initialDeal, loadDeal, reloadRequest])
 
-  const matchingLoadState = dealLoadState?.dealId === dealId ? dealLoadState : null
+  const matchingLoadState = dealLoadState?.dealId === dealId
+    ? dealLoadState
+    : initialDeal && initialDeal.id === dealId
+      ? { status: 'success' as const, dealId, deal: initialDeal }
+      : null
   const deal = matchingLoadState?.status === 'success' ? matchingLoadState.deal : null
   const isLoading = Boolean(
     dealId && (!matchingLoadState || matchingLoadState.status === 'loading'),
