@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Menu, PanelLeft, PanelLeftClose } from 'lucide-react'
 import { Navigation } from '@/components/navigation'
+import { WalletAppProviders } from '@/components/providers/wallet-app-providers'
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -36,8 +37,10 @@ export function DashboardShell({ userType, children }: DashboardShellProps) {
   useEffect(() => {
     const initial =
       readSidebarCollapsedFromDocument() ?? readSidebarCollapsedPreference() ?? false
-    setCollapsed(initial)
     applySidebarCollapsedToDocument(initial)
+    if (initial) {
+      queueMicrotask(() => setCollapsed(true))
+    }
   }, [])
 
   useEffect(() => {
@@ -61,6 +64,7 @@ export function DashboardShell({ userType, children }: DashboardShellProps) {
   }
 
   return (
+    <WalletAppProviders>
     <div className="flex min-h-screen flex-col">
       <Navigation />
 
@@ -140,5 +144,6 @@ export function DashboardShell({ userType, children }: DashboardShellProps) {
         </div>
       </div>
     </div>
+    </WalletAppProviders>
   )
 }

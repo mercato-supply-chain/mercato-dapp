@@ -49,9 +49,12 @@ export function SupplierLogoInline({
       className={`flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 ${boxClassName}`}
     >
       {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={logoUrl as string}
           alt={alt}
+          width={20}
+          height={20}
           className="h-full w-full object-cover"
           onError={() => setImageError(true)}
         />

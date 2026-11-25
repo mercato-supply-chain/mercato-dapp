@@ -1,3 +1,5 @@
+import type { Locale } from '@/lib/i18n/config'
+import { formatLocalizedDate } from '@/lib/i18n/format'
 import { Button } from '@/components/ui/button'
 import type { ReferralActivityItem } from '@/lib/referrals/activity-grouping'
 
@@ -9,6 +11,7 @@ type Labels = {
 }
 
 type Props = {
+  locale: Locale
   items: ReferralActivityItem[]
   labels: Labels
   page: number
@@ -17,7 +20,7 @@ type Props = {
   baseQuery: string
 }
 
-export function ReferralActivityTimeline({ items, labels, page, total, pageSize, baseQuery }: Props) {
+export function ReferralActivityTimeline({ items, labels, page, total, pageSize, baseQuery, locale }: Props) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
 
   return (
@@ -43,7 +46,7 @@ export function ReferralActivityTimeline({ items, labels, page, total, pageSize,
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{openLabel}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleString()}
+                    {formatLocalizedDate(item.createdAt, locale, { dateStyle: 'short', timeStyle: 'medium' })}
                   </p>
                 </div>
               </li>

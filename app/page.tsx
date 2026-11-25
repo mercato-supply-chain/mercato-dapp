@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
 import { LandingHero } from '@/components/landing/landing-hero'
 import { LandingRoles } from '@/components/landing/landing-roles'
@@ -12,6 +11,9 @@ import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
 import { LandingStats } from '@/components/landing/landing-stats'
 import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
+import { LandingHeroDeal } from '@/components/landing/landing-hero-deal'
+import { HeroDealSheet } from '@/components/landing/hero-deal-sheet'
+import { sampleHeroDeal } from '@/lib/landing/hero-deal'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +51,11 @@ export default function HomePage() {
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero stats={
+      <LandingHero deal={
+        <Suspense fallback={<HeroDealSheet deal={sampleHeroDeal()} className="hero-stagger-4 w-full lg:justify-self-end" />}>
+          <LandingHeroDeal />
+        </Suspense>
+      } stats={
         <Suspense fallback={<HeroStatsBar />}>
           <LandingStats />
         </Suspense>
@@ -58,13 +64,6 @@ export default function HomePage() {
       <LandingRoles />
 
       <LandingRateComparison />
-
-      <div className="flex flex-col items-center py-12 border-t border-border/50">
-        <p className="text-muted-foreground mb-3">Want to understand the full picture?</p>
-       <Link href="/our-story" className="text-primary font-medium underline underline-offset-4">
-  Learn our story →
-</Link>
-      </div>
 
       <section className="border-t border-border/50 bg-background">
         <LandingLiveDeals />

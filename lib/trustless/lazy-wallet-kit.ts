@@ -1,16 +1,12 @@
-import {
-  StellarWalletsKit,
-  WalletNetwork,
-  FREIGHTER_ID,
-  AlbedoModule,
-  FreighterModule,
-} from '@creit.tech/stellar-wallets-kit'
+import type { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit'
+import { registerActiveWalletKitDisconnect } from '@/lib/wallet/session-cleanup'
 
 /**
  * Lazy, concurrency-safe accessor for the Stellar Wallets Kit singleton.
  *
- * The SDK is only instantiated on first access (e.g., wallet connection, signing, or session restoration),
- * not at module load. This defers bundle overhead and network activity on public routes where no wallet is stored.
+ * Both SDK module evaluation and instantiation are deferred until first access
+ * (e.g., wallet connection, signing, or external session restoration) so routes
+ * like `/auth/login` and `/auth/sign-up` do not eagerly bundle Stellar Wallets Kit.
  *
  * Implementation is inspired by React 18 + Next.js lazy loading patterns:
  * @see https://nextjs.org/docs/app/guides/lazy-loading
@@ -46,13 +42,30 @@ async function initializeStellarWalletKit(): Promise<StellarWalletsKit | null> {
     return initPromise
   }
 
-  // Start initialization.
+  // Start initialization with dynamic SDK import so initial route chunks omit SWK.
   initPromise = (async () => {
     try {
-      stellarWalletKitInstance = new StellarWalletsKit({
+      const {
+        StellarWalletsKit: StellarWalletsKitCtor,
+        WalletNetwork,
+        FREIGHTER_ID,
+        AlbedoModule,
+        FreighterModule,
+      } = await import('@creit.tech/stellar-wallets-kit')
+
+      const instance = new StellarWalletsKitCtor({
         network: isTestnet ? WalletNetwork.TESTNET : WalletNetwork.PUBLIC,
         selectedWalletId: FREIGHTER_ID,
         modules: [new FreighterModule(), new AlbedoModule()],
+      })
+      stellarWalletKitInstance = instance
+      registerActiveWalletKitDisconnect(async () => {
+        if (stellarWalletKitInstance === instance) {
+          stellarWalletKitInstance = null
+        }
+        initPromise = null
+        registerActiveWalletKitDisconnect(null)
+        await instance.disconnect()
       })
       return stellarWalletKitInstance
     } catch (error) {
@@ -106,4 +119,5 @@ export function isStellarWalletKitInitialized(): boolean {
 export function resetStellarWalletKit(): void {
   stellarWalletKitInstance = null
   initPromise = null
+  registerActiveWalletKitDisconnect(null)
 }

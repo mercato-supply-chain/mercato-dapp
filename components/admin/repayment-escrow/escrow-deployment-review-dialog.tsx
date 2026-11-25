@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CircleAlert, Pencil, RotateCcw, Rocket } from 'lucide-react'
 import { toast } from 'sonner'
@@ -55,7 +56,7 @@ export function EscrowDeploymentReviewDialog({
   onRevalidate,
   triggerDisabled = false,
 }: EscrowDeploymentReviewDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -277,10 +278,7 @@ export function EscrowDeploymentReviewDialog({
                       <div className="flex items-baseline justify-between gap-3 text-sm">
                         <span className="shrink-0 text-muted-foreground">{t('repaymentEscrow.deploy.milestoneAmountLabel')}</span>
                         <span className="min-w-0 truncate text-right font-medium tabular-nums">
-                          {firstMilestone.amount.toLocaleString('es-MX', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{' '}
+                          {formatAmount(locale, firstMilestone.amount)}{' '}
                           USDC
                         </span>
                       </div>

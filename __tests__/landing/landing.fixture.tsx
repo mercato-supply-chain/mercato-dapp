@@ -15,6 +15,10 @@ if (scenario === 'stream') {
   let release!: (value: typeof stats) => void
   const pending = new Promise<typeof stats>((resolve) => { release = resolve })
   mock.module('@/lib/landing/get-platform-stats', () => ({ getLandingPlatformStats: () => pending }))
+  const { sampleHeroDeal } = await import('@/lib/landing/hero-deal')
+  let releaseDeal!: (value: ReturnType<typeof sampleHeroDeal>) => void
+  const pendingDeal = new Promise<ReturnType<typeof sampleHeroDeal>>((resolve) => { releaseDeal = resolve })
+  mock.module('@/lib/landing/get-hero-deal', () => ({ getLandingHeroDeal: () => pendingDeal }))
   const { enDict } = await import('@/lib/i18n/dictionaries')
   const { translate } = await import('@/lib/i18n/messages')
   mock.module('@/lib/i18n/provider', () => ({ useI18n: () => ({
@@ -52,7 +56,9 @@ if (scenario === 'stream') {
   assert(shell.includes('LandingRoles') && shell.includes('LandingFaq'))
   assert(shell.includes('aria-busy="true"'), 'stats skeleton should be in initial HTML')
   assert(!shell.includes('3 deals open'), 'real stats must still be pending')
+  assert(shell.includes(translate(enDict, enDict, 'landing.hero.deal.statusSample')), 'pending deal shows the labelled sample')
   release(stats)
+  releaseDeal({ ...sampleHeroDeal(), source: 'live', productName: 'Streamed live deal' })
   let rest = ''
   for (;;) {
     const next = await reader.read()
@@ -61,6 +67,7 @@ if (scenario === 'stream') {
   }
   assert(rest.includes('aria-busy="false"'))
   assert(rest.includes('12'))
+  assert(rest.includes('Streamed live deal'), 'upstream live deal must render after its query completes')
   assert(rest.includes(translate(enDict, enDict, 'landing.hero.stats.orders.deltaOpen', { count: 3 })))
   assert(rest.includes(translate(enDict, enDict, 'landing.hero.stats.capital.deltaGrowth', { percent: 100 })))
 } else {

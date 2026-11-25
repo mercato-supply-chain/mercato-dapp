@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAdminVaultMonitor } from '@/hooks/use-admin-vault-monitor'
 import { useI18n } from '@/lib/i18n/provider'
@@ -135,6 +136,7 @@ export function AdminVaultMonitor({ configuredVaultAddress }: AdminVaultMonitorP
                 onChange={(e) => setWatchAddress(e.target.value)}
                 placeholder="C…"
                 className="font-mono text-xs"
+                {...STELLAR_ADDRESS_INPUT_PROPS}
               />
               <p className="text-[11px] text-muted-foreground">{m.watchHint}</p>
             </div>

@@ -6,6 +6,11 @@ The homepage renders its shell and hero without awaiting Supabase. A server
 labels, and icons with skeleton values while loading, without displaying false
 zero counts.
 
+The live deal card has a separate `LandingHeroDeal` server component and Suspense
+boundary. It initially shows the existing, explicitly labelled sample deal,
+then replaces it with the selected live deal when available. Neither the live
+deal query nor the stats aggregate blocks the hero copy or other page sections.
+
 The aggregate uses Next.js Data Cache (`unstable_cache`) with a 60-second
 revalidation interval and React request deduplication. Warm requests reuse the
 aggregate; after the interval Next.js can serve the stale value while refreshing
@@ -28,8 +33,9 @@ Run the isolated streaming and query regression scenarios with:
 bun test __tests__/landing/landing.test.ts
 ```
 
-The streaming scenario holds the stats promise pending and checks initial HTML
-for the real hero, roles, FAQ, and skeleton before resolving and checking the
-funded-order, open-deal, and month-over-month output. Query scenarios use real
+The streaming scenario holds both the stats and live-deal promises pending and
+checks initial HTML for the real hero, roles, FAQ, sample deal, and skeleton
+before resolving and checking the live deal, funded-order, open-deal, and
+month-over-month output. Query scenarios use real
 Supabase query builders against a controlled HTTP transport to verify aggregation,
 anonymous client configuration, cache configuration, and failure recovery.

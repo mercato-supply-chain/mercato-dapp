@@ -1,11 +1,10 @@
 'use client'
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -18,28 +17,54 @@ import {
   mapNotificationFromDb,
   type Notification,
 } from '@/lib/notifications'
+import { useOptionalNavAuth } from '@/components/providers/nav-auth-provider'
+import {
+  NotificationsContext,
+  useNotifications,
+  useNotificationsContext,
+  type NotificationsContextValue,
+} from '@/components/notifications/notifications-context'
 
-interface NotificationsContextValue {
-  notifications: Notification[]
-  unreadCount: number
-  isLoading: boolean
-  error: Error | null
-  refresh: () => Promise<void>
-  markAsRead: (id: string) => Promise<void>
-  markAllAsRead: () => Promise<void>
+export { useNotifications, useNotificationsContext, type NotificationsContextValue }
+
+type NotificationsBucket = {
+  ownerId: string | null
+  items: Notification[]
 }
 
-const NotificationsContext = createContext<NotificationsContextValue | null>(null)
-
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState<string | null>(null)
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const navAuth = useOptionalNavAuth()
+  const hasNavAuthProvider = navAuth !== null
+  const isNavAuthReady = hasNavAuthProvider ? navAuth.ready : true
+  const primedUserId =
+    hasNavAuthProvider && navAuth.ready ? (navAuth.user?.id ?? null) : null
+
+  const [fallbackUserId, setFallbackUserId] = useState<string | null>(null)
+  const [bucket, setBucket] = useState<NotificationsBucket>({
+    ownerId: null,
+    items: [],
+  })
+  const [isLoading, setIsLoading] = useState<boolean>(
+    hasNavAuthProvider ? !navAuth.ready || Boolean(primedUserId) : true,
+  )
+  const [errorState, setErrorState] = useState<{
+    ownerId: string | null
+    error: Error | null
+  }>({ ownerId: null, error: null })
   const supabase = useMemo(() => createClient(), [])
 
-  // Resolve the current user, and keep it in sync with auth changes.
+  const userId = hasNavAuthProvider ? primedUserId : fallbackUserId
+  const activeUserIdRef = useRef<string | null>(userId)
   useEffect(() => {
+    activeUserIdRef.current = userId
+  }, [userId])
+
+  // Resolve the current user, and keep it in sync with auth changes only when
+  // NotificationsProvider is mounted without NavAuthProvider (e.g. isolated unit tests).
+  // When NavAuthProvider is present, never fall back to getUser()/onAuthStateChange during
+  // `ready === false` transitions.
+  useEffect(() => {
+    if (hasNavAuthProvider) return
     let cancelled = false
 
     const loadUser = async () => {
@@ -48,9 +73,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getUser()
       if (cancelled) return
       const nextId = user?.id ?? null
-      setUserId(nextId)
+      setFallbackUserId(nextId)
       if (!nextId) {
-        setNotifications([])
+        setBucket({ ownerId: null, items: [] })
         setIsLoading(false)
       }
     }
@@ -62,9 +87,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return
       const nextId = session?.user?.id ?? null
-      setUserId(nextId)
+      setFallbackUserId(nextId)
       if (!nextId) {
-        setNotifications([])
+        setBucket({ ownerId: null, items: [] })
         setIsLoading(false)
       }
     })
@@ -73,20 +98,36 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       cancelled = true
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [hasNavAuthProvider, supabase])
 
-  // Manual refresh (exposed to consumers). Always clears loading in `finally`.
+  const visibleNotifications = useMemo(
+    () => (userId && bucket.ownerId === userId ? bucket.items : []),
+    [bucket, userId],
+  )
+  const visibleError =
+    userId && errorState.ownerId === userId ? errorState.error : null
+
+  // Manual refresh (exposed to consumers). Guarded by activeUserIdRef so a stale
+  // response from a previous account never overwrites the newly active account's bucket.
   const refresh = useCallback(async () => {
-    if (!userId) return
+    const requestUserId = userId
+    if (!requestUserId) return
     setIsLoading(true)
-    setError(null)
+    setErrorState({ ownerId: requestUserId, error: null })
     try {
-      const data = await notificationsRequest.fetch(userId)
-      setNotifications(data)
+      const data = await notificationsRequest.fetch(requestUserId)
+      if (activeUserIdRef.current !== requestUserId) return
+      setBucket({ ownerId: requestUserId, items: data })
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch notifications'))
+      if (activeUserIdRef.current !== requestUserId) return
+      setErrorState({
+        ownerId: requestUserId,
+        error: err instanceof Error ? err : new Error('Failed to fetch notifications'),
+      })
     } finally {
-      setIsLoading(false)
+      if (activeUserIdRef.current === requestUserId) {
+        setIsLoading(false)
+      }
     }
   }, [userId])
 
@@ -98,15 +139,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     const run = async () => {
       setIsLoading(true)
-      setError(null)
+      setErrorState({ ownerId: userId, error: null })
       try {
         const data = await notificationsRequest.fetch(userId)
-        if (!cancelled) setNotifications(data)
+        if (!cancelled) setBucket({ ownerId: userId, items: data })
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err : new Error('Failed to fetch notifications'),
-          )
+          setErrorState({
+            ownerId: userId,
+            error:
+              err instanceof Error ? err : new Error('Failed to fetch notifications'),
+          })
         }
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -136,9 +179,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         (payload) => {
           notificationsRequest.invalidate(userId)
           const incoming = mapNotificationFromDb(payload.new as never)
-          setNotifications((prev) => {
-            if (prev.some((n) => n.id === incoming.id)) return prev
-            return [incoming, ...prev].slice(0, NOTIFICATIONS_LIMIT)
+          setBucket((prev) => {
+            const currentItems = prev.ownerId === userId ? prev.items : []
+            if (currentItems.some((n) => n.id === incoming.id)) return prev
+            return {
+              ownerId: userId,
+              items: [incoming, ...currentItems].slice(0, NOTIFICATIONS_LIMIT),
+            }
           })
         },
       )
@@ -153,9 +200,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         (payload) => {
           notificationsRequest.invalidate(userId)
           const updated = mapNotificationFromDb(payload.new as never)
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === updated.id ? updated : n)),
-          )
+          setBucket((prev) => {
+            if (prev.ownerId !== userId) return prev
+            return {
+              ownerId: userId,
+              items: prev.items.map((n) => (n.id === updated.id ? updated : n)),
+            }
+          })
         },
       )
       .subscribe()
@@ -168,65 +219,101 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // Mutations: optimistic update, roll back on error, no refetch.
   const markAsRead = useCallback(
     async (id: string) => {
-      if (!userId) return
-      const previous = notifications
+      const requestUserId = userId
+      if (!requestUserId) return
+      const previous = visibleNotifications
       const now = new Date().toISOString()
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id && !n.read_at ? { ...n, read_at: now } : n)),
-      )
+      setBucket((prev) => {
+        if (prev.ownerId !== requestUserId) return prev
+        return {
+          ownerId: requestUserId,
+          items: prev.items.map((n) =>
+            n.id === id && !n.read_at ? { ...n, read_at: now } : n,
+          ),
+        }
+      })
       const { error: updateError } = await supabase
         .from('notifications')
         .update({ read_at: now })
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('user_id', requestUserId)
 
       if (updateError) {
-        setNotifications(previous)
-        setError(updateError as unknown as Error)
+        if (activeUserIdRef.current === requestUserId) {
+          setBucket({ ownerId: requestUserId, items: previous })
+          setErrorState({
+            ownerId: requestUserId,
+            error: updateError as unknown as Error,
+          })
+        }
       } else {
-        notificationsRequest.invalidate(userId)
+        notificationsRequest.invalidate(requestUserId)
       }
     },
-    [userId, notifications, supabase],
+    [userId, visibleNotifications, supabase],
   )
 
   const markAllAsRead = useCallback(async () => {
-    if (!userId) return
-    const previous = notifications
+    const requestUserId = userId
+    if (!requestUserId) return
+    const previous = visibleNotifications
     const now = new Date().toISOString()
-    setNotifications((prev) =>
-      prev.map((n) => (n.read_at ? n : { ...n, read_at: now })),
-    )
+    setBucket((prev) => {
+      if (prev.ownerId !== requestUserId) return prev
+      return {
+        ownerId: requestUserId,
+        items: prev.items.map((n) => (n.read_at ? n : { ...n, read_at: now })),
+      }
+    })
     const { error: updateError } = await supabase
       .from('notifications')
       .update({ read_at: now })
-      .eq('user_id', userId)
+      .eq('user_id', requestUserId)
       .is('read_at', null)
 
     if (updateError) {
-      setNotifications(previous)
-      setError(updateError as unknown as Error)
+      if (activeUserIdRef.current === requestUserId) {
+        setBucket({ ownerId: requestUserId, items: previous })
+        setErrorState({
+          ownerId: requestUserId,
+          error: updateError as unknown as Error,
+        })
+      }
     } else {
-      notificationsRequest.invalidate(userId)
+      notificationsRequest.invalidate(requestUserId)
     }
-  }, [userId, notifications, supabase])
+  }, [userId, visibleNotifications, supabase])
 
   const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read_at).length,
-    [notifications],
+    () => visibleNotifications.filter((n) => !n.read_at).length,
+    [visibleNotifications],
   )
+
+  const visibleLoading = userId
+    ? bucket.ownerId !== userId || isLoading
+    : hasNavAuthProvider
+      ? !isNavAuthReady
+      : isLoading
 
   const value = useMemo<NotificationsContextValue>(
     () => ({
-      notifications,
+      notifications: visibleNotifications,
       unreadCount,
-      isLoading,
-      error,
+      isLoading: visibleLoading,
+      error: visibleError,
       refresh,
       markAsRead,
       markAllAsRead,
     }),
-    [notifications, unreadCount, isLoading, error, refresh, markAsRead, markAllAsRead],
+    [
+      visibleNotifications,
+      unreadCount,
+      visibleLoading,
+      visibleError,
+      refresh,
+      markAsRead,
+      markAllAsRead,
+    ],
   )
 
   return (
@@ -234,17 +321,4 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       {children}
     </NotificationsContext.Provider>
   )
-}
-
-export function useNotifications() {
-  const ctx = useContext(NotificationsContext)
-  if (!ctx) {
-    throw new Error('useNotifications must be used within NotificationsProvider')
-  }
-  return ctx
-}
-
-/** Same context, but `null` when the tree has not mounted a provider yet (HMR). */
-export function useNotificationsContext() {
-  return useContext(NotificationsContext)
 }
