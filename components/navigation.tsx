@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback, useSyncExternalStore } from 'react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOutApp } from '@/lib/auth/sign-out-app'
-import { useWallet } from '@/hooks/use-wallet'
+import { useOptionalWallet } from '@/hooks/use-wallet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { MobileNavSheet } from '@/components/navigation/mobile-nav-sheet'
@@ -26,42 +26,35 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const { t } = useI18n()
   const { user, profile, ready: authReady, clear: clearNavAuth } = useNavAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrollFade, setScrollFade] = useState(0)
 
-  const updateScrollFade = useCallback(() => {
-    const fade = Math.min(1, window.scrollY / SCROLL_FADE_DISTANCE)
-    setScrollFade(fade)
+  const subscribeScroll = useCallback((onStoreChange: () => void) => {
+    window.addEventListener('scroll', onStoreChange, { passive: true })
+    return () => window.removeEventListener('scroll', onStoreChange)
   }, [])
+  const scrollFade = useSyncExternalStore(
+    subscribeScroll,
+    () => Math.min(1, window.scrollY / SCROLL_FADE_DISTANCE),
+    () => 0,
+  )
 
-  useEffect(() => {
-    updateScrollFade()
-    window.addEventListener('scroll', updateScrollFade, { passive: true })
-    return () => window.removeEventListener('scroll', updateScrollFade)
-  }, [updateScrollFade])
-
-  const {
-    walletInfo,
-    isConnected,
-    truncatedAddress,
-    handleConnect,
-    handleDisconnect,
-    connectPollarWallet,
-    provider,
-    status,
-    isEmbedded,
-  } = useWallet()
+  const wallet = useOptionalWallet()
 
   const handleLogout = async () => {
     clearNavAuth()
-    try {
-      await handleDisconnect()
-    } catch (e) {
-      console.error('[Navigation] wallet disconnect during logout failed', e)
+    const disconnectSignsOutApp = wallet?.provider === 'pollar'
+    if (wallet) {
+      try {
+        await wallet.handleDisconnect()
+      } catch (e) {
+        console.error('[Navigation] wallet disconnect during logout failed', e)
+      }
     }
-    try {
-      await signOutApp()
-    } catch (e) {
-      console.error('[Navigation] signOutApp failed', e)
+    if (!disconnectSignsOutApp) {
+      try {
+        await signOutApp()
+      } catch (e) {
+        console.error('[Navigation] signOutApp failed', e)
+      }
     }
     router.replace('/')
     router.refresh()
@@ -70,17 +63,19 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const isAuthenticated = authReady && !!user
   const closeMobile = () => setMobileOpen(false)
   const logoHref = isAuthenticated ? '/dashboard' : '/'
-  const walletProps = {
-    isConnected,
-    address: walletInfo?.address,
-    truncatedAddress,
-    onConnect: handleConnect,
-    onConnectPollar: connectPollarWallet,
-    onDisconnect: handleDisconnect,
-    provider,
-    status,
-    isEmbedded,
-  }
+  const walletProps = wallet
+    ? {
+        isConnected: wallet.isConnected,
+        address: wallet.walletInfo?.address,
+        truncatedAddress: wallet.truncatedAddress,
+        onConnect: wallet.handleConnect,
+        onConnectPollar: wallet.connectPollarWallet,
+        onDisconnect: wallet.handleDisconnect,
+        provider: wallet.provider,
+        status: wallet.status,
+        isEmbedded: wallet.isEmbedded,
+      }
+    : undefined
 
   return (
     <>
