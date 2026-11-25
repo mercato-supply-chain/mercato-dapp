@@ -26,9 +26,10 @@ export const formatUSDC = (value: number, locale?: string): string =>
 
 export const formatDecimal = (
   value: number,
-  options?: { minFractionDigits?: number; maxFractionDigits?: number }
+  options?: { minFractionDigits?: number; maxFractionDigits?: number },
+  locale = 'en-US',
 ): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: options?.minFractionDigits ?? 0,
     maximumFractionDigits: options?.maxFractionDigits ?? 2,
   }).format(value)

@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { DM_Serif_Display } from 'next/font/google'
-import '@pollar/react/styles.css'
 import { AppProviders } from '@/components/providers/app-providers'
 import { getNavAuth } from '@/lib/navigation/nav-auth-server'
 import { Toaster } from '@/components/ui/sonner'
@@ -77,11 +76,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Start nav auth immediately — it has no dependencies
+  const navAuthPromise = getNavAuth()
   const locale = await getServerLocale()
+
   // Only serialize the active dictionary across the server/client boundary
   // when it is not the default (English) — the client already holds `enDict`.
-  const messages = locale === 'en' ? undefined : await getDictionary(locale)
-  const navAuth = await getNavAuth()
+  // Load it in parallel with nav auth once locale is known.
+  const [navAuth, messages] = await Promise.all([
+    navAuthPromise,
+    locale === 'en' ? Promise.resolve(undefined) : getDictionary(locale),
+  ])
 
   return (
     <html lang={locale} className={`scroll-smooth ${GeistSans.variable} ${GeistMono.variable} ${dmSerifDisplay.variable}`} suppressHydrationWarning>

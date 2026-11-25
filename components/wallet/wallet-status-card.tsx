@@ -83,7 +83,7 @@ export function WalletStatusCard() {
       <Card className="border-border/60 bg-gradient-to-br from-background via-background to-muted/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-4 w-4" />
+            <Wallet className="h-4 w-4" aria-hidden />
             {t('walletStatus.walletSetupTitle')}
           </CardTitle>
           <CardDescription>
@@ -107,7 +107,7 @@ export function WalletStatusCard() {
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-4 w-4" />
+            <Wallet className="h-4 w-4" aria-hidden />
             {walletName || t('walletStatus.defaultWalletName')}
           </CardTitle>
           <Badge variant={status === 'active' ? 'secondary' : 'outline'} className="uppercase tracking-wide">
@@ -124,7 +124,7 @@ export function WalletStatusCard() {
         </CardDescription>
         {provider === 'pollar' && status !== 'active' && (
           <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>
               {t('walletStatus.pendingActivationHint')} {PollarWalletKitLimitations}
             </span>
@@ -171,18 +171,26 @@ export function WalletStatusCard() {
             size="sm"
             className="gap-2"
             disabled={refreshing}
+            aria-label={t('walletStatus.refreshBalance')}
+            aria-busy={refreshing}
           >
             {refreshing ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : refreshDone ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden />
             ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             )}
             {t('walletStatus.refreshBalance')}
           </Button>
-          <Button onClick={copyAddress} variant="outline" size="sm" className="gap-2">
-            <Copy className="h-3.5 w-3.5" />
+          <Button
+            onClick={copyAddress}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            aria-label={t('walletStatus.copyAddress')}
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden />
             {t('walletStatus.copyAddress')}
           </Button>
           <Button
@@ -195,8 +203,9 @@ export function WalletStatusCard() {
               href={`https://stellar.expert/explorer/${process.env.NEXT_PUBLIC_TRUSTLESS_NETWORK === 'mainnet' ? 'public' : 'testnet'}/account/${publicKey}`}
               target="_blank"
               rel="noreferrer"
+              aria-label={t('walletStatus.viewExplorerAriaLabel')}
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               {t('walletStatus.viewExplorer')}
             </a>
           </Button>
@@ -204,10 +213,14 @@ export function WalletStatusCard() {
             {t('walletStatus.disconnect')}
           </Button>
         </div>
+        {/* Kept mounted so screen readers pick up the change when the refresh finishes. */}
+        <span role="status" aria-live="polite" className="sr-only">
+          {refreshDone ? t('walletStatus.balanceRefreshed') : ''}
+        </span>
 
         {provider === 'pollar' && status !== 'active' && (
           <Button onClick={handleActivate} disabled={activating || !publicKey} className="w-full gap-2">
-            {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheckBig className="h-4 w-4" />}
+            {activating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CircleCheckBig className="h-4 w-4" aria-hidden />}
             {t('walletStatus.activateEmbedded')}
           </Button>
         )}

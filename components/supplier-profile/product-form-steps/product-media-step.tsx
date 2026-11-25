@@ -60,9 +60,12 @@ export function ProductMediaStep({
         {formProduct.imagePreview ? (
           <div className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-4">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={formProduct.imagePreview}
                 alt=""
+                width={80}
+                height={80}
                 className="h-full w-full object-cover"
               />
             </div>

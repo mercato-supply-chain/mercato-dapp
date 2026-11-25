@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CircleAlert, Pencil, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,6 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -45,7 +47,7 @@ export function AddMilestoneReviewDialog({
   onSubmit,
   triggerDisabled = false,
 }: AddMilestoneReviewDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen] = useState(false)
   const [stage, setStage] = useState<ReviewStage>('edit')
   const [submitting, setSubmitting] = useState(false)
@@ -145,11 +147,11 @@ export function AddMilestoneReviewDialog({
             <CopyableCodeLine value={item.escrowContractAddress} label={t('repaymentEscrow.addMilestone.contractId')} />
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-muted-foreground">{t('repaymentEscrow.addMilestone.totalGrossed')}</span>
-              <span className="font-medium tabular-nums">{totalGrossed.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+              <span className="font-medium tabular-nums">{formatAmount(locale, totalGrossed)} USDC</span>
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-muted-foreground">{t('repaymentEscrow.addMilestone.remaining')}</span>
-              <span className="font-medium tabular-nums">{proposedRemaining.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+              <span className="font-medium tabular-nums">{formatAmount(locale, proposedRemaining)} USDC</span>
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-muted-foreground">{t('repaymentEscrow.addMilestone.signer')}</span>
@@ -166,7 +168,7 @@ export function AddMilestoneReviewDialog({
                   return (
                     <li key={idx} className="flex items-baseline justify-between gap-2 rounded bg-muted/30 px-2 py-1">
                       <span className="truncate">{mm.description ?? `${t('repaymentEscrow.addMilestone.newMilestone')} ${idx + 1}`}</span>
-                      <span className="shrink-0 tabular-nums">{Number(mm.amount ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+                      <span className="shrink-0 tabular-nums">{formatAmount(locale, Number(mm.amount ?? 0))} USDC</span>
                       <Badge variant="secondary" className="text-[10px]">{String(mm.status ?? '—')}</Badge>
                     </li>
                   )
@@ -190,7 +192,7 @@ export function AddMilestoneReviewDialog({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="add-milestone-receiver">{t('repaymentEscrow.addMilestone.newReceiverLabel')}</Label>
-                <Input id="add-milestone-receiver" className="font-mono text-xs" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="G..." />
+                <Input id="add-milestone-receiver" className="font-mono text-xs" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="G..." {...STELLAR_ADDRESS_INPUT_PROPS} />
                 {receiver && !receiverValid && <p className="text-xs text-destructive">{t('repaymentEscrow.addMilestone.invalidReceiver')}</p>}
               </div>
 

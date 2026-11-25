@@ -1,8 +1,11 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import React from 'react'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
-import type { DealRow } from '@/lib/deals'
+import { mapDealFromDb, type DealRow } from '@/lib/deals'
 import type { Deal } from '@/lib/types'
+import * as ReputationNamespace from '@/lib/reputation'
+
+const ReputationOriginal = { ...ReputationNamespace }
 
 type DealQueryResult = {
   data: DealRow | null
@@ -12,6 +15,8 @@ type DealQueryResult = {
 type TestGlobals = typeof globalThis & {
   __dealResponses?: Map<string, Array<Promise<DealQueryResult>>>
   __dealCalls?: string[]
+  __indexerRead?: () => Promise<never[]>
+  __reputationRead?: () => Promise<null>
 }
 
 function deferred<T>() {
@@ -95,8 +100,13 @@ mock.module('@/hooks/use-wallet', () => ({
 
 mock.module('@trustless-work/escrow/hooks', () => ({
   useGetEscrowFromIndexerByContractIds: () => ({
-    getEscrowByContractIds: async () => [],
+    getEscrowByContractIds: () => (globalThis as TestGlobals).__indexerRead?.() ?? Promise.resolve([]),
   }),
+}))
+
+mock.module('@/lib/reputation', () => ({
+  ...ReputationOriginal,
+  getReputation: () => (globalThis as TestGlobals).__reputationRead?.() ?? Promise.resolve(null),
 }))
 
 import { useDealDetail } from '@/hooks/use-deal-detail'
@@ -113,9 +123,100 @@ afterEach(() => {
   mock.restore()
   delete globals.__dealResponses
   delete globals.__dealCalls
+  delete globals.__indexerRead
+  delete globals.__reputationRead
+})
+
+afterAll(() => {
+  mock.module('@/lib/reputation', () => ({ ...ReputationOriginal }))
 })
 
 describe('useDealDetail load lifecycle', () => {
+  test('renders the server deal immediately without a browser deal query', async () => {
+    const initialDeal = mapDealFromDb(dealRow('A', 'Server terms'))
+    const hook = renderHook(() => useDealDetail('A', initialDeal), { wrapper: TestWrapper })
+
+    expect(hook.result.current.deal).toBe(initialDeal)
+    expect(hook.result.current.isLoading).toBe(false)
+    expect(hook.result.current.loadError).toBe(false)
+    expect(globals.__dealCalls).toEqual([])
+    await act(async () => {})
+  })
+
+  test('can refresh and retry a server-seeded deal', async () => {
+    const initialDeal = mapDealFromDb(dealRow('A', 'Server terms'))
+    enqueueDealResponse('A', resolvedDeal('A', 'Updated after funding'))
+    enqueueDealResponse('A', resolvedDeal('A', 'Retried'))
+    const hook = renderHook(({ seed }) => useDealDetail(seed.id, seed), {
+      initialProps: { seed: initialDeal },
+      wrapper: TestWrapper,
+    })
+
+    await act(async () => {
+      const updated = await hook.result.current.fetchDeal()
+      if (updated) hook.result.current.setDeal(updated)
+    })
+    expect(hook.result.current.deal?.productName).toBe('Updated after funding')
+    act(() => hook.result.current.retry())
+    await waitFor(() => expect(hook.result.current.deal?.productName).toBe('Retried'))
+    expect(globals.__dealCalls).toEqual(['A', 'A'])
+
+    const nextDeal = mapDealFromDb(dealRow('B', 'New server route'))
+    hook.rerender({ seed: nextDeal })
+    expect(hook.result.current.deal).toBe(nextDeal)
+    expect(hook.result.current.isLoading).toBe(false)
+    expect(globals.__dealCalls).toEqual(['A', 'A'])
+    await act(async () => {})
+  })
+
+  test('uses the new server deal on navigation and ignores a mismatched seed', async () => {
+    const dealA = mapDealFromDb(dealRow('A'))
+    const dealB = mapDealFromDb(dealRow('B'))
+    const hook = renderHook(({ id, seed }) => useDealDetail(id, seed), {
+      initialProps: { id: 'A', seed: dealA },
+      wrapper: TestWrapper,
+    })
+    hook.rerender({ id: 'B', seed: dealB })
+    expect(hook.result.current.deal).toBe(dealB)
+    expect(hook.result.current.isLoading).toBe(false)
+    expect(globals.__dealCalls).toEqual([])
+
+    enqueueDealResponse('C', resolvedDeal('C'))
+    hook.rerender({ id: 'C', seed: dealB })
+    await waitFor(() => expect(hook.result.current.deal?.id).toBe('C'))
+    expect(globals.__dealCalls).toEqual(['C'])
+  })
+
+  test('starts reputation and escrow together without blocking server terms on indexer failure', async () => {
+    const reputation = deferred<null>()
+    const indexer = deferred<never[]>()
+    const reputationRead = mock(() => reputation.promise)
+    const indexerRead = mock(() => indexer.promise)
+    globals.__reputationRead = reputationRead
+    globals.__indexerRead = indexerRead
+    const initialDeal = mapDealFromDb({
+      ...dealRow('A', 'Visible terms'),
+      pyme_id: 'buyer',
+      escrow_address: 'escrow-contract',
+      supplier: { owner_id: 'supplier' },
+    })
+    const hook = renderHook(() => useDealDetail('A', initialDeal), { wrapper: TestWrapper })
+
+    expect(reputationRead).toHaveBeenCalledTimes(2)
+    expect(indexerRead).toHaveBeenCalledTimes(1)
+    expect(hook.result.current.deal).toBe(initialDeal)
+    expect(hook.result.current.isLoading).toBe(false)
+    await act(async () => {
+      indexer.reject(new Error('indexer unavailable'))
+      await indexer.promise.catch(() => {})
+    })
+    expect(hook.result.current.deal?.productName).toBe('Visible terms')
+    expect(hook.result.current.loadError).toBe(false)
+    expect(hook.result.current.indexerEscrow).toBeNull()
+    await act(async () => reputation.resolve(null))
+    expect(globals.__dealCalls).toEqual([])
+  })
+
   test('keeps B active when A resolves after an ID switch', async () => {
     const requestA = deferred<DealQueryResult>()
     const requestB = deferred<DealQueryResult>()

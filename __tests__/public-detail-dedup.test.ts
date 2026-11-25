@@ -11,6 +11,10 @@ const ReactOriginal = { ...ReactNamespace }
 const SupabaseServerOriginal = { ...SupabaseServerNamespace }
 const SupabaseServiceOriginal = { ...SupabaseServiceNamespace }
 
+// Captured before the dedup tests replace 'react'. Bun shares one module registry across test
+// files, so the stand-in has to be swapped back or every later file that requires React breaks.
+const realReact = await import('react')
+
 const ROOT = join(import.meta.dir, '..')
 
 function readDetailPage(route: string): string {
@@ -45,7 +49,7 @@ function keyedMemo<T extends (...args: string[]) => Promise<unknown>>(fn: T): T 
   }) as T
 }
 
-function stubServerClient(onRead: () => void) {
+function stubServerClient(onRead: () => void, row: Record<string, unknown> | null = null) {
   return {
     createClient: async () => ({
       from: () => ({
@@ -53,7 +57,7 @@ function stubServerClient(onRead: () => void) {
           eq: () => ({
             maybeSingle: async () => {
               onRead()
-              return { data: null, error: null }
+              return { data: row, error: null }
             },
           }),
         }),
@@ -74,6 +78,36 @@ describe('cached loader deduplication', () => {
     expect(reads).toBe(1)
     await getDealSummary('deal-b')
     expect(reads).toBe(2)
+  })
+
+  test('deal summary carries the mapped terms and relations from the same server row', async () => {
+    let reads = 0
+    mock.module('@/lib/supabase/server', () => stubServerClient(() => { reads += 1 }, {
+      id: 'server-deal',
+      title: 'Invoice title',
+      product_name: 'Server product',
+      description: 'Server terms',
+      pyme_id: 'buyer',
+      amount: 250,
+      interest_rate: 5,
+      term_days: 30,
+      status: 'seeking_funding',
+      pyme: [{ company_name: 'Buyer', stake_amount: 12, address: 'buyer-address' }],
+      supplier: { company_name: 'Supplier', owner_id: 'supplier', address: 'supplier-address' },
+      milestones: [],
+    }))
+    const { getDealSummary } = await import('@/lib/deals/detail')
+    const metadataRow = await getDealSummary('server-deal')
+    const pageRow = await getDealSummary('server-deal')
+
+    expect(reads).toBe(1)
+    expect(pageRow).toBe(metadataRow)
+    expect(pageRow?.deal.id).toBe(pageRow?.id)
+    expect(pageRow?.deal.productName).toBe(pageRow?.product_name ?? undefined)
+    expect(pageRow?.deal.description).toBe(pageRow?.description ?? undefined)
+    expect(pageRow?.deal.priceUSDC).toBe(250)
+    expect(pageRow?.deal.supplierOwnerId).toBe('supplier')
+    expect(pageRow?.deal.supplierAddress).toBe('supplier-address')
   })
 
   test('investor loader reads once for repeated calls with the same id', async () => {
@@ -112,11 +146,6 @@ describe('cached loader deduplication', () => {
   })
 })
 
-// Bun's mock.module() registrations are global and persist for the rest of the test
-// process; restore the real modules so later test files import the full React and
-// Supabase implementations instead of these stubs.
 afterAll(() => {
-  mock.module('react', () => ({ ...ReactOriginal }))
-  mock.module('@/lib/supabase/server', () => ({ ...SupabaseServerOriginal }))
-  mock.module('@/lib/supabase/service', () => ({ ...SupabaseServiceOriginal }))
+  mock.module('react', () => realReact)
 })
