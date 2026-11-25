@@ -1,6 +1,7 @@
 'use client'
 
-import { FieldRow, money } from './escrow-field-row'
+import { formatAmount } from '@/lib/i18n/format'
+import { FieldRow } from './escrow-field-row'
 import { CopyableCodeLine } from '@/components/admin/copyable-code-line'
 import { isLikelyStellarAddress } from '@/lib/defindex/stellar-address'
 import { useI18n } from '@/lib/i18n/provider'
@@ -14,7 +15,7 @@ type EscrowDealSummaryProps = {
 
 /** Deal context — all read-only, derived from authoritative deal data. */
 export function EscrowDealSummary({ item, draft }: EscrowDealSummaryProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const investorValue = item.investorName ?? item.investorAddress ?? t('repaymentEscrow.dealSummary.noWallet')
   const isInvestorAddress = item.investorAddress && isLikelyStellarAddress(item.investorAddress)
   return (
@@ -33,20 +34,23 @@ export function EscrowDealSummary({ item, draft }: EscrowDealSummaryProps) {
         />
       )}
       <div className="grid gap-x-4 sm:grid-cols-2">
-        <FieldRow label={t('repaymentEscrow.dealSummary.principal')} value={`${money(item.principal)} USDC`} />
+        <FieldRow label={t('repaymentEscrow.dealSummary.principal')} numeric value={`${formatAmount(locale, item.principal)} USDC`} />
         <FieldRow label={t('repaymentEscrow.dealSummary.apr')} value={`${item.aprPercent}%`} />
         <FieldRow label={t('repaymentEscrow.dealSummary.term')} value={`${item.termDays} días`} />
         <FieldRow
           label={t('repaymentEscrow.dealSummary.investorProfit')}
-          value={`${money(draft.repayment.investorProfit)} USDC`}
+          numeric
+          value={`${formatAmount(locale, draft.repayment.investorProfit)} USDC`}
         />
         <FieldRow
           label={t('repaymentEscrow.dealSummary.netTarget')}
-          value={`${money(draft.repayment.investorNetTarget)} USDC`}
+          numeric
+          value={`${formatAmount(locale, draft.repayment.investorNetTarget)} USDC`}
         />
         <FieldRow
           label={t('repaymentEscrow.dealSummary.totalGrossed')}
-          value={`${money(draft.repayment.totalGrossed)} USDC`}
+          numeric
+          value={`${formatAmount(locale, draft.repayment.totalGrossed)} USDC`}
         />
       </div>
     </section>

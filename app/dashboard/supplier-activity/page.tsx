@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getServerDictionary } from '@/lib/i18n/server'
+import { getServerDictionary, getServerLocale } from '@/lib/i18n/server'
 import { getSupplierCommercialActivity } from '@/lib/suppliers/get-supplier-commercial-activity'
 import { authorizeSupplierActivityAccess } from '@/lib/suppliers/supplier-activity-authorization'
 import {
@@ -28,7 +28,7 @@ type PageProps = {
 }
 
 export default async function SupplierActivityPage({ searchParams }: PageProps) {
-  const m = await getServerDictionary()
+  const [m, locale] = await Promise.all([getServerDictionary(), getServerLocale()])
   const rawParams = await searchParams
   const supabase = await createClient()
 
@@ -120,6 +120,7 @@ export default async function SupplierActivityPage({ searchParams }: PageProps) 
       />
 
       <SupplierCustomerActivitySection
+        locale={locale}
         sectionTitle={m.supplierActivity.customerActivityTitle}
         items={data.customerActivity}
         labels={buildCustomerActivityTableLabels(m.supplierActivity)}

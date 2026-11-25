@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -14,13 +15,6 @@ import { useI18n } from '@/lib/i18n/provider'
 
 const EDITABLE_ROLE_KEYS = ['approver', 'serviceProvider', 'disputeResolver'] as const
 type EditableRoleKey = (typeof EDITABLE_ROLE_KEYS)[number]
-
-function stringifyValue(value: number): string {
-  return value.toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
 
 export type EscrowActionConfirmationProps = {
   readonly item: CreateEscrowItem
@@ -54,7 +48,7 @@ export function EscrowActionConfirmation({
   onBack,
   onConfirm,
 }: EscrowActionConfirmationProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const ROLE_LABELS: Record<EditableRoleKey, string> = {
     approver: t('repaymentEscrow.roles.approver'),
     serviceProvider: t('repaymentEscrow.roles.serviceProvider'),
@@ -85,14 +79,14 @@ export function EscrowActionConfirmation({
         <div className="flex items-baseline justify-between gap-3 text-sm">
           <span className="shrink-0 text-muted-foreground">{t('repaymentEscrow.confirmation.totalGrossed')}</span>
           <span className="font-medium tabular-nums">
-            {stringifyValue(reviewed.repayment.totalGrossed)} USDC
+            {formatAmount(locale, reviewed.repayment.totalGrossed)} USDC
           </span>
         </div>
         <div className="flex items-baseline justify-between gap-3 text-sm">
           <span className="shrink-0 text-muted-foreground">{t('repaymentEscrow.confirmation.initialMilestone')}</span>
           <span className="font-medium tabular-nums">
             {firstReviewed
-              ? `${stringifyValue(firstReviewed.amount)} USDC · ${percent}%`
+              ? `${formatAmount(locale, firstReviewed.amount)} USDC · ${percent}%`
               : '—'}
           </span>
         </div>

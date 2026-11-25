@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getServerDictionary } from '@/lib/i18n/server'
+import { getServerDictionary, getServerLocale } from '@/lib/i18n/server'
 import { getSupplierReferralDashboard } from '@/lib/referrals/get-supplier-referral-dashboard'
 import type { ReferredPymeStatus } from '@/lib/referrals/referred-pyme-status'
 import { ReferralSummaryCards } from '@/components/referrals/summary-cards'
@@ -42,7 +42,7 @@ function parsePage(value: string | undefined) {
 }
 
 export default async function ReferralsPage({ searchParams }: { searchParams?: SearchParams }) {
-  const m = await getServerDictionary()
+  const [m, locale] = await Promise.all([getServerDictionary(), getServerLocale()])
   const supabase = await createClient()
   const {
     data: { user },
@@ -156,6 +156,7 @@ export default async function ReferralsPage({ searchParams }: { searchParams?: S
       />
 
       <ReferralActivityTimeline
+        locale={locale}
         items={data.activity.rows}
         labels={{
           title: m.referrals.activity.title,
