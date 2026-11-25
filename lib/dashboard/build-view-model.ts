@@ -43,13 +43,8 @@ export type DashboardViewModel = {
     tableInvestor: string
     tableCompany: string
     tableCreated: string
-    tableMilestones: string
     tableFunded: string
     tableView: string
-    tableAct: string
-    tableApprove: string
-    openLabel: string
-    milestoneActionNeeded: string
     aprSummary: string
   }
   dealsColumns: {
@@ -253,12 +248,7 @@ export function buildDashboardViewModel(
       tableCompany: t.dashboard.tableCompany,
       tableCreated: t.dashboard.tableCreated,
       tableFunded: t.dashboard.tableFunded,
-      tableMilestones: t.dashboard.tableMilestones,
       tableView: t.dashboard.tableView,
-      tableAct: t.dashboard.tableAct,
-      tableApprove: t.dashboard.tableApprove,
-      openLabel: t.dashboard.openLabel,
-      milestoneActionNeeded: t.dashboard.milestoneActionNeeded,
       aprSummary: t.dashboard.aprSummary,
     },
   }

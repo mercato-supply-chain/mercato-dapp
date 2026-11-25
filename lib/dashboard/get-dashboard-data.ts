@@ -113,7 +113,7 @@ export async function getDashboardData(
       supabase
         .from('deals')
         .select(
-          'id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), milestones(id, status)',
+          'id, title, product_name, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)',
         )
         .eq('investor_id', userId)
         .order('created_at', { ascending: false })
@@ -157,13 +157,13 @@ export async function getDashboardData(
           ? supabase
               .from('deals')
               .select(
-                'id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url), milestones(id, status)',
+                'id, title, product_name, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url)',
               )
               .eq('supplier_id', filterByCompany)
           : supabase
               .from('deals')
               .select(
-                'id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url), milestones(id, status)',
+                'id, title, product_name, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url)',
               )
               .in('supplier_id', companyIds)
         )
@@ -260,7 +260,7 @@ export async function getDashboardData(
       supabase
         .from('deals')
         .select(
-          'id, title, product_name, description, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url), investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name), milestones(id, status)',
+          'id, title, product_name, status, amount, term_days, interest_rate, created_at, funded_at, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name), supplier:supplier_companies(company_name, full_name, contact_name, logo_url), investor:profiles!deals_investor_id_fkey(company_name, full_name, contact_name)',
         )
         .order('created_at', { ascending: false })
         .limit(10),
