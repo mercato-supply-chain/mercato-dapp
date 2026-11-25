@@ -7,10 +7,6 @@ import type { Locale } from '@/lib/i18n/config'
 import type { Messages } from '@/lib/i18n/dictionaries'
 import { NavAuthProvider } from '@/components/providers/nav-auth-provider'
 import type { NavAuthSnapshot } from '@/lib/navigation/nav-auth'
-import { PollarProvider } from '@/providers/pollar-provider'
-import { TrustlessWorkProvider } from '@/lib/trustless/config'
-import { WalletProvider } from '@/providers/wallet-provider'
-import { NotificationsProvider } from '@/components/notifications/notifications-provider'
 
 export function AppProviders({
   children,
@@ -25,17 +21,9 @@ export function AppProviders({
 }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <NotificationsProvider>
-        <I18nProvider locale={locale} messages={messages}>
-          <NavAuthProvider initial={navAuth}>
-            <PollarProvider>
-              <TrustlessWorkProvider>
-                <WalletProvider>{children}</WalletProvider>
-              </TrustlessWorkProvider>
-            </PollarProvider>
-          </NavAuthProvider>
-        </I18nProvider>
-      </NotificationsProvider>
+      <I18nProvider locale={locale} messages={messages}>
+        <NavAuthProvider initial={navAuth}>{children}</NavAuthProvider>
+      </I18nProvider>
     </ThemeProvider>
   )
 }

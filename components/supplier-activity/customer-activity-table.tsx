@@ -1,7 +1,9 @@
-import { formatUSDC } from '@/lib/format'
+import type { Locale } from '@/lib/i18n/config'
+import { formatLocalizedDate, formatMoney } from '@/lib/i18n/format'
 import type { SupplierCustomerActivity } from '@/lib/suppliers/get-supplier-commercial-activity'
 
 type CustomerActivityTableProps = {
+  locale: Locale
   items: SupplierCustomerActivity[]
   labels: {
     title: string
@@ -16,14 +18,7 @@ type CustomerActivityTableProps = {
   }
 }
 
-function formatDate(value: string | null): string {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (!Number.isFinite(d.getTime())) return '—'
-  return d.toLocaleDateString()
-}
-
-export function CustomerActivityTable({ items, labels }: CustomerActivityTableProps) {
+export function CustomerActivityTable({ items, labels, locale }: CustomerActivityTableProps) {
   if (items.length === 0) {
     return <p className="text-sm text-muted-foreground">{labels.empty}</p>
   }
@@ -49,10 +44,10 @@ export function CustomerActivityTable({ items, labels }: CustomerActivityTablePr
               <td className="px-3 py-2">{item.pymeName}</td>
               <td className="px-3 py-2">{item.productsRequested.join(', ')}</td>
               <td className="px-3 py-2 tabular-nums">{item.financingRequestCount}</td>
-              <td className="px-3 py-2 tabular-nums">{formatUSDC(item.financingRequestValue)}</td>
+              <td className="px-3 py-2 tabular-nums">{formatMoney(locale, item.financingRequestValue)}</td>
               <td className="px-3 py-2 tabular-nums">{item.fundedRequestCount}</td>
               <td className="px-3 py-2 tabular-nums">{item.awaitingFundingCount}</td>
-              <td className="px-3 py-2">{formatDate(item.mostRecentActivityAt)}</td>
+              <td className="px-3 py-2">{formatLocalizedDate(item.mostRecentActivityAt, locale)}</td>
             </tr>
           ))}
         </tbody>

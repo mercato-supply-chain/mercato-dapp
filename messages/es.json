@@ -739,12 +739,15 @@
     "refreshBalance": "Actualizar saldo",
     "copyAddress": "Copiar dirección",
     "viewExplorer": "Ver en explorador",
+    "viewExplorerAriaLabel": "Ver en explorador (se abre en una pestaña nueva)",
+    "balanceRefreshed": "Saldo actualizado",
     "disconnect": "Desconectar",
     "activateEmbedded": "Activar billetera integrada",
     "defaultWalletName": "Billetera"
   },
   "notifications": {
     "ariaLabel": "Notificaciones",
+    "loading": "Cargando notificaciones",
     "unreadCount": "{count} sin leer",
     "title": "Notificaciones",
     "markAllRead": "Marcar todas leídas",
@@ -2519,14 +2522,34 @@
   "landing": {
     "hero": {
       "badge": "Financiamos producción real",
-      "titleLine1": "Capital para producir.",
-      "titleLine2": "Crecimiento para todos.",
-      "description": "Conectamos PYMEs, proveedores e inversores para financiar órdenes reales con pagos seguros y transparentes en cada etapa.",
+      "titleLine1": "Financia una orden real.",
+      "titleLine2": "Cobra con rendimiento.",
+      "description": "Una PyME necesita inventario. Los inversionistas pagan la factura del proveedor por adelantado y la PyME devuelve el capital más rendimiento mediante un escrow on-chain.",
       "primaryCta": "Explorar oportunidades",
       "secondaryCta": "Financiar una orden",
-      "trust1": "Pagos protegidos por hitos",
-      "trust2": "Transparente en cada etapa",
-      "trust3": "Sin garantías personales",
+      "deal": {
+        "ariaLabel": "Operación destacada",
+        "statusOpen": "Abierta para financiar",
+        "statusSample": "Operación de ejemplo",
+        "reference": "Operación {ref}",
+        "units": "{count} unidades",
+        "buyer": "Comprador (PyME)",
+        "supplier": "Proveedor",
+        "invoice": "Monto de la factura",
+        "invoiceHint": "Se paga al proveedor cuando se financia la operación",
+        "investorReceives": "El inversionista recibe",
+        "investorHint": "{principal} de capital + {yield} de rendimiento en {days} días",
+        "rateHint": "{rate}% por el plazo",
+        "settlement": "Se paga mediante escrow on-chain en Stellar",
+        "sampleNote": "Términos ilustrativos. Aquí aparece una operación abierta cuando hay una disponible.",
+        "ctaLive": "Ver esta operación",
+        "ctaSample": "Explorar operaciones abiertas",
+        "sample": {
+          "product": "Hilo de algodón",
+          "buyer": "Manufacturas del Norte",
+          "supplier": "Hilados del Bajío"
+        }
+      },
       "liveDeal": {
         "centerTagline": "Mediamos para que los acuerdos se cumplan.",
         "order": {

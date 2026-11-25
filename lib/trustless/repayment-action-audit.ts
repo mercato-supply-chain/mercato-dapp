@@ -69,6 +69,16 @@ type AuditRow = {
 }
 
 /**
+ * The slice of the Supabase client the audit writer uses. Injectable so callers
+ * and tests can provide a client without creating a browser client from env.
+ */
+export type RepaymentAuditClient = {
+  from(table: 'repayment_escrow_actions'): {
+    insert(rows: AuditRow[]): PromiseLike<{ error: unknown }>
+  }
+}
+
+/**
  * Append-only writer. Never updates an existing row; `deployment_submitted`
  * and `deployment_succeeded` are independent inserts so a failed transaction
  * cannot retroactively produce a success audit record by mutating a shared row.
@@ -86,8 +96,8 @@ function withPayoutContext(
 
 export async function recordRepaymentEscrowAction(
   action: RepaymentEscrowActionInput,
+  supabase: RepaymentAuditClient = createClient(),
 ): Promise<void> {
-  const supabase = createClient()
   const row: AuditRow = {
     deal_id: action.dealId,
     action_type: action.actionType,

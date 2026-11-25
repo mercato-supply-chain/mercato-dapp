@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { BarChart3, Database } from 'lucide-react'
+import { BarChart3, Database, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { AdminAnalyticsRange } from '@/components/dashboard/admin/admin-analytics-range'
 import {
@@ -50,6 +50,13 @@ export default async function AdminAnalyticsPage({
     timeZone: 'UTC',
   })
 
+  // Sections whose underlying queries failed are reported explicitly instead of
+  // being rendered with zero totals. Missing/failed values stay null.
+  const failedSections: string[] = Array.isArray(data?.failedSections)
+    ? (data!.failedSections as string[])
+    : []
+  const isFailed = (name: string) => failedSections.includes(name)
+
   return (
     <div className="space-y-6">
       <header>
@@ -88,122 +95,149 @@ export default async function AdminAnalyticsPage({
             })}
           </p>
 
-          <AdminAnalyticsSection
-            titleKey="adminAnalytics.usersTitle"
-            descriptionKey="adminAnalytics.usersDescription"
-            messages={m}
-            locale={locale}
-            metrics={[
-              { labelKey: 'adminAnalytics.metrics.newUsers', pair: data.users.newUsers, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.newPymes', pair: data.users.newPymes, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.newInvestors', pair: data.users.newInvestors, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.newSuppliers', pair: data.users.newSuppliers, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.onboardingCompleted', pair: data.users.onboardingCompleted, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.onboardingConversion', pair: data.users.cohortConversion, format: 'percent' },
-              { labelKey: 'adminAnalytics.metrics.medianCompletionTime', pair: data.users.medianCompletionSeconds, format: 'duration' },
-            ]}
-            chartRows={[
-              {
-                name: tr(m, 'adminAnalytics.metrics.newUsers'),
-                current: data.users.newUsers.current ?? 0,
-                previous: data.users.newUsers.previous ?? 0,
-              },
-              {
-                name: tr(m, 'adminAnalytics.metrics.onboardingCompleted'),
-                current: data.users.onboardingCompleted.current ?? 0,
-                previous: data.users.onboardingCompleted.previous ?? 0,
-              },
-            ]}
-            chartAriaLabelKey="adminAnalytics.usersChartLabel"
-            snapshotTitleKey="adminAnalytics.snapshotTitle"
-            snapshot={[
-              { labelKey: 'adminAnalytics.metrics.totalUsers', value: data.users.snapshot.totalUsers },
-              { labelKey: 'adminAnalytics.metrics.pymes', value: data.users.snapshot.pymes },
-              { labelKey: 'adminAnalytics.metrics.investors', value: data.users.snapshot.investors },
-              { labelKey: 'adminAnalytics.metrics.suppliers', value: data.users.snapshot.suppliers },
-              { labelKey: 'adminAnalytics.metrics.onboardingIncomplete', value: data.users.snapshot.onboardingIncomplete },
-              { labelKey: 'adminAnalytics.metrics.onboardingCompletedTotal', value: data.users.snapshot.onboardingCompleted },
-              { labelKey: 'adminAnalytics.metrics.onboardingLegacy', value: data.users.snapshot.onboardingCompletedLegacy },
-              { labelKey: 'adminAnalytics.metrics.verifiedUsers', value: data.users.snapshot.verifiedUsers },
-              { labelKey: 'adminAnalytics.metrics.verifiedCompanies', value: data.users.snapshot.verifiedCompanies },
-            ]}
-          />
+          {failedSections.length > 0 && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <div>
+                <p className="font-medium">{tr(m, 'adminAnalytics.partialFailureTitle')}</p>
+                <p className="text-muted-foreground">
+                  {tr(m, 'adminAnalytics.partialFailureHint')}
+                </p>
+              </div>
+            </div>
+          )}
 
-          <AdminAnalyticsSection
-            titleKey="adminAnalytics.dealsTitle"
-            descriptionKey="adminAnalytics.dealsDescription"
-            messages={m}
-            locale={locale}
-            metrics={[
-              { labelKey: 'adminAnalytics.metrics.dealsCreated', pair: data.deals.dealsCreated, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.dealsFunded', pair: data.deals.dealsFunded, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.fundingConversion', pair: data.deals.fundingConversion, format: 'percent' },
-              { labelKey: 'adminAnalytics.metrics.requestedVolume', pair: data.deals.requestedVolume, format: 'money' },
-              { labelKey: 'adminAnalytics.metrics.fundedVolume', pair: data.deals.fundedVolume, format: 'money' },
-              { labelKey: 'adminAnalytics.metrics.avgTimeToFunding', pair: data.deals.avgTimeToFundingSeconds, format: 'duration' },
-            ]}
-            chartRows={[
-              {
-                name: tr(m, 'adminAnalytics.metrics.dealsCreated'),
-                current: data.deals.dealsCreated.current ?? 0,
-                previous: data.deals.dealsCreated.previous ?? 0,
-              },
-              {
-                name: tr(m, 'adminAnalytics.metrics.dealsFunded'),
-                current: data.deals.dealsFunded.current ?? 0,
-                previous: data.deals.dealsFunded.previous ?? 0,
-              },
-            ]}
-            chartAriaLabelKey="adminAnalytics.dealsChartLabel"
-            snapshotTitleKey="adminAnalytics.snapshotTitle"
-            snapshot={[
-              { labelKey: 'adminAnalytics.metrics.totalDeals', value: data.deals.snapshot.totalDeals },
-              { labelKey: 'adminAnalytics.metrics.seekingFunding', value: data.deals.snapshot.seekingFunding },
-              { labelKey: 'adminAnalytics.metrics.funded', value: data.deals.snapshot.funded },
-              { labelKey: 'adminAnalytics.metrics.inProgress', value: data.deals.snapshot.inProgress },
-              { labelKey: 'adminAnalytics.metrics.completed', value: data.deals.snapshot.completed },
-              { labelKey: 'adminAnalytics.metrics.activeDeals', value: data.deals.snapshot.activeDeals },
-              { labelKey: 'adminAnalytics.metrics.activeVolume', value: data.deals.snapshot.activeVolume, format: 'money' },
-              { labelKey: 'adminAnalytics.metrics.completedVolume', value: data.deals.snapshot.completedVolume, format: 'money' },
-            ]}
-          />
+          {isFailed('users') ? (
+            <AdminAnalyticsUnavailable titleKey="adminAnalytics.usersTitle" messages={m} />
+          ) : (
+            <AdminAnalyticsSection
+              titleKey="adminAnalytics.usersTitle"
+              descriptionKey="adminAnalytics.usersDescription"
+              messages={m}
+              locale={locale}
+              metrics={[
+                { labelKey: 'adminAnalytics.metrics.newUsers', pair: data.users.newUsers, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.newPymes', pair: data.users.newPymes, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.newInvestors', pair: data.users.newInvestors, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.newSuppliers', pair: data.users.newSuppliers, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.onboardingCompleted', pair: data.users.onboardingCompleted, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.onboardingConversion', pair: data.users.cohortConversion, format: 'percent' },
+                { labelKey: 'adminAnalytics.metrics.medianCompletionTime', pair: data.users.medianCompletionSeconds, format: 'duration' },
+              ]}
+              chartRows={[
+                {
+                  name: tr(m, 'adminAnalytics.metrics.newUsers'),
+                  current: data.users.newUsers.current ?? 0,
+                  previous: data.users.newUsers.previous ?? 0,
+                },
+                {
+                  name: tr(m, 'adminAnalytics.metrics.onboardingCompleted'),
+                  current: data.users.onboardingCompleted.current ?? 0,
+                  previous: data.users.onboardingCompleted.previous ?? 0,
+                },
+              ]}
+              chartAriaLabelKey="adminAnalytics.usersChartLabel"
+              snapshotTitleKey="adminAnalytics.snapshotTitle"
+              snapshot={[
+                { labelKey: 'adminAnalytics.metrics.totalUsers', value: data.users.snapshot.totalUsers },
+                { labelKey: 'adminAnalytics.metrics.pymes', value: data.users.snapshot.pymes },
+                { labelKey: 'adminAnalytics.metrics.investors', value: data.users.snapshot.investors },
+                { labelKey: 'adminAnalytics.metrics.suppliers', value: data.users.snapshot.suppliers },
+                { labelKey: 'adminAnalytics.metrics.onboardingIncomplete', value: data.users.snapshot.onboardingIncomplete },
+                { labelKey: 'adminAnalytics.metrics.onboardingCompletedTotal', value: data.users.snapshot.onboardingCompleted },
+                { labelKey: 'adminAnalytics.metrics.onboardingLegacy', value: data.users.snapshot.onboardingCompletedLegacy },
+                { labelKey: 'adminAnalytics.metrics.verifiedUsers', value: data.users.snapshot.verifiedUsers },
+                { labelKey: 'adminAnalytics.metrics.verifiedCompanies', value: data.users.snapshot.verifiedCompanies },
+              ]}
+            />
+          )}
 
-          <AdminAnalyticsSection
-            titleKey="adminAnalytics.repaymentsTitle"
-            descriptionKey="adminAnalytics.repaymentsDescription"
-            messages={m}
-            locale={locale}
-            metrics={[
-              { labelKey: 'adminAnalytics.metrics.escrowsCreated', pair: data.repayments.escrowsCreated, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.firstReleases', pair: data.repayments.firstReleases, format: 'count' },
-              { labelKey: 'adminAnalytics.metrics.deliveryToEscrow', pair: data.repayments.avgDeliveryToEscrowSeconds, format: 'duration' },
-              { labelKey: 'adminAnalytics.metrics.readyToRelease', pair: data.repayments.avgReadyToReleaseSeconds, format: 'duration' },
-            ]}
-            chartRows={[
-              {
-                name: tr(m, 'adminAnalytics.metrics.escrowsCreated'),
-                current: data.repayments.escrowsCreated.current ?? 0,
-                previous: data.repayments.escrowsCreated.previous ?? 0,
-              },
-              {
-                name: tr(m, 'adminAnalytics.metrics.firstReleases'),
-                current: data.repayments.firstReleases.current ?? 0,
-                previous: data.repayments.firstReleases.previous ?? 0,
-              },
-            ]}
-            chartAriaLabelKey="adminAnalytics.repaymentsChartLabel"
-            snapshotTitleKey="adminAnalytics.snapshotTitle"
-            snapshot={[
-              { labelKey: 'adminAnalytics.metrics.awaitingEscrow', value: data.repayments.snapshot.awaitingEscrow },
-              { labelKey: 'adminAnalytics.metrics.awaitingFunding', value: data.repayments.snapshot.awaitingFunding },
-              { labelKey: 'adminAnalytics.metrics.readyToReleaseCount', value: data.repayments.snapshot.readyToRelease },
-              { labelKey: 'adminAnalytics.metrics.partiallyReleased', value: data.repayments.snapshot.partiallyReleased },
-              { labelKey: 'adminAnalytics.metrics.released', value: data.repayments.snapshot.released },
-              { labelKey: 'adminAnalytics.metrics.milestonesReleased', value: data.repayments.snapshot.milestonesReleased },
-              { labelKey: 'adminAnalytics.metrics.milestonesOpen', value: data.repayments.snapshot.milestonesOpen },
-              { labelKey: 'adminAnalytics.metrics.releasedVolume', value: data.repayments.snapshot.releasedVolume, format: 'money' },
-            ]}
-          />
+          {isFailed('deals') ? (
+            <AdminAnalyticsUnavailable titleKey="adminAnalytics.dealsTitle" messages={m} />
+          ) : (
+            <AdminAnalyticsSection
+              titleKey="adminAnalytics.dealsTitle"
+              descriptionKey="adminAnalytics.dealsDescription"
+              messages={m}
+              locale={locale}
+              metrics={[
+                { labelKey: 'adminAnalytics.metrics.dealsCreated', pair: data.deals.dealsCreated, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.dealsFunded', pair: data.deals.dealsFunded, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.fundingConversion', pair: data.deals.fundingConversion, format: 'percent' },
+                { labelKey: 'adminAnalytics.metrics.requestedVolume', pair: data.deals.requestedVolume, format: 'money' },
+                { labelKey: 'adminAnalytics.metrics.fundedVolume', pair: data.deals.fundedVolume, format: 'money' },
+                { labelKey: 'adminAnalytics.metrics.avgTimeToFunding', pair: data.deals.avgTimeToFundingSeconds, format: 'duration' },
+              ]}
+              chartRows={[
+                {
+                  name: tr(m, 'adminAnalytics.metrics.dealsCreated'),
+                  current: data.deals.dealsCreated.current ?? 0,
+                  previous: data.deals.dealsCreated.previous ?? 0,
+                },
+                {
+                  name: tr(m, 'adminAnalytics.metrics.dealsFunded'),
+                  current: data.deals.dealsFunded.current ?? 0,
+                  previous: data.deals.dealsFunded.previous ?? 0,
+                },
+              ]}
+              chartAriaLabelKey="adminAnalytics.dealsChartLabel"
+              snapshotTitleKey="adminAnalytics.snapshotTitle"
+              snapshot={[
+                { labelKey: 'adminAnalytics.metrics.totalDeals', value: data.deals.snapshot.totalDeals },
+                { labelKey: 'adminAnalytics.metrics.seekingFunding', value: data.deals.snapshot.seekingFunding },
+                { labelKey: 'adminAnalytics.metrics.funded', value: data.deals.snapshot.funded },
+                { labelKey: 'adminAnalytics.metrics.inProgress', value: data.deals.snapshot.inProgress },
+                { labelKey: 'adminAnalytics.metrics.completed', value: data.deals.snapshot.completed },
+                { labelKey: 'adminAnalytics.metrics.activeDeals', value: data.deals.snapshot.activeDeals },
+                { labelKey: 'adminAnalytics.metrics.activeVolume', value: data.deals.snapshot.activeVolume, format: 'money' },
+                { labelKey: 'adminAnalytics.metrics.completedVolume', value: data.deals.snapshot.completedVolume, format: 'money' },
+              ]}
+            />
+          )}
+
+          {isFailed('repayments') ? (
+            <AdminAnalyticsUnavailable titleKey="adminAnalytics.repaymentsTitle" messages={m} />
+          ) : (
+            <AdminAnalyticsSection
+              titleKey="adminAnalytics.repaymentsTitle"
+              descriptionKey="adminAnalytics.repaymentsDescription"
+              messages={m}
+              locale={locale}
+              metrics={[
+                { labelKey: 'adminAnalytics.metrics.escrowsCreated', pair: data.repayments.escrowsCreated, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.firstReleases', pair: data.repayments.firstReleases, format: 'count' },
+                { labelKey: 'adminAnalytics.metrics.deliveryToEscrow', pair: data.repayments.avgDeliveryToEscrowSeconds, format: 'duration' },
+                { labelKey: 'adminAnalytics.metrics.readyToRelease', pair: data.repayments.avgReadyToReleaseSeconds, format: 'duration' },
+              ]}
+              chartRows={[
+                {
+                  name: tr(m, 'adminAnalytics.metrics.escrowsCreated'),
+                  current: data.repayments.escrowsCreated.current ?? 0,
+                  previous: data.repayments.escrowsCreated.previous ?? 0,
+                },
+                {
+                  name: tr(m, 'adminAnalytics.metrics.firstReleases'),
+                  current: data.repayments.firstReleases.current ?? 0,
+                  previous: data.repayments.firstReleases.previous ?? 0,
+                },
+              ]}
+              chartAriaLabelKey="adminAnalytics.repaymentsChartLabel"
+              snapshotTitleKey="adminAnalytics.snapshotTitle"
+              snapshot={[
+                { labelKey: 'adminAnalytics.metrics.awaitingEscrow', value: data.repayments.snapshot.awaitingEscrow },
+                { labelKey: 'adminAnalytics.metrics.awaitingFunding', value: data.repayments.snapshot.awaitingFunding },
+                { labelKey: 'adminAnalytics.metrics.readyToReleaseCount', value: data.repayments.snapshot.readyToRelease },
+                { labelKey: 'adminAnalytics.metrics.partiallyReleased', value: data.repayments.snapshot.partiallyReleased },
+                { labelKey: 'adminAnalytics.metrics.released', value: data.repayments.snapshot.released },
+                { labelKey: 'adminAnalytics.metrics.milestonesReleased', value: data.repayments.snapshot.milestonesReleased },
+                { labelKey: 'adminAnalytics.metrics.milestonesOpen', value: data.repayments.snapshot.milestonesOpen },
+                { labelKey: 'adminAnalytics.metrics.releasedVolume', value: data.repayments.snapshot.releasedVolume, format: 'money' },
+              ]}
+            />
+          )}
 
           <p className="text-xs text-muted-foreground">
             {tr(m, 'adminAnalytics.timingDataNote')}
@@ -213,5 +247,22 @@ export default async function AdminAnalyticsPage({
 
       <AdminVaultHealthCard vaultConfigured={Boolean(getConfiguredVaultAddress())} />
     </div>
+  )
+}
+
+function AdminAnalyticsUnavailable({
+  titleKey,
+  messages,
+}: {
+  titleKey: string
+  messages: Parameters<typeof tr>[0]
+}) {
+  return (
+    <section className="rounded-xl border border-dashed border-border bg-card px-6 py-8 text-center">
+      <h2 className="font-semibold">{tr(messages, titleKey)}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {tr(messages, 'adminAnalytics.sectionUnavailable')}
+      </p>
+    </section>
   )
 }

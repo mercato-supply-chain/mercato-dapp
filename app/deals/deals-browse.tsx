@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DealCard } from '@/components/deal-card'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,9 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { fetchDealsBrowse } from '@/lib/deals/browse-client'
+import {
+  buildDealsBrowseUrl,
+  fetchDealsBrowse,
+} from '@/lib/deals/browse-client'
 import {
   dealBrowseCacheKey,
+  parseDealsBrowseParams,
   type DealBrowseFilters,
   type DealBrowseSort,
   type DealBrowseStatusFilter,
@@ -22,8 +25,9 @@ import {
   type DealsBrowseSummary,
 } from '@/lib/deals/browse'
 import { formatCurrency } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { Deal } from '@/lib/types'
-import { Search, TrendingUp, BarChart3, Clock, DollarSign, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
 
 const STATUS_PILLS: { value: DealBrowseStatusFilter; labelKey: string }[] = [
@@ -71,8 +75,12 @@ export function DealsBrowse({
 
   const [searchQuery, setSearchQuery] = useState(initialFilters.q)
   const [debouncedQuery, setDebouncedQuery] = useState(initialFilters.q)
-  const [statusFilter, setStatusFilter] = useState<DealBrowseStatusFilter>(initialFilters.status)
-  const [categoryFilter, setCategoryFilter] = useState<string>(initialFilters.category ?? 'all')
+  const [statusFilter, setStatusFilter] = useState<DealBrowseStatusFilter>(
+    initialFilters.status,
+  )
+  const [categoryFilter, setCategoryFilter] = useState<string>(
+    initialFilters.category ?? 'all',
+  )
   const [sortBy, setSortBy] = useState<DealBrowseSort>(initialFilters.sort)
 
   const [deals, setDeals] = useState<Deal[]>(initialDeals)
@@ -125,17 +133,42 @@ export function DealsBrowse({
   }, [])
 
   // The server already rendered the filters in `initialFilters`, so the first
-  // effect run is skipped and only interactive changes refetch.
+  // effect run is skipped and only interactive changes sync the URL and refetch.
   const filtersKey = dealBrowseCacheKey(filters)
   const lastFiltersKeyRef = useRef(filtersKey)
 
   useEffect(() => {
     if (lastFiltersKeyRef.current === filtersKey) return
     lastFiltersKeyRef.current = filtersKey
+    if (typeof window !== 'undefined') {
+      const nextUrl = buildDealsBrowseUrl(
+        window.location.pathname,
+        window.location.search,
+        filters,
+      )
+      window.history.replaceState(window.history.state, '', nextUrl)
+    }
     void request(filters, false)
   }, [filters, filtersKey, request])
 
-  const loadMore = useCallback(() => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handlePopState = () => {
+      const params = Object.fromEntries(
+        new URLSearchParams(window.location.search).entries(),
+      )
+      const parsed = parseDealsBrowseParams(params)
+      setStatusFilter(parsed.status)
+      setCategoryFilter(parsed.category ?? 'all')
+      setSearchQuery(parsed.q)
+      setDebouncedQuery(parsed.q)
+      setSortBy(parsed.sort)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const handleLoadMore = useCallback(() => {
     if (isLoading) return
     void request({ ...filters, page: page + 1 }, true)
   }, [filters, isLoading, page, request])
@@ -143,7 +176,7 @@ export function DealsBrowse({
   const hasActiveFilters =
     statusFilter !== 'all' || categoryFilter !== 'all' || searchQuery !== ''
 
-  const clearAll = () => {
+  const handleClearAll = () => {
     setStatusFilter('all')
     setCategoryFilter('all')
     setSearchQuery('')
@@ -168,108 +201,105 @@ export function DealsBrowse({
     <div className="flex min-h-screen flex-col">
       <div className="container mx-auto px-4 py-10">
         {/* Page header */}
-        <div className="mb-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent/20">
-            <TrendingUp className="h-3 w-3" aria-hidden />
+        <header className="mb-8">
+          <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {t('deals.eyebrow')}
-          </div>
-          <h1 className="mb-2 text-4xl font-bold tracking-tight">{t('deals.title')}</h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            {t('deals.title')}
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground sm:text-base">
             {t('deals.description')}
           </p>
-        </div>
+        </header>
 
-        {/* Stat tiles */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <BarChart3 className="h-5 w-5 text-muted-foreground" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('deals.totalDeals')}</p>
-              <p className="text-2xl font-bold tabular-nums">{summary.total}</p>
-            </div>
+        {/* Summary figures — uniform ledger strip without per-stat card chrome */}
+        <dl className="mb-8 grid grid-cols-2 gap-x-8 gap-y-4 border-y border-border py-4 sm:grid-cols-4">
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {t('deals.totalDeals')}
+            </dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {summary.total}
+            </dd>
           </div>
-          <div className="flex items-center gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-              <TrendingUp className="h-5 w-5 text-accent" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('deals.openForFunding')}</p>
-              <p className="text-2xl font-bold tabular-nums text-accent">{summary.open}</p>
-            </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {t('deals.openForFunding')}
+            </dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {summary.open}
+            </dd>
           </div>
-          <div className="flex items-center gap-4 rounded-xl border border-success/30 bg-success/5 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-              <Clock className="h-5 w-5 text-success" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('deals.active')}</p>
-              <p className="text-2xl font-bold tabular-nums text-success">{summary.active}</p>
-            </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {t('deals.active')}
+            </dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {summary.active}
+            </dd>
           </div>
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <DollarSign className="h-5 w-5 text-muted-foreground" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{t('deals.totalValue')}</p>
-              <p className="text-2xl font-bold tabular-nums">
-                {formatCompact(summary.totalValue)}
-              </p>
-            </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {t('deals.totalValue')}
+            </dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {formatCompact(summary.totalValue)}
+            </dd>
           </div>
-        </div>
+        </dl>
 
         {/* Filters */}
         <div className="mb-6 space-y-4">
-          {/* Status quick-filter pills */}
+          {/* Status quick-filters — single focus/active treatment */}
           <div
-            className="flex flex-wrap gap-2"
+            className="flex flex-wrap gap-1 border-b border-border"
             role="group"
             aria-label={t('deals.filterStatusAria')}
           >
-            {STATUS_PILLS.map((pill) => (
-              <button
-                key={pill.value}
-                type="button"
-                onClick={() => setStatusFilter(pill.value)}
-                aria-pressed={statusFilter === pill.value}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-[color,background-color,border-color,transform,box-shadow] duration-200 ease-out active:scale-[0.98] motion-reduce:active:scale-100 ${
-                  statusFilter === pill.value
-                    ? 'bg-foreground text-background'
-                    : 'border border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground'
-                }`}
-              >
-                {t(pill.labelKey)}
-                {pill.value !== 'all' && (
-                  <Badge
-                    variant="secondary"
-                    className={`h-4 min-w-4 px-1 py-0 text-[10px] tabular-nums ${
-                      statusFilter === pill.value ? 'bg-background/20 text-background' : ''
-                    }`}
-                  >
-                    {pillCount(pill.value)}
-                  </Badge>
-                )}
-              </button>
-            ))}
+            {STATUS_PILLS.map((pill) => {
+              const isSelected = statusFilter === pill.value
+              return (
+                <button
+                  key={pill.value}
+                  type="button"
+                  onClick={() => setStatusFilter(pill.value)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'relative -mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    isSelected
+                      ? 'border-foreground font-semibold text-foreground'
+                      : 'border-transparent font-medium text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <span>{t(pill.labelKey)}</span>
+                  {pill.value !== 'all' && (
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums',
+                        isSelected
+                          ? 'text-foreground'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {pillCount(pill.value)}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {/* Search, category, sort */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1 sm:max-w-sm">
-              <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
+            <div className="flex-1 sm:max-w-sm">
               <Input
                 type="search"
                 placeholder={t('deals.searchPlaceholder')}
                 aria-label={t('deals.searchAria')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
               />
             </div>
 
@@ -314,47 +344,57 @@ export function DealsBrowse({
         {/* Active filter chips */}
         {hasActiveFilters && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">{t('common.filters')}</span>
+            <span className="text-xs text-muted-foreground">
+              {t('common.filters')}
+            </span>
             {statusFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                {t(STATUS_PILLS.find((p) => p.value === statusFilter)?.labelKey ?? 'deals.allDeals')}
+              <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs">
+                {t(
+                  STATUS_PILLS.find((p) => p.value === statusFilter)
+                    ?.labelKey ?? 'deals.allDeals',
+                )}
                 <button
                   type="button"
                   aria-label={t('deals.removeStatus')}
                   onClick={() => setStatusFilter('all')}
-                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                  className="ml-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden />
                 </button>
               </span>
             )}
             {categoryFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium capitalize">
+              <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs capitalize">
                 {categoryFilter}
                 <button
                   type="button"
                   aria-label={t('deals.removeCategory')}
                   onClick={() => setCategoryFilter('all')}
-                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                  className="ml-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden />
                 </button>
               </span>
             )}
             {searchQuery && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+              <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs">
                 &ldquo;{searchQuery}&rdquo;
                 <button
                   type="button"
                   aria-label={t('deals.clearSearch')}
                   onClick={() => setSearchQuery('')}
-                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                  className="ml-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden />
                 </button>
               </span>
             )}
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearAll}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={handleClearAll}
+            >
               {t('common.clearAll')}
             </Button>
           </div>
@@ -375,48 +415,45 @@ export function DealsBrowse({
               }`}
         </p>
 
-        {/* Deal grid */}
+        {/* Invoice list */}
         {isLoading && deals.length === 0 && initialDeals.length === 0 ? (
-          <div
-            className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-            aria-busy="true"
-          >
+          <div className="border-t border-border" aria-busy="true">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className="h-72 animate-pulse rounded-2xl border-2 border-border bg-muted/40"
+                className="h-24 animate-pulse border-b border-border bg-muted/20"
               />
             ))}
           </div>
         ) : deals.length > 0 ? (
           <>
-            <div
-              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-              aria-busy={isLoading}
-            >
+            <div aria-busy={isLoading}>
               {deals.map((deal, index) => (
                 <DealCard key={deal.id} deal={deal} listIndex={index} />
               ))}
             </div>
             {hasMore && (
               <div className="mt-8 flex justify-center">
-                <Button variant="outline" onClick={loadMore} disabled={isLoading}>
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoading}
+                >
                   {isLoading ? t('deals.loadingDeals') : t('deals.loadMore')}
                 </Button>
               </div>
             )}
           </>
         ) : (
-          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <Search className="h-6 w-6 text-muted-foreground" aria-hidden />
-            </div>
+          <div className="border-y border-border py-16 text-center">
             <p className="mb-1 text-base font-semibold">{t('deals.noDeals')}</p>
-            <p className="mb-5 max-w-xs text-sm text-muted-foreground">
-              {hasActiveFilters ? t('deals.noDealsFiltered') : t('deals.noDealsEmpty')}
+            <p className="mx-auto mb-5 max-w-xs text-sm text-muted-foreground">
+              {hasActiveFilters
+                ? t('deals.noDealsFiltered')
+                : t('deals.noDealsEmpty')}
             </p>
             {hasActiveFilters && (
-              <Button variant="outline" onClick={clearAll}>
+              <Button variant="outline" onClick={handleClearAll}>
                 {t('common.clearFilters')}
               </Button>
             )}

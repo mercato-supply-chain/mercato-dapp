@@ -1,9 +1,11 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -55,7 +57,7 @@ export function EscrowMilestoneEditor({
   onAmountChange,
   onReceiverOverride,
 }: EscrowMilestoneEditorProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [percentText, setPercentText] = useState(() => String(percent))
   const [amountText, setAmountText] = useState(() => String(milestoneAmount))
   const [overrideText, setOverrideText] = useState('')
@@ -172,10 +174,7 @@ export function EscrowMilestoneEditor({
           {t('repaymentEscrow.milestoneEditor.remaining')}
         </span>
         <span className="font-medium tabular-nums">
-          {remaining.toLocaleString('es-MX', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{' '}
+          {formatAmount(locale, remaining)}{' '}
           USDC
         </span>
       </div>
@@ -203,6 +202,7 @@ export function EscrowMilestoneEditor({
               value={overrideText}
               placeholder={generatedReceiver}
               onChange={(e) => setOverrideText(e.target.value)}
+              {...STELLAR_ADDRESS_INPUT_PROPS}
             />
             {overrideText.trim() !== '' && !overrideValid && (
               <p className="text-xs text-destructive">{t('repaymentEscrow.milestoneEditor.invalidAddress')}</p>

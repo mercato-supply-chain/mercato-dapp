@@ -121,7 +121,7 @@ function RateBar({
     >
       <div
         className={cn(
-          'absolute top-0 h-full rounded-full transition-all duration-700',
+          'absolute top-0 h-full rounded-full transition-color duration-700',
           highlighted
             ? 'bg-gradient-to-r from-brand-mid to-brand-light shadow-[0_0_12px_hsl(var(--brand-light)/0.45)]'
             : 'bg-muted-foreground/35 dark:bg-white/20',
@@ -189,7 +189,7 @@ export function LandingRateComparison() {
       <div className="container relative mx-auto px-4">
         <div
           className={cn(
-            'mx-auto max-w-6xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            'mx-auto max-w-6xl transition-opacity transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
           )}
         >
@@ -221,7 +221,7 @@ export function LandingRateComparison() {
                     <div key={option.id} className="flex-[0_0_100%] min-w-0 px-4 md:flex-[0_0_80%] lg:flex-[0_0_60%]">
                       <div
                         className={cn(
-                          'relative h-full rounded-3xl border p-6 transition-all duration-500 md:p-10',
+                          'relative h-full rounded-3xl border p-6 transition-opacity transition-transform duration-500 motion-reduce:transition-none',
                           option.mercato
                             ? 'border-brand-light/50 bg-gradient-to-br from-brand-pale/90 via-background to-brand-ultra shadow-glow-brand dark:border-brand-light/25 dark:from-brand-mid/10 dark:via-card dark:to-background'
                             : 'border-border/60 bg-card/80 dark:bg-card/50',
@@ -319,7 +319,7 @@ export function LandingRateComparison() {
                   key={i}
                   onClick={() => emblaApi?.scrollTo(i)}
                   className={cn(
-                    'h-1.5 rounded-full transition-all duration-300',
+                    'h-1.5 rounded-full transition-width transition-color duration-300',
                     i === selectedIndex ? 'w-8 bg-brand-mid' : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
                   )}
                   aria-label={`Go to slide ${i + 1}`}

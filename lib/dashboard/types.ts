@@ -2,7 +2,6 @@ export type DashboardDealRow = {
   id: string
   title?: string
   product_name?: string
-  description?: string
   status: string
   amount: number
   term_days?: number
@@ -12,7 +11,6 @@ export type DashboardDealRow = {
   pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
   supplier?: { company_name?: string; full_name?: string; contact_name?: string; logo_url?: string | null } | null
   investor?: { company_name?: string; full_name?: string; contact_name?: string } | null
-  milestones?: Array<{ id: string; status: string }> | null
 }
 
 export type DashboardQuickAction = {

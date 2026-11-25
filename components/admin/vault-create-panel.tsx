@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -368,6 +369,7 @@ export function VaultCreatePanel({ onDeployed }: VaultCreatePanelProps) {
                 placeholder="C… (use preset above for testnet)"
                 className="font-mono text-xs"
                 disabled={busy}
+                {...STELLAR_ADDRESS_INPUT_PROPS}
               />
               <p className="text-[11px] text-muted-foreground">
                 Testnet BlendUSDC: <code className="rounded bg-muted px-0.5">CAQCFVL…RCJU</code>
@@ -382,6 +384,7 @@ export function VaultCreatePanel({ onDeployed }: VaultCreatePanelProps) {
                 placeholder="C… (leave blank for no strategy)"
                 className="font-mono text-xs"
                 disabled={busy}
+                {...STELLAR_ADDRESS_INPUT_PROPS}
               />
             </div>
             {form.strategyAddress.trim() && (
@@ -425,6 +428,7 @@ export function VaultCreatePanel({ onDeployed }: VaultCreatePanelProps) {
                   placeholder="G… (defaults to your wallet)"
                   className="font-mono text-xs"
                   disabled={busy}
+                  {...STELLAR_ADDRESS_INPUT_PROPS}
                 />
               </div>
             ))}

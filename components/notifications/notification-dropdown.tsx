@@ -13,7 +13,7 @@ import { Bell, Package, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatNotificationTime } from '@/lib/notifications'
 import { useMounted } from '@/hooks/use-mounted'
 import { useI18n } from '@/lib/i18n/provider'
-import { useNotificationsContext } from '@/components/notifications/notifications-provider'
+import { useNotificationsContext } from '@/components/notifications/notifications-context'
 
 export function NotificationDropdown() {
   const { t } = useI18n()
@@ -28,7 +28,11 @@ export function NotificationDropdown() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label={t('notifications.ariaLabel')}
+      aria-label={
+        unreadCount > 0
+          ? `${t('notifications.ariaLabel')}, ${t('notifications.unreadCount', { count: unreadCount })}`
+          : t('notifications.ariaLabel')
+      }
       className="relative"
       type="button"
     >
@@ -36,7 +40,7 @@ export function NotificationDropdown() {
       {unreadCount > 0 && (
         <span
           className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
-          aria-label={t('notifications.unreadCount', { count: unreadCount })}
+          aria-hidden
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
@@ -65,12 +69,13 @@ export function NotificationDropdown() {
         </div>
         <ScrollArea className="h-[min(320px,50vh)]">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div role="status" className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden />
+              <span className="sr-only">{t('notifications.loading')}</span>
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
-              <Bell className="h-10 w-10" />
+              <Bell className="h-10 w-10" aria-hidden />
               <p>{t('notifications.empty')}</p>
             </div>
           ) : (

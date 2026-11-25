@@ -12,6 +12,13 @@ export default function DashboardError({
 }) {
   const { t } = useI18n()
 
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[dashboard] route error boundary', {
+      name: error.name,
+      digest: error.digest,
+    })
+  }
+
   return (
     <LocalizedErrorBoundary
       error={error}
