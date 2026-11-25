@@ -19,8 +19,14 @@ import {
 } from '@/lib/navigation/nav-auth-client'
 import type { NavAuthSnapshot, NavAuthState } from '@/lib/navigation/nav-auth'
 import type { NavProfile, NavUser } from '@/components/navigation/user-nav-types'
+import {
+  clearPersistedWalletSessions,
+  clearPollarHydrationBlockForUser,
+  markPollarHydrationBlockedForUser,
+  readStoredWalletOwnerId,
+} from '@/lib/wallet/session-cleanup'
 
-type NavAuthContextValue = NavAuthState & { clear: () => void }
+export type NavAuthContextValue = NavAuthState & { clear: () => void }
 
 const NavAuthContext = createContext<NavAuthContextValue | null>(null)
 
@@ -49,8 +55,9 @@ export function NavAuthProvider({
   const initialRef = useRef(initial)
   const [user, setUser] = useState<NavUser | null>(initial.user)
   const [profile, setProfile] = useState<NavProfile | null>(initial.profile)
-  const [ready] = useState(true)
+  const [ready, setReady] = useState(true)
   const userIdRef = useRef<string | null>(initial.user?.id ?? null)
+  const profileLoadGenRef = useRef(0)
 
   const applySessionUser = useCallback(
     (authUser: User | null) => {
@@ -60,15 +67,42 @@ export function NavAuthProvider({
       setUser(nextUser)
 
       if (!nextUser) {
+        profileLoadGenRef.current += 1
+        if (previousId) {
+          clearPollarHydrationBlockForUser(previousId)
+          void clearPersistedWalletSessions()
+        }
         invalidateNavProfile()
         setProfile(null)
+        setReady(true)
         return
       }
 
       // Same identity: keep the current profile, only the email can change.
       if (nextUser.id === previousId) return
 
-      void loadNavProfile(supabase, nextUser.id).then((nextProfile) => setProfile(nextProfile))
+      const storedWalletOwnerId = readStoredWalletOwnerId()
+      const hasStoredOwnerMismatch = Boolean(
+        storedWalletOwnerId && storedWalletOwnerId !== nextUser.id,
+      )
+      if ((previousId && nextUser.id !== previousId) || hasStoredOwnerMismatch) {
+        markPollarHydrationBlockedForUser(nextUser.id)
+        void clearPersistedWalletSessions()
+      }
+
+      const loadGen = ++profileLoadGenRef.current
+      setProfile(null)
+      setReady(false)
+      void loadNavProfile(supabase, nextUser.id)
+        .then((nextProfile) => {
+          if (profileLoadGenRef.current !== loadGen) return
+          setProfile(nextProfile)
+        })
+        .finally(() => {
+          if (profileLoadGenRef.current === loadGen) {
+            setReady(true)
+          }
+        })
     },
     [supabase],
   )
@@ -94,8 +128,12 @@ export function NavAuthProvider({
     const onProfileUpdated = () => {
       const currentId = userIdRef.current
       if (!currentId) return
+      const loadGen = ++profileLoadGenRef.current
       invalidateNavProfile(currentId)
-      void loadNavProfile(supabase, currentId).then((nextProfile) => setProfile(nextProfile))
+      void loadNavProfile(supabase, currentId).then((nextProfile) => {
+        if (profileLoadGenRef.current !== loadGen) return
+        setProfile(nextProfile)
+      })
     }
 
     window.addEventListener('mercato:profile-updated', onProfileUpdated)
@@ -103,9 +141,11 @@ export function NavAuthProvider({
   }, [supabase])
 
   const clear = useCallback(() => {
+    profileLoadGenRef.current += 1
     userIdRef.current = null
     setUser(null)
     setProfile(null)
+    setReady(true)
   }, [])
 
   const value = useMemo<NavAuthContextValue>(
@@ -114,6 +154,10 @@ export function NavAuthProvider({
   )
 
   return <NavAuthContext.Provider value={value}>{children}</NavAuthContext.Provider>
+}
+
+export function useOptionalNavAuth(): NavAuthContextValue | null {
+  return useContext(NavAuthContext)
 }
 
 export function useNavAuth(): NavAuthContextValue {

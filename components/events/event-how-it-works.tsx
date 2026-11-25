@@ -21,7 +21,7 @@ export function EventHowItWorks() {
       <div
         ref={ref}
         className={cn(
-          'container mx-auto max-w-4xl px-4 transition-all duration-700',
+          'container mx-auto max-w-4xl px-4 transition-opacity transition-transform duration-700 motion-reduce:transition-none',
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
         )}
       >

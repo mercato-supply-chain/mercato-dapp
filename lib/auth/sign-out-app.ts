@@ -1,13 +1,21 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import {
+  clearPersistedWalletSessions,
+  type ClearWalletSessionsOptions,
+} from '@/lib/wallet/session-cleanup'
 
 /**
- * Clears Supabase auth: browser session + server cookie headers.
+ * Clears Supabase auth (browser session + server cookie headers) and wipes any
+ * persisted Mercato/Pollar wallet session state even when invoked from public
+ * routes that do not mount WalletProvider.
  * Client-only signOut can leave session cookies that survive a full reload; the POST
  * clears chunks the same way as middleware/session refresh.
  */
-export async function signOutApp(): Promise<void> {
+export async function signOutApp(options?: ClearWalletSessionsOptions): Promise<void> {
+  await clearPersistedWalletSessions(options)
+
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12_000)
 

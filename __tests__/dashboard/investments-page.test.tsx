@@ -2,7 +2,7 @@ import { afterAll, beforeEach, expect, mock, test } from 'bun:test'
 import * as nextNavigation from 'next/navigation'
 import * as i18nServer from '@/lib/i18n/server'
 import * as investorPortfolio from '@/lib/investments/get-investor-portfolio'
-import * as supabaseServer from '@/lib/supabase/server'
+import * as dashboardSession from '@/lib/dashboard/get-dashboard-session'
 
 // Bun's mock.restore() does not undo mock.module(), and every test file shares one process.
 // So each mock below falls through to the real export once this file is done (afterAll).
@@ -10,7 +10,6 @@ const real = {
   redirect: nextNavigation.redirect,
   getServerDictionary: i18nServer.getServerDictionary,
   getInvestorPortfolio: investorPortfolio.getInvestorPortfolio,
-  createClient: supabaseServer.createClient,
 }
 
 type Deferred<T> = {
@@ -70,12 +69,15 @@ const client = {
   },
 }
 
-mock.module('@/lib/supabase/server', () => ({
-  ...supabaseServer,
-  createClient: async () => {
-    if (!state.active) return real.createClient()
+// The session helper is mocked directly: Bun shares one module registry across test files, so
+// mocking '@/lib/supabase/server' would depend on which file loaded the session module first.
+mock.module('@/lib/dashboard/get-dashboard-session', () => ({
+  ...dashboardSession,
+  getDashboardSession: async () => {
+    if (!state.active) return real.getDashboardSession()
     state.started.push('session')
-    return client
+    const { data } = await state.getUser()
+    return { supabase: client, user: data.user, profile: data.user ? state.profile : null }
   },
 }))
 

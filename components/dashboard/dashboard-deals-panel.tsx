@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { SupplierLogo } from '@/components/suppliers/supplier-logo'
-import { AlertCircle, ArrowRight, Building2, Clock, ExternalLink, Plus, User } from 'lucide-react'
+import { ArrowRight, Building2, Clock, ExternalLink, Plus, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -37,10 +37,6 @@ type DashboardDealsPanelProps = {
     viewAllFooter: string
     dealUntitled: string
     tableView: string
-    tableAct: string
-    tableApprove: string
-    openLabel: string
-    milestoneActionNeeded: string
     aprSummary: string
     tableFunded?: string
     tableDeal?: string
@@ -51,7 +47,6 @@ type DashboardDealsPanelProps = {
     tableSupplier?: string
     tableInvestor?: string
     tableCreated?: string
-    tableMilestones?: string
   }
   columns: {
     showSmb?: boolean
@@ -145,7 +140,6 @@ export function DashboardDealsPanel({
                   {columns.showCreated && (
                     <th className="hidden p-4 text-left font-medium lg:table-cell">{labels.tableCreated}</th>
                   )}
-                  <th className="hidden p-4 text-center font-medium sm:table-cell">{labels.tableMilestones}</th>
                   <th className="w-24 p-4 text-right font-medium"> </th>
                 </tr>
               </thead>
@@ -211,10 +205,6 @@ function DealCardMobile({
   labels: DashboardDealsPanelProps['labels']
   columns: DashboardDealsPanelProps['columns']
 }) {
-  const { locale } = useI18n()
-  const milestones = deal.milestones ?? []
-  const pending = milestones.filter((m) => m.status === 'in_progress').length
-  const hasPending = pending > 0
   const statusLabel = statusLabels[deal.status] ?? deal.status
 
   return (
@@ -234,11 +224,6 @@ function DealCardMobile({
           <PartyWithLogo p={deal.pyme} fallbackIcon={User} />
         </div>
       )}
-      {hasPending && userType === 'supplier' && (
-        <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">
-          {labels.milestoneActionNeeded}
-        </p>
-      )}
     </Link>
   )
 }
@@ -256,12 +241,6 @@ function DealTableRow({
   labels: DashboardDealsPanelProps['labels']
   columns: DashboardDealsPanelProps['columns']
 }) {
-  const { locale } = useI18n()
-  const milestones = deal.milestones ?? []
-  const completed = milestones.filter((m) => m.status === 'completed').length
-  const pending = milestones.filter((m) => m.status === 'in_progress').length
-  const total = milestones.length
-  const hasPending = pending > 0
   const statusLabel = statusLabels[deal.status] ?? deal.status
 
   return (
@@ -312,28 +291,13 @@ function DealTableRow({
           {deal.created_at ? formatLocalizedDate(deal.created_at, locale) : '—'}
         </td>
       )}
-      <td className="hidden p-4 text-center sm:table-cell">
-        {total > 0 ? (
-          <span className={cn('text-xs', hasPending && 'font-medium text-amber-600 dark:text-amber-400')}>
-            {completed}/{total}
-            {hasPending && <AlertCircle className="ml-1 inline h-3 w-3" />}
-          </span>
-        ) : (
-          '—'
-        )}
-      </td>
       <td className="p-4 text-right">
         <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
           <Link href={`/deals/${deal.id}`}>
-            {userType === 'supplier' && hasPending ? labels.tableAct : labels.tableView}
+            {labels.tableView}
             <ExternalLink className="ml-1 h-3 w-3 opacity-70" />
           </Link>
         </Button>
-        {userType === 'admin' && hasPending && (
-          <Button asChild size="sm" className="ml-1 h-7 px-2 text-xs">
-            <Link href="/dashboard/admin/approvals">{labels.tableApprove}</Link>
-          </Button>
-        )}
       </td>
     </tr>
   )
