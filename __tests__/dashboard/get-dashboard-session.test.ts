@@ -1,11 +1,10 @@
-import { afterAll, beforeEach, expect, mock, test } from 'bun:test'
-import * as supabaseServer from '@/lib/supabase/server'
+import { beforeEach, expect, test } from 'bun:test'
+import { loadDashboardSession } from '@/lib/dashboard/get-dashboard-session'
 
-// Bun's mock.restore() does not undo mock.module(); fall through to the real export afterwards.
-const realCreateClient = supabaseServer.createClient
-
+// Bun shares one module registry across test files, so mocking '@/lib/supabase/server' here would
+// only take effect if this file happened to load the session module first. The session read is
+// exercised with an explicit client instead.
 const state = {
-  active: true,
   user: null as { id: string } | null,
   profile: null as Record<string, unknown> | null,
   queries: [] as { table: string; columns?: string; eq?: [string, unknown] }[],
@@ -35,12 +34,8 @@ const client = {
   },
 }
 
-mock.module('@/lib/supabase/server', () => ({
-  ...supabaseServer,
-  createClient: async () => (state.active ? client : realCreateClient()),
-}))
-
-const { getDashboardSession } = await import('@/lib/dashboard/get-dashboard-session')
+type SessionClient = Parameters<typeof loadDashboardSession>[0]
+const sessionClient = client as unknown as SessionClient
 
 beforeEach(() => {
   state.user = null
@@ -48,18 +43,12 @@ beforeEach(() => {
   state.queries = []
 })
 
-afterAll(() => {
-  state.active = false
-})
-
-// React's cache() only memoizes inside a server render, so these tests cover what one call
-// loads - not the layout-and-page deduplication, which is React's request-cache semantics.
 test('returns no user and skips the profile query when signed out', async () => {
-  const session = await getDashboardSession()
+  const session = await loadDashboardSession(sessionClient)
 
   expect(session.user).toBeNull()
   expect(session.profile).toBeNull()
-  expect(session.supabase).toBe(client as never)
+  expect(session.supabase).toBe(sessionClient)
   expect(state.queries).toHaveLength(0)
 })
 
@@ -67,7 +56,7 @@ test('loads the profile with the projection the layout and investments page shar
   state.user = { id: 'user-1' }
   state.profile = { user_type: 'investor', full_name: 'Ada', company_name: null, contact_name: null }
 
-  const session = await getDashboardSession()
+  const session = await loadDashboardSession(sessionClient)
 
   expect(session.user).toEqual({ id: 'user-1' } as never)
   expect(session.profile).toEqual(state.profile as never)
