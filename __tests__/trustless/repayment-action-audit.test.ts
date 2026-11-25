@@ -1,19 +1,19 @@
-import { describe, expect, test, mock } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import type { RepaymentEscrowActionInput } from '@/lib/trustless/repayment-action-audit'
 
 describe('repayment_action_audit', () => {
   test('deployment_submitted y deployment_succeeded son inserts separados', async () => {
     const inserts: unknown[][] = []
-    mock.module('@/lib/supabase/client', () => ({
-      createClient: () => ({
-        from: () => ({
-          insert: async (rows: unknown[]) => {
-            inserts.push(rows)
-            return { error: null }
-          },
-        }),
+    // Injected rather than module-mocked: Bun shares one module registry across test files, so a
+    // mock.module() here would depend on whether an earlier file already loaded the writer.
+    const client = {
+      from: (_table: 'repayment_escrow_actions') => ({
+        insert: async (rows: unknown[]) => {
+          inserts.push(rows)
+          return { error: null }
+        },
       }),
-    }))
+    }
     const { recordRepaymentEscrowAction } = await import('@/lib/trustless/repayment-action-audit')
     const base: RepaymentEscrowActionInput = {
       dealId: 'deal-1',
@@ -30,8 +30,8 @@ describe('repayment_action_audit', () => {
       transactionHash: null,
       failureMessage: null,
     }
-    await recordRepaymentEscrowAction(base)
-    await recordRepaymentEscrowAction({ ...base, actionType: 'deployment_succeeded', contractId: 'C-contract', completionTimestamp: new Date().toISOString(), transactionHash: 'txhash' })
+    await recordRepaymentEscrowAction(base, client)
+    await recordRepaymentEscrowAction({ ...base, actionType: 'deployment_succeeded', contractId: 'C-contract', completionTimestamp: new Date().toISOString(), transactionHash: 'txhash' }, client)
     expect(inserts.length).toBe(2)
     expect((inserts[0][0] as Record<string, unknown>).action_type).toBe('deployment_submitted')
     expect((inserts[1][0] as Record<string, unknown>).action_type).toBe('deployment_succeeded')
