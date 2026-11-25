@@ -4,7 +4,7 @@ import { enDict, getDictionary } from '@/lib/i18n/dictionaries'
 
 describe('i18n pure message helpers', () => {
   test('lookup resolves nested string keys', () => {
-    expect(lookup(enDict, 'landing.hero.titleLine1')).toBe('Capital to produce.')
+    expect(lookup(enDict, 'landing.hero.titleLine1')).toBe('Fund a real order.')
   })
 
   test('lookup returns undefined for missing keys', () => {
@@ -44,7 +44,7 @@ describe('i18n pure message helpers', () => {
   test('scopedMessages returns the namespace subtree', () => {
     const scoped = scopedMessages(enDict, 'landing')
     expect(typeof scoped).toBe('object')
-    expect((scoped.hero as Record<string, unknown>).titleLine1).toBe('Capital to produce.')
+    expect((scoped.hero as Record<string, unknown>).titleLine1).toBe('Fund a real order.')
   })
 
   test('scopedMessages returns an empty object for an unknown namespace', () => {

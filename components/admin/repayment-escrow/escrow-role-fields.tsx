@@ -2,6 +2,7 @@
 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Badge } from '@/components/ui/badge'
 import { CopyableCodeLine } from '@/components/admin/copyable-code-line'
 import { isLikelyStellarAddress } from '@/lib/defindex/stellar-address'
@@ -93,6 +94,7 @@ export function EscrowRoleFields({
             className="font-mono text-xs"
             value={draft.roles[role]}
             onChange={(e) => onRoleChange(role, e.target.value)}
+            {...STELLAR_ADDRESS_INPUT_PROPS}
           />
         </div>
       ))}

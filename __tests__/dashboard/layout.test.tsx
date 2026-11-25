@@ -1,9 +1,12 @@
 import { afterAll, beforeEach, expect, mock, test } from 'bun:test'
 import * as nextNavigation from 'next/navigation'
-import * as supabaseServer from '@/lib/supabase/server'
+import * as dashboardSession from '@/lib/dashboard/get-dashboard-session'
 
 // Bun's mock.restore() does not undo mock.module(); fall through to the real exports afterwards.
-const real = { redirect: nextNavigation.redirect, createClient: supabaseServer.createClient }
+const real = {
+  redirect: nextNavigation.redirect,
+  getDashboardSession: dashboardSession.getDashboardSession,
+}
 
 class RedirectCalled extends Error {
   constructor(readonly url: string) {
@@ -17,22 +20,14 @@ const state = {
   profile: null as { user_type: string | null } | null,
 }
 
-// The real getDashboardSession runs against this fake client.
-const client = {
-  auth: { getUser: async () => ({ data: { user: state.user } }) },
-  from() {
-    const builder = {
-      select: () => builder,
-      eq: () => builder,
-      single: async () => ({ data: state.profile, error: null }),
-    }
-    return builder
+// The session helper is mocked directly: Bun shares one module registry across test files, so
+// mocking '@/lib/supabase/server' would depend on which file loaded the session module first.
+mock.module('@/lib/dashboard/get-dashboard-session', () => ({
+  ...dashboardSession,
+  getDashboardSession: async () => {
+    if (!state.active) return real.getDashboardSession()
+    return { supabase: {} as never, user: state.user, profile: state.profile }
   },
-}
-
-mock.module('@/lib/supabase/server', () => ({
-  ...supabaseServer,
-  createClient: async () => (state.active ? client : real.createClient()),
 }))
 
 // Keep every real export so later test files still find usePathname etc.

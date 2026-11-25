@@ -77,7 +77,7 @@ export default async function DealDetailPage({ params }: PageProps) {
   return (
     <>
       <JsonLd data={breadcrumbSchema} />
-      <DealDetailPageClient />
+      <DealDetailPageClient initialDeal={dbDeal.deal} />
     </>
   )
 }

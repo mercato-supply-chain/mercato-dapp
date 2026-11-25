@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { DealFactRow } from '@/components/deals/deal-fact-row'
@@ -477,7 +478,7 @@ export function DealFundDialog({
 
               <div className="space-y-2">
                 <Label>{t('dealDetail.fundingFrom')}</Label>
-                <Input value={walletAddress ?? ''} disabled className="font-mono text-xs" />
+                <Input value={walletAddress ?? ''} disabled className="font-mono text-xs" {...STELLAR_ADDRESS_INPUT_PROPS} />
               </div>
 
               <p className="text-xs leading-relaxed text-muted-foreground">

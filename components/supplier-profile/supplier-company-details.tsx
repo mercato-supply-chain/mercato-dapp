@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { LATAM_COUNTRIES, SECTORS } from '@/lib/constants'
 import type { CompanyFormState, SupplierCompany } from '@/lib/supplier-profile/types'
 import { useI18n } from '@/lib/i18n/provider'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { SupplierLogoUpload } from './supplier-logo-upload'
 
 type SupplierCompanyDetailsProps = {
@@ -102,6 +103,7 @@ export function SupplierCompanyDetails({
             value={form.address}
             onChange={(e) => onChange({ address: e.target.value })}
             placeholder="G..."
+            {...STELLAR_ADDRESS_INPUT_PROPS}
           />
         </div>
         <div className="space-y-2 sm:col-span-2">

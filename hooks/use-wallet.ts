@@ -1,10 +1,13 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useMercatoWallet } from '@/hooks/use-mercato-wallet'
+import {
+  useOptionalWalletContext,
+  type WalletContextValue,
+} from '@/providers/wallet-context'
 
-export const useWallet = () => {
-  const mercatoWallet = useMercatoWallet()
-
+function buildWalletView(mercatoWallet: WalletContextValue) {
   const handleConnect = async () => {
     try {
       await mercatoWallet.connectExternalWallet()
@@ -40,4 +43,17 @@ export const useWallet = () => {
     disconnectWallet: mercatoWallet.disconnect,
     refreshBalance: mercatoWallet.refreshBalance,
   }
+}
+
+export const useWallet = () => {
+  const mercatoWallet = useMercatoWallet()
+  return useMemo(() => buildWalletView(mercatoWallet), [mercatoWallet])
+}
+
+export const useOptionalWallet = () => {
+  const mercatoWallet = useOptionalWalletContext()
+  return useMemo(
+    () => (mercatoWallet ? buildWalletView(mercatoWallet) : null),
+    [mercatoWallet],
+  )
 }

@@ -23,10 +23,9 @@ export function AdminEventQrCard({ event }: AdminEventQrCardProps) {
 
   useEffect(() => {
     let cancelled = false
-    setIsGenerating(true)
 
     QRCode.toDataURL(landingUrl, {
-      width: 512,
+      width: 192,
       margin: 2,
       color: {
         dark: '#1a1a1a',
@@ -34,13 +33,16 @@ export function AdminEventQrCard({ event }: AdminEventQrCardProps) {
       },
     })
       .then((dataUrl) => {
-        if (!cancelled) setQrDataUrl(dataUrl)
+        if (!cancelled) {
+          setQrDataUrl(dataUrl)
+          setIsGenerating(false)
+        }
       })
       .catch(() => {
-        if (!cancelled) setQrDataUrl(null)
-      })
-      .finally(() => {
-        if (!cancelled) setIsGenerating(false)
+        if (!cancelled) {
+          setQrDataUrl(null)
+          setIsGenerating(false)
+        }
       })
 
     return () => {
@@ -86,6 +88,8 @@ export function AdminEventQrCard({ event }: AdminEventQrCardProps) {
           <img
             src={qrDataUrl}
             alt={t('adminLeads.qr.previewAlt', { event: event.slug })}
+            width={192}
+            height={192}
             className="h-48 w-48"
           />
         ) : (
