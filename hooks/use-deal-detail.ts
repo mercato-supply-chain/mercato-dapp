@@ -40,10 +40,12 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
   } | null>(null)
   const [userType, setUserType] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
-  const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
-  const [pymeReputation, setPymeReputation] = useState<Reputation | null>(null)
-  const [supplierReputation, setSupplierReputation] = useState<Reputation | null>(null)
-  const [partyReputationsLoading, setPartyReputationsLoading] = useState(false)
+  const [partyData, setPartyData] = useState<{
+    key: string
+    pymeReputation: Reputation | null
+    supplierReputation: Reputation | null
+    indexerEscrow: GetEscrowsFromIndexerResponse | null
+  } | null>(null)
 
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { walletInfo, isConnected, handleConnect } = useWallet()
@@ -195,61 +197,56 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
   )
   const loadError = matchingLoadState?.status === 'error'
 
-  useEffect(() => {
-    const pymeId = deal?.pymeId
-    const supplierOwnerId = deal?.supplierOwnerId
-    if (!pymeId && !supplierOwnerId) {
-      setPymeReputation(null)
-      setSupplierReputation(null)
-      setPartyReputationsLoading(false)
-      return
-    }
-    let cancelled = false
-    setPartyReputationsLoading(true)
-    Promise.all([
-      pymeId ? getReputation(supabase, pymeId) : Promise.resolve(null),
-      supplierOwnerId ? getReputation(supabase, supplierOwnerId) : Promise.resolve(null),
-    ])
-      .then(([pyme, supplier]) => {
-        if (cancelled) return
-        setPymeReputation(pyme)
-        setSupplierReputation(supplier)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPymeReputation(null)
-          setSupplierReputation(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPartyReputationsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [deal?.pymeId, deal?.supplierOwnerId, supabase])
-
   const escrowAddress = deal?.escrowAddress ?? ''
   const getEscrowRef = useRef(getEscrowByContractIds)
-  getEscrowRef.current = getEscrowByContractIds
   useEffect(() => {
-    if (!escrowAddress) {
-      setIndexerEscrow(null)
-      return
-    }
+    getEscrowRef.current = getEscrowByContractIds
+  }, [getEscrowByContractIds])
+
+  const pymeId = deal?.pymeId
+  const supplierOwnerId = deal?.supplierOwnerId
+  const partyLookupKey = deal
+    ? `${deal.id}:${pymeId ?? ''}:${supplierOwnerId ?? ''}:${escrowAddress}`
+    : ''
+  const hasReputations = Boolean(pymeId || supplierOwnerId)
+  const currentPartyData = partyData?.key === partyLookupKey ? partyData : null
+  const pymeReputation = currentPartyData?.pymeReputation ?? null
+  const supplierReputation = currentPartyData?.supplierReputation ?? null
+  const indexerEscrow = currentPartyData?.indexerEscrow ?? null
+  const partyReputationsLoading = Boolean(hasReputations && !currentPartyData)
+
+  useEffect(() => {
+    if (!partyLookupKey) return
     let cancelled = false
-    getEscrowRef.current({ contractIds: [escrowAddress] })
-      .then((escrows) => {
-        if (!cancelled && escrows?.length) setIndexerEscrow(escrows[0])
-        else if (!cancelled) setIndexerEscrow(null)
-      })
-      .catch(() => {
-        if (!cancelled) setIndexerEscrow(null)
-      })
+
+    const pymeReputationPromise = pymeId
+      ? getReputation(supabase, pymeId).catch(() => null)
+      : Promise.resolve(null)
+    const supplierReputationPromise = supplierOwnerId
+      ? getReputation(supabase, supplierOwnerId).catch(() => null)
+      : Promise.resolve(null)
+    const escrowPromise = escrowAddress
+      ? getEscrowRef.current({ contractIds: [escrowAddress] })
+          .then((escrows) => escrows?.[0] ?? null)
+          .catch(() => null)
+      : Promise.resolve(null)
+
+    Promise.all([pymeReputationPromise, supplierReputationPromise, escrowPromise]).then(
+      ([pyme, supplier, escrow]) => {
+        if (cancelled) return
+        setPartyData({
+          key: partyLookupKey,
+          pymeReputation: pyme,
+          supplierReputation: supplier,
+          indexerEscrow: escrow,
+        })
+      },
+    )
+
     return () => {
       cancelled = true
     }
-  }, [escrowAddress])
+  }, [pymeId, partyLookupKey, supplierOwnerId, escrowAddress, supabase])
 
   const isSupplier = Boolean(deal?.supplierOwnerId && userId && deal.supplierOwnerId === userId)
   const isPyme = Boolean(deal?.pymeId && userId && deal.pymeId === userId)

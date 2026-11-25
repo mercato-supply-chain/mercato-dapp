@@ -23,6 +23,7 @@ import { formatCurrency } from '@/lib/format'
 import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
 import { investorFundingTotal } from '@/lib/deals/fees'
+import type { Deal } from '@/lib/types'
 
 function getDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
   const statusConfig = {
