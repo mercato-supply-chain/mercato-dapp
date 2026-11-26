@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { ApproveMilestonePayload } from '@trustless-work/escrow'
 import { Button } from '@/components/ui/button'
@@ -18,20 +18,20 @@ import { Wallet } from 'lucide-react'
 import type { Deal } from '@/lib/types'
 import type { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/provider'
+import { useWallet } from '@/hooks/use-wallet'
+import {
+  canWalletSignSorobanTx,
+  getWalletCapabilityLimitation,
+} from '@/lib/mercato-wallet'
 
 type Supabase = ReturnType<typeof createClient>
 
-interface DealDeliveryPanelProps {
+export interface DealDeliveryPanelProps {
   deal: Deal
   open: boolean
   milestoneIndex: number | null
   milestoneId: string | null
-  isPyme: boolean
-  isAdmin: boolean
-  isConnected: boolean
-  walletAddress: string | undefined
   onOpenChange: (open: boolean) => void
-  onConnect: () => void
   signAndSend: (unsignedTransaction: string, address: string) => Promise<void>
   approveMilestone: (
     payload: ApproveMilestonePayload,
@@ -47,12 +47,7 @@ export function DealDeliveryPanel({
   open,
   milestoneIndex,
   milestoneId,
-  isPyme,
-  isAdmin,
-  isConnected,
-  walletAddress,
   onOpenChange,
-  onConnect,
   signAndSend,
   approveMilestone,
   supabase,
@@ -60,11 +55,17 @@ export function DealDeliveryPanel({
   onDealUpdate,
 }: DealDeliveryPanelProps) {
   const { t } = useI18n()
+  const { walletInfo, isConnected, handleConnect, provider } = useWallet()
+  const walletAddress = walletInfo?.address
   const [proofNotes, setProofNotes] = useState('')
   const [proofDocumentUrl, setProofDocumentUrl] = useState('')
   const [isSubmittingProof, setIsSubmittingProof] = useState(false)
+  const submittingLockRef = useRef(false)
+  const canSignSoroban = canWalletSignSorobanTx(provider)
+  const capabilityWarning = isConnected ? getWalletCapabilityLimitation(provider) : null
 
   const handleConfirmDelivery = async () => {
+    if (submittingLockRef.current) return
     if (!deal?.escrowAddress || milestoneIndex == null || !milestoneId || !walletAddress) {
       toast.error(t('dealDetail.toastMissingProofWallet'))
       return
@@ -73,13 +74,14 @@ export function DealDeliveryPanel({
       toast.error(t('dealDetail.toastConnectWalletDelivery'))
       return
     }
-    if (!isPyme && !isAdmin) {
-      toast.error(t('dealDetail.toastOnlyPymeOrAdminDelivery'))
+    if (!canSignSoroban) {
+      if (capabilityWarning) toast.error(capabilityWarning)
       return
     }
     const evidence =
       [proofNotes, proofDocumentUrl].filter(Boolean).join(' | ') ||
       t('dealDetail.evidenceDeliveryDefault')
+    submittingLockRef.current = true
     setIsSubmittingProof(true)
     try {
       const payload: ApproveMilestonePayload = {
@@ -114,6 +116,7 @@ export function DealDeliveryPanel({
       console.error('Confirm delivery error:', err)
       toast.error(message)
     } finally {
+      submittingLockRef.current = false
       setIsSubmittingProof(false)
     }
   }
@@ -147,21 +150,26 @@ export function DealDeliveryPanel({
             />
           </div>
           {!isConnected ? (
-            <Button type="button" onClick={onConnect} className="w-full">
+            <Button type="button" onClick={() => void handleConnect()} className="w-full">
               <Wallet className="mr-2 h-4 w-4" aria-hidden />
               {t('dealDetail.connectWalletSign')}
             </Button>
           ) : (
-            <Button
-              type="button"
-              onClick={handleConfirmDelivery}
-              disabled={isSubmittingProof}
-              className="w-full"
-            >
-              {isSubmittingProof
-                ? t('dealDetail.confirming')
-                : t('dealDetail.confirmDeliveryBtn')}
-            </Button>
+            <>
+              {capabilityWarning ? (
+                <p className="text-xs text-muted-foreground">{capabilityWarning}</p>
+              ) : null}
+              <Button
+                type="button"
+                onClick={handleConfirmDelivery}
+                disabled={isSubmittingProof || !canSignSoroban}
+                className="w-full"
+              >
+                {isSubmittingProof
+                  ? t('dealDetail.confirming')
+                  : t('dealDetail.confirmDeliveryBtn')}
+              </Button>
+            </>
           )}
         </div>
       </DialogContent>

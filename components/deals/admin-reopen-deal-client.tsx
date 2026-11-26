@@ -14,7 +14,6 @@ export function AdminReopenDealClient({ deal }: AdminReopenDealClientProps) {
   return (
     <DealAdminReopenPanel
       deal={deal}
-      isAdmin
       inline
       onReopened={() => {
         router.push(`/deals/${deal.id}`)

@@ -1,18 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { HeroDealSheet } from '@/components/landing/hero-deal-sheet'
-import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
-import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
 import { Button } from '@/components/ui/button'
-import type { LandingHeroDeal } from '@/lib/landing/hero-deal'
-import type { LandingPlatformStats } from '@/lib/landing/platform-stats'
+import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
+import type { ReactNode } from 'react'
 import { useI18n } from '@/lib/i18n/provider'
 import { BadgeCheck } from 'lucide-react'
 
 type LandingHeroProps = {
-  deal: LandingHeroDeal
-  stats: LandingPlatformStats
+  deal: ReactNode
+  stats: ReactNode
 }
 
 export function LandingHero({ deal, stats }: LandingHeroProps) {
@@ -50,14 +47,14 @@ export function LandingHero({ deal, stats }: LandingHeroProps) {
             </div>
           </div>
 
-          <HeroDealSheet deal={deal} className="hero-stagger-4 w-full lg:justify-self-end" />
+          {deal}
         </div>
       </div>
 
       <div className="relative z-20 w-full">
         <div className="hero-ref-bases-bar hero-stats-bar relative border-y border-border/60 bg-white dark:border-white/[0.08] dark:bg-[hsl(0_0%_4%/0.94)] dark:backdrop-blur-md">
           <div className="hero-ref-bases-inner relative z-[1] mx-auto py-3 md:py-4">
-            <HeroStatsBar stats={stats} />
+            {stats}
           </div>
         </div>
       </div>
