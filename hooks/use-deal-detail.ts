@@ -20,6 +20,12 @@ type DealLoadResult =
   | { kind: 'not-found' }
   | { kind: 'error' }
 
+type AuthViewerState = {
+  userId: string | null
+  userType: string | null
+  resolved: boolean
+}
+
 export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
   const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(() =>
     initialDeal && initialDeal.id === dealId
@@ -38,8 +44,11 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
     dealId: string
     initialDeal: Deal | undefined
   } | null>(null)
-  const [userType, setUserType] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [authViewer, setAuthViewer] = useState<AuthViewerState>({
+    userId: null,
+    userType: null,
+    resolved: false,
+  })
   const [partyData, setPartyData] = useState<{
     key: string
     pymeReputation: Reputation | null
@@ -54,6 +63,14 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
   const requestSequenceRef = useRef(0)
   const lastCommittedSequenceRef = useRef(0)
   const dealRequestSequencesRef = useRef(new WeakMap<Deal, number>())
+  const getEscrowRef = useRef(getEscrowByContractIds)
+
+  useEffect(() => {
+    getEscrowRef.current = getEscrowByContractIds
+  }, [getEscrowByContractIds])
+
+  const userId = authViewer.userId
+  const userType = authViewer.userType
 
   const loadDeal = useCallback(async (id: string): Promise<DealLoadResult> => {
     try {
@@ -126,24 +143,62 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
   }, [dealId, initialDeal])
 
   useEffect(() => {
-    const loadUserProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        setUserType(null)
-        setUserId(null)
+    let cancelled = false
+    let authSeq = 0
+
+    const resolveViewerFromUserId = async (nextUserId: string | null) => {
+      const seq = ++authSeq
+      if (!nextUserId) {
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({ userId: null, userType: null, resolved: true })
         return
       }
-      setUserId(user.id)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .single()
-      setUserType(profile?.user_type ?? null)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', nextUserId)
+          .single()
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({
+          userId: nextUserId,
+          userType: profile?.user_type ?? null,
+          resolved: true,
+        })
+      } catch {
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({ userId: nextUserId, userType: null, resolved: true })
+      }
     }
-    loadUserProfile()
+
+    const loadUserProfile = async () => {
+      const loadSeq = ++authSeq
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (cancelled || loadSeq !== authSeq) return
+        await resolveViewerFromUserId(user?.id ?? null)
+      } catch {
+        if (cancelled || loadSeq !== authSeq) return
+        setAuthViewer({ userId: null, userType: null, resolved: true })
+      }
+    }
+
+    void loadUserProfile()
+
+    const authListener =
+      typeof supabase.auth.onAuthStateChange === 'function'
+        ? supabase.auth.onAuthStateChange((event, session) => {
+            if (cancelled || event === 'INITIAL_SESSION') return
+            void resolveViewerFromUserId(session?.user?.id ?? null)
+          })
+        : null
+
+    return () => {
+      cancelled = true
+      authListener?.data?.subscription?.unsubscribe()
+    }
   }, [supabase])
 
   useEffect(() => {
@@ -186,23 +241,25 @@ export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
     }
   }, [dealId, initialDeal, loadDeal, reloadRequest])
 
-  const matchingLoadState = dealLoadState?.dealId === dealId
-    ? dealLoadState
-    : initialDeal && initialDeal.id === dealId
-      ? { status: 'success' as const, dealId, deal: initialDeal }
-      : null
+  const hasMatchingInitialDeal = Boolean(initialDeal && initialDeal.id === dealId)
+  const matchingLoadState =
+    dealLoadState?.dealId === dealId
+      ? dealLoadState
+      : initialDeal && initialDeal.id === dealId
+        ? { status: 'success' as const, dealId, deal: initialDeal }
+        : null
   const deal = matchingLoadState?.status === 'success' ? matchingLoadState.deal : null
   const isLoading = Boolean(
-    dealId && (!matchingLoadState || matchingLoadState.status === 'loading'),
+    dealId &&
+      matchingLoadState?.status !== 'error' &&
+      matchingLoadState?.status !== 'not-found' &&
+      (!matchingLoadState ||
+        matchingLoadState.status === 'loading' ||
+        (!hasMatchingInitialDeal && !authViewer.resolved)),
   )
   const loadError = matchingLoadState?.status === 'error'
 
   const escrowAddress = deal?.escrowAddress ?? ''
-  const getEscrowRef = useRef(getEscrowByContractIds)
-  useEffect(() => {
-    getEscrowRef.current = getEscrowByContractIds
-  }, [getEscrowByContractIds])
-
   const pymeId = deal?.pymeId
   const supplierOwnerId = deal?.supplierOwnerId
   const partyLookupKey = deal
