@@ -32,6 +32,7 @@
     "main": "Main",
     "marketing": "Landing page",
     "openMenu": "Open menu",
+    "skipToContent": "Skip to content",
     "whyMercato": "Why Mercato",
     "roles": "Who it's for",
     "builtWith": "Built with",
@@ -3462,5 +3463,11 @@
     "directoryTitle": "Unable to load directory",
     "directoryDescription": "The directory listings could not be loaded. Please try again.",
     "diagnosticLabel": "Error reference"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or may have been moved.",
+    "backHome": "Back to home",
+    "browseDeals": "Browse deals"
   }
 }

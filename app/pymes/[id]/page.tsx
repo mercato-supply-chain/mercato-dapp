@@ -128,7 +128,7 @@ export default async function SmbDetailPage({
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <div className="container mx-auto max-w-5xl px-4 py-8">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-5xl px-4 py-8">
 
         {/* Back link */}
         <div className="mb-6">
@@ -307,7 +307,7 @@ export default async function SmbDetailPage({
           </CardContent>
         </Card>
 
-      </div>
+      </main>
     </div>
   )
 }

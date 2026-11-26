@@ -10,7 +10,7 @@ export default async function InvestorsLoading() {
   return (
     <div className="flex min-h-screen flex-col" aria-busy>
       <Navigation />
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold tracking-tight">
             {tr(messages, 'investorsPage.title')}
@@ -18,7 +18,7 @@ export default async function InvestorsLoading() {
           <p className="text-muted-foreground">{tr(messages, 'investorsPage.subtitle')}</p>
         </div>
         <InvestorsSkeleton />
-      </div>
+      </main>
     </div>
   )
 }

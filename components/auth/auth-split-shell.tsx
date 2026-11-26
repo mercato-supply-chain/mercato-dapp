@@ -74,7 +74,7 @@ export function AuthSplitShell({
           </p>
         </div>
 
-        <main className="flex flex-1 flex-col justify-center px-5 pb-16 pt-4 sm:px-10 lg:px-16 xl:px-24">
+        <main id="main" tabIndex={-1} className="flex flex-1 flex-col justify-center px-5 pb-16 pt-4 sm:px-10 lg:px-16 xl:px-24">
           <div className="mx-auto w-full max-w-[26rem]">{children}</div>
         </main>
       </div>

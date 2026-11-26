@@ -51,27 +51,21 @@ export default function HomePage() {
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero deal={
-        <Suspense fallback={<HeroDealSheet deal={sampleHeroDeal()} className="hero-stagger-4 w-full lg:justify-self-end" />}>
-          <LandingHeroDeal />
-        </Suspense>
-      } stats={
-        <Suspense fallback={<HeroStatsBar />}>
-          <LandingStats />
-        </Suspense>
-      } />
+      <main id="main" tabIndex={-1} className="flex-1">
+        <LandingHero deal={heroDeal} stats={platformStats} />
 
-      <LandingRoles />
+        <LandingRoles />
 
-      <LandingRateComparison />
+        <LandingRateComparison />
 
-      <section className="border-t border-border/50 bg-background">
-        <LandingLiveDeals />
-      </section>
+        <section className="border-t border-border/50 bg-background">
+          <LandingLiveDeals />
+        </section>
 
-      <LandingFaq />
+        <LandingFaq />
 
-      <LandingPartnersStrip />
+        <LandingPartnersStrip />
+      </main>
 
       <LandingFooter />
     </div>

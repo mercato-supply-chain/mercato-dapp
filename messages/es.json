@@ -32,6 +32,7 @@
     "main": "Principal",
     "marketing": "Página principal",
     "openMenu": "Abrir menú",
+    "skipToContent": "Saltar al contenido",
     "whyMercato": "Por qué Mercato",
     "roles": "Quién participa",
     "builtWith": "Construido con",
@@ -3462,5 +3463,11 @@
     "directoryTitle": "No se pudo cargar el directorio",
     "directoryDescription": "No se pudieron cargar los listados del directorio. Por favor intenta de nuevo.",
     "diagnosticLabel": "Referencia del error"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o pudo haber sido movida.",
+    "backHome": "Volver al inicio",
+    "browseDeals": "Ver órdenes"
   }
 }

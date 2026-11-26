@@ -20,7 +20,16 @@
     }
   }
 
+  main#main {
+    scroll-margin-top: 4rem;
+  }
+
+  main#main:focus {
+    outline: none;
+  }
+
   :root {
+    color-scheme: light;
     --pollar-brand-overlay-z-index: 80;
     --background: 0 0% 100%;
     --foreground: 150 15% 8%;
@@ -83,6 +92,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     /* Noir base — neutral blacks; green reserved for brand accents */
     --background: 0 0% 3.5%;
     --foreground: 0 0% 96%;

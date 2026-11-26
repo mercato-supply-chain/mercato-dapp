@@ -78,7 +78,7 @@ export async function BlogIndexView() {
 
   return (
     <BlogLayout>
-      <main className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:py-16">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:py-16">
         <BlogBreadcrumbs items={[{ label: 'Home', href: '/' }, { label: copy.title }]} />
 
         <div className="mb-12 max-w-3xl">
@@ -119,7 +119,7 @@ export async function BlogPostView({ slug }: { slug: string }) {
 
   return (
     <BlogLayout>
-      <main className="container mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:py-16">
+      <main id="main" tabIndex={-1} className="container mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:py-16">
         <BlogBreadcrumbs
           items={[
             { label: 'Home', href: '/' },

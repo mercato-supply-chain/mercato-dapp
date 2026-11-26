@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { getDictionary } from '@/lib/i18n/dictionaries'
 import { getServerLocale } from '@/lib/i18n/server'
 import { UserTypeGate } from '@/components/user-type-gate'
+import { SkipLink } from '@/components/a11y/skip-link'
 import './globals.css'
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -94,6 +95,7 @@ export default async function RootLayout({
         <JsonLd data={organizationSchema} />
         <JsonLd data={websiteSchema} />
         <AppProviders locale={locale} messages={messages} navAuth={navAuth}>
+          <SkipLink />
           <UserTypeGate />
           {children}
           <Toaster />
