@@ -2522,11 +2522,12 @@
   },
   "landing": {
     "hero": {
-      "badge": "We fund real production",
-      "titleLine1": "Fund a real order.",
-      "titleLine2": "Get repaid with yield.",
-      "description": "An SME needs inventory. Investors pay the supplier's invoice up front, and the SME repays principal plus yield through an on-chain escrow.",
-      "primaryCta": "Explore opportunities",
+      "badge": "Escrow on Stellar",
+      "titleLine1": "Pay the supplier today.",
+      "titleLine2": "Get repaid from the order.",
+      "description": "An SME needs inventory. You fund the supplier’s invoice in USDC. The SME repays principal plus yield through on-chain escrow.",
+      "primaryCta": "Browse open orders",
+      "flowLink": "See how a deal moves",
       "secondaryCta": "Fund an order",
       "deal": {
         "ariaLabel": "Featured deal",
@@ -2537,6 +2538,7 @@
         "buyer": "Buyer (SME)",
         "supplier": "Supplier",
         "invoice": "Invoice amount",
+        "asset": "USDC",
         "invoiceHint": "Paid to the supplier when the deal is funded",
         "investorReceives": "Investor receives",
         "investorHint": "{principal} principal + {yield} yield after {days} days",
@@ -2611,6 +2613,15 @@
           "deltaLive": "Live from platform deals"
         }
       }
+    },
+    "network": {
+      "testnet": "testnet",
+      "mainnet": "mainnet",
+      "healthy": "Stellar {network} is live",
+      "degraded": "Stellar {network} is unreachable",
+      "ledger": "Ledger {ledger}",
+      "protocol": "Protocol {version}",
+      "explorer": "Open Stellar Expert"
     },
     "roles": {
       "eyebrow": "Who it's for",

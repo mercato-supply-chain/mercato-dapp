@@ -149,7 +149,7 @@ function AccessPill({ level, t }: { level: AccessLevel; t: (key: string) => stri
   }[level]
 
   return (
-    <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide', config.className)}>
+    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', config.className)}>
       {config.label}
     </span>
   )
@@ -194,16 +194,14 @@ export function LandingRateComparison() {
           )}
         >
           <div className="mb-12 max-w-3xl md:mb-16">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-mid dark:text-brand-light">
+            <p className="mb-3 text-sm font-medium text-brand-mid dark:text-brand-light">
               {t('landing.rates.eyebrow')}
             </p>
             <h2
               id="rate-comparison-heading"
               className="font-display mb-5 text-[clamp(2rem,5vw,3.25rem)] font-normal leading-[1.06] tracking-tight text-foreground text-balance"
             >
-              {t('landing.rates.titleLine1')}
-              <br />
-              <span className="text-brand-mid dark:text-brand-light">{t('landing.rates.titleAccent')}</span>
+              {t('landing.rates.titleLine1')} {t('landing.rates.titleAccent')}
             </h2>
             <p className="text-lg leading-relaxed text-muted-foreground">
               {t('landing.rates.description', { apr: t('landing.rates.aprHighlight') })}

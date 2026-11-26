@@ -2522,11 +2522,12 @@
   },
   "landing": {
     "hero": {
-      "badge": "Financiamos producción real",
-      "titleLine1": "Financia una orden real.",
-      "titleLine2": "Cobra con rendimiento.",
-      "description": "Una PyME necesita inventario. Los inversionistas pagan la factura del proveedor por adelantado y la PyME devuelve el capital más rendimiento mediante un escrow on-chain.",
-      "primaryCta": "Explorar oportunidades",
+      "badge": "Escrow en Stellar",
+      "titleLine1": "Págale al proveedor hoy.",
+      "titleLine2": "Cobra con el pedido.",
+      "description": "Una PyME necesita inventario. Tú financias la factura del proveedor en USDC. La PyME devuelve capital más rendimiento mediante un escrow on-chain.",
+      "primaryCta": "Ver órdenes abiertas",
+      "flowLink": "Cómo se mueve un trato",
       "secondaryCta": "Financiar una orden",
       "deal": {
         "ariaLabel": "Operación destacada",
@@ -2537,6 +2538,7 @@
         "buyer": "Comprador (PyME)",
         "supplier": "Proveedor",
         "invoice": "Monto de la factura",
+        "asset": "USDC",
         "invoiceHint": "Se paga al proveedor cuando se financia la operación",
         "investorReceives": "El inversionista recibe",
         "investorHint": "{principal} de capital + {yield} de rendimiento en {days} días",
@@ -2611,6 +2613,15 @@
           "deltaLive": "Datos en vivo de la plataforma"
         }
       }
+    },
+    "network": {
+      "testnet": "testnet",
+      "mainnet": "mainnet",
+      "healthy": "Stellar {network} está en línea",
+      "degraded": "Stellar {network} no responde",
+      "ledger": "Ledger {ledger}",
+      "protocol": "Protocolo {version}",
+      "explorer": "Abrir Stellar Expert"
     },
     "roles": {
       "eyebrow": "Quién participa",

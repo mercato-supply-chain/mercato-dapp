@@ -20,7 +20,6 @@ type RoleId = 'sme' | 'investor' | 'supplier'
 
 const ROLES: {
   id: RoleId
-  num: string
   label: string
   icon: React.ElementType
   headline: string
@@ -28,14 +27,9 @@ const ROLES: {
   body: string
   bullets: string[]
   cta: { label: string; href: string }
-  accent: string
-  accentBorder: string
-  panelBg: string
-  watermark: string
 }[] = [
   {
     id: 'sme',
-    num: '01',
     label: 'SMEs',
     icon: Zap,
     headline: 'Stop waiting on capital.',
@@ -47,14 +41,9 @@ const ROLES: {
       'Repay from inventory sales',
     ],
     cta: { label: 'Create your first deal', href: '/auth/sign-up' },
-    accent: 'text-brand-mid dark:text-brand-light',
-    accentBorder: 'border-brand-mid bg-brand-mid',
-    panelBg: 'bg-gradient-to-br from-brand-ultra via-background to-brand-pale/40 dark:from-[hsl(0,0%,5%)] dark:via-card dark:to-background',
-    watermark: 'text-brand-mid/10 dark:text-brand-light/10',
   },
   {
     id: 'investor',
-    num: '02',
     label: 'Investors',
     icon: TrendingUp,
     headline: 'Yield on real trade.',
@@ -66,14 +55,9 @@ const ROLES: {
       '30–90 day terms',
     ],
     cta: { label: 'Browse open deals', href: '/deals' },
-    accent: 'text-emerald-700 dark:text-emerald-400',
-    accentBorder: 'border-emerald-600 bg-emerald-600',
-    panelBg: 'bg-gradient-to-br from-emerald-50/90 via-background to-teal-50/30 dark:from-emerald-950/20 dark:via-card dark:to-background',
-    watermark: 'text-emerald-600/10 dark:text-emerald-400/10',
   },
   {
     id: 'supplier',
-    num: '03',
     label: 'Suppliers',
     icon: Package,
     headline: 'Get paid as you deliver.',
@@ -85,10 +69,6 @@ const ROLES: {
       'Repeat buyers on Mercato',
     ],
     cta: { label: 'Join as supplier', href: '/auth/sign-up' },
-    accent: 'text-amber-800 dark:text-amber-400',
-    accentBorder: 'border-amber-600 bg-amber-600',
-    panelBg: 'bg-gradient-to-br from-amber-50/80 via-background to-orange-50/25 dark:from-amber-950/15 dark:via-card dark:to-background',
-    watermark: 'text-amber-600/10 dark:text-amber-400/10',
   },
 ]
 
@@ -97,7 +77,7 @@ function SmeMockup() {
   return (
     <div className="rounded-2xl border border-border/70 bg-card shadow-elevated">
       <div className="border-b border-border bg-brand-ultra/80 px-4 py-3 dark:bg-white/[0.04]">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-mid">{t('landing.roles.sme.mockupTitle')}</p>
+        <p className="text-xs font-medium text-brand-mid">{t('landing.roles.sme.mockupTitle')}</p>
         <p className="text-sm font-bold text-foreground">{t('landing.roles.sme.mockupSubtitle')}</p>
       </div>
       <div className="space-y-3 p-4">
@@ -235,13 +215,11 @@ export function LandingRoles() {
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
             )}
           >
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-mid">
+            <p className="mb-3 text-sm font-medium text-brand-mid">
               {t('landing.roles.eyebrow')}
             </p>
             <h2 className="font-display max-w-2xl text-[clamp(2rem,5vw,3.25rem)] font-normal leading-[1.05] tracking-tight text-foreground text-balance">
-              {t('landing.roles.titleLine1')}
-              <br />
-              <span className="text-muted-foreground">{t('landing.roles.titleLine2')}</span>
+              {t('landing.roles.titleLine1')} {t('landing.roles.titleLine2')}
             </h2>
           </div>
 
@@ -290,7 +268,7 @@ export function LandingRoles() {
                       type="button"
                       onClick={() => selectRole(r.id)}
                       className={cn(
-                        'group relative flex flex-1 flex-col items-start gap-3 border-b border-border/60 px-6 py-8 text-left transition-all duration-300 last:border-b-0',
+                        'group relative flex flex-1 flex-col items-start gap-3 border-b border-border/60 px-6 py-8 text-left transition-colors last:border-b-0',
                         isActive
                           ? 'bg-background'
                           : 'hover:bg-background/60',
@@ -299,17 +277,14 @@ export function LandingRoles() {
                     >
                       <span
                         className={cn(
-                          'absolute left-0 top-6 bottom-6 w-1 rounded-r-full transition-all duration-300',
-                          isActive ? r.accentBorder : 'bg-transparent',
+                          'absolute left-0 top-6 bottom-6 w-1 rounded-r-full',
+                          isActive ? 'bg-brand-mid' : 'bg-transparent',
                         )}
                         aria-hidden
                       />
-                      <span className="font-display text-3xl text-muted-foreground/30 transition-colors group-aria-current:text-brand-mid/40">
-                        {r.num}
-                      </span>
                       <span className="flex items-center gap-2">
                         <RIcon
-                          className={cn('h-5 w-5', isActive ? r.accent : 'text-muted-foreground')}
+                          className={cn('h-5 w-5', isActive ? 'text-brand-mid dark:text-brand-light' : 'text-muted-foreground')}
                           aria-hidden
                         />
                         <span
@@ -332,38 +307,18 @@ export function LandingRoles() {
               {/* Detail panel */}
               <div
                 key={panelKey}
-                className={cn(
-                  'tab-panel-enter relative min-h-[32rem] overflow-hidden p-6 md:p-10 lg:min-h-[520px]',
-                  role.panelBg,
-                )}
+                className="tab-panel-enter relative min-h-[32rem] overflow-hidden bg-background p-6 md:p-10 lg:min-h-[520px]"
               >
-                <span
-                  className={cn(
-                    'pointer-events-none absolute -right-4 -top-6 font-display text-[12rem] font-normal leading-none select-none',
-                    role.watermark,
-                  )}
-                  aria-hidden
-                >
-                  {role.num}
-                </span>
-
                 <div className="relative grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
                   <div className="order-2 lg:order-1">{MOCKUPS[active]}</div>
 
                   <div className="order-1 lg:order-2">
-                    <p
-                      className={cn(
-                        'mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em]',
-                        role.accent,
-                      )}
-                    >
+                    <p className="mb-3 flex items-center gap-2 text-sm font-medium text-brand-mid dark:text-brand-light">
                       <Icon className="h-4 w-4" aria-hidden />
                       {t('landing.roles.forRole', { role: role.label })}
                     </p>
                     <h3 className="font-display mb-4 text-3xl font-normal leading-[1.08] tracking-tight text-foreground md:text-4xl">
-                      {role.headline}
-                      <br />
-                      <span className="text-muted-foreground">{role.subhead}</span>
+                      {role.headline} {role.subhead}
                     </h3>
                     <p className="mb-6 text-base leading-relaxed text-muted-foreground md:text-lg">
                       {role.body}
@@ -371,20 +326,12 @@ export function LandingRoles() {
                     <ul className="mb-8 space-y-3">
                       {role.bullets.map((b) => (
                         <li key={b} className="flex items-start gap-3 text-sm text-foreground/90">
-                          <CheckCircle2 className={cn('mt-0.5 h-4 w-4 shrink-0', role.accent)} aria-hidden />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-mid dark:text-brand-light" aria-hidden />
                           {b}
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      asChild
-                      className={cn(
-                        'rounded-full px-6 font-semibold text-white shadow-md',
-                        active === 'sme' && 'bg-brand-mid hover:bg-brand-dark',
-                        active === 'investor' && 'bg-emerald-600 hover:bg-emerald-700',
-                        active === 'supplier' && 'bg-amber-600 hover:bg-amber-700',
-                      )}
-                    >
+                    <Button asChild>
                       <Link href={role.cta.href}>
                         {role.cta.label}
                         <ArrowRight className="ml-2 h-4 w-4" aria-hidden />

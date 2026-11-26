@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { mapDealFromDb, type DealRow } from '@/lib/deals'
 import { pickHeroDeal, sampleHeroDeal, type LandingHeroDeal } from '@/lib/landing/hero-deal'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 
 export type { LandingHeroDeal } from '@/lib/landing/hero-deal'
 
@@ -10,7 +10,7 @@ const CANDIDATE_LIMIT = 6
 
 async function fetchLandingHeroDeal(): Promise<LandingHeroDeal> {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
     const { data, error } = await supabase
       .from('deals')
       .select('*, pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name)')

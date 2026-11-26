@@ -50,7 +50,7 @@ export function LandingFaq() {
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
             )}
           >
-            <p className="mb-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-mid">
+            <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-brand-mid">
               <MessageCircleQuestion className="h-3.5 w-3.5" aria-hidden />
               {t('landing.faq.eyebrow')}
             </p>
@@ -58,8 +58,7 @@ export function LandingFaq() {
               id="landing-faq-heading"
               className="font-display text-[clamp(1.85rem,4vw,2.75rem)] font-normal leading-[1.08] tracking-tight text-foreground text-balance"
             >
-              {t('landing.faq.titlePrefix')}{' '}
-              <span className="text-brand-mid dark:text-brand-light">{t('landing.faq.titleAccent')}</span>
+              {t('landing.faq.titlePrefix')} {t('landing.faq.titleAccent')}
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
               {t('landing.faq.description')}

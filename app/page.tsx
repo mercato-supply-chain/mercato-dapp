@@ -9,13 +9,7 @@ import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
-import { LandingStats } from '@/components/landing/landing-stats'
-import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
-import { LandingHeroDeal } from '@/components/landing/landing-hero-deal'
-import { HeroDealSheet } from '@/components/landing/hero-deal-sheet'
-import { sampleHeroDeal } from '@/lib/landing/hero-deal'
-
-export const dynamic = 'force-dynamic'
+import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
 
 export async function generateMetadata() {
   return {
@@ -44,6 +38,25 @@ const breadcrumbSchema = {
   ],
 }
 
+function HowItWorksFallback() {
+  return <div className="h-16 w-full" aria-hidden />
+}
+
+function LiveDealsFallback() {
+  return (
+    <section className="py-16 md:py-20">
+      <div className="container mx-auto px-4">
+        <div className="mb-8 h-24 rounded bg-muted/40" />
+        <div className="space-y-0 border-t border-border">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="h-28 border-b border-border bg-muted/20" />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-background">
@@ -52,33 +65,26 @@ export default function HomePage() {
       <LandingHashScroll />
 
       <main id="main" tabIndex={-1} className="flex-1">
-        <LandingHero
-          deal={
-            <Suspense
-              fallback={
-                <HeroDealSheet
-                  deal={sampleHeroDeal()}
-                  className="hero-stagger-4 w-full lg:justify-self-end"
-                />
-              }
-            >
-              <LandingHeroDeal />
+        <LandingHero />
+
+        <section
+          id="how-it-works"
+          className="landing-section-anchor border-b border-border bg-background"
+        >
+          <div className="container mx-auto px-4 py-8 md:py-10">
+            <Suspense fallback={<HowItWorksFallback />}>
+              <HeroHowItWorksSteps />
             </Suspense>
-          }
-          stats={
-            <Suspense fallback={<HeroStatsBar />}>
-              <LandingStats />
-            </Suspense>
-          }
-        />
+          </div>
+        </section>
 
         <LandingRoles />
 
         <LandingRateComparison />
 
-        <section className="border-t border-border/50 bg-background">
+        <Suspense fallback={<LiveDealsFallback />}>
           <LandingLiveDeals />
-        </section>
+        </Suspense>
 
         <LandingFaq />
 

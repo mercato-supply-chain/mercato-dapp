@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
-import { createClient } from '@supabase/supabase-js'
 import type { LandingPlatformStats } from '@/lib/landing/platform-stats'
+import { createPublicClient } from '@/lib/supabase/public'
 
 export type { LandingPlatformStats } from '@/lib/landing/platform-stats'
 
@@ -36,13 +36,7 @@ function sumFundedAmounts(
 }
 
 async function fetchLandingPlatformStats(): Promise<LandingPlatformStats> {
-  // Public aggregates must not depend on a visitor's cookies or session. This
-  // anonymous client retains RLS and is safe to share across requests.
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
-  )
+  const supabase = createPublicClient()
   const { thisMonthIso, lastMonthIso } = monthBounds()
 
   const results = await Promise.all([

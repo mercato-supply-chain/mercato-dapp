@@ -17,7 +17,7 @@ export function LandingPartnersStrip({ variant = 'section' }: LandingPartnersStr
     <div className={cn('mx-auto max-w-6xl', isHero && 'px-4')}>
       <p
         className={cn(
-          'text-center text-[11px] font-semibold uppercase tracking-[0.2em]',
+          'text-center text-sm font-medium',
           isHero ? 'mb-6 text-brand-mid/60 dark:text-white/40' : 'mb-8 text-brand-mid/60',
         )}
       >

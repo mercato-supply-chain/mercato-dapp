@@ -1,6 +1,5 @@
 'use client'
 
-import { BadgeCheck, Building2, CircleDollarSign, Package } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
 import {
   formatStatCount,
@@ -9,10 +8,10 @@ import {
 } from '@/lib/landing/platform-stats'
 
 const STATS = [
-  { key: 'orders', icon: Package, label: 'landing.hero.stats.orders.label' },
-  { key: 'smes', icon: Building2, label: 'landing.hero.stats.smes.label' },
-  { key: 'suppliers', icon: BadgeCheck, label: 'landing.hero.stats.suppliers.label' },
-  { key: 'capital', icon: CircleDollarSign, label: 'landing.hero.stats.capital.label' },
+  { key: 'orders', label: 'landing.hero.stats.orders.label' },
+  { key: 'smes', label: 'landing.hero.stats.smes.label' },
+  { key: 'suppliers', label: 'landing.hero.stats.suppliers.label' },
+  { key: 'capital', label: 'landing.hero.stats.capital.label' },
 ] as const
 
 type HeroStatsBarProps = {
@@ -76,26 +75,28 @@ export function HeroStatsBar({ stats }: HeroStatsBarProps) {
   })
 
   return (
-    <div aria-busy={!stats} className="hero-stats-grid grid w-full grid-cols-2 gap-x-3 gap-y-4 min-[480px]:grid-cols-2 sm:gap-x-4 lg:grid-cols-4 lg:items-start lg:gap-x-4 lg:gap-y-0 xl:gap-x-5">
-      {items.map(({ key, icon: Icon, label, value, delta }) => (
-        <div key={key} className="flex min-w-0 items-start gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-pale text-brand-mid md:h-8 md:w-8 dark:bg-brand-mid/20 dark:text-brand-light">
-            <Icon className="h-3 w-3 md:h-3.5 md:w-3.5" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium leading-tight text-muted-foreground dark:text-white/65">
-              {t(label)}
+    <div
+      aria-busy={!stats}
+      className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 sm:gap-x-8"
+    >
+      {items.map(({ key, label, value, delta }) => (
+        <div key={key} className="min-w-0">
+          <p className="font-display text-2xl tabular-nums tracking-tight text-foreground md:text-[1.65rem]">
+            {value ?? (
+              <span aria-hidden className="inline-block h-[1em] w-16 rounded bg-muted motion-safe:animate-pulse" />
+            )}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t(label)}</p>
+          {delta ? (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground/80" title={delta}>
+              {delta}
             </p>
-            <p className="mt-0.5 font-display text-base font-normal tracking-tight text-foreground min-[480px]:text-lg md:text-xl lg:text-[1.35rem] dark:text-white">
-              {value ?? <span aria-hidden className="inline-block h-[1em] w-16 rounded bg-muted motion-safe:animate-pulse" />}
-            </p>
+          ) : (
             <span
-              title={delta ?? undefined}
-              className="mt-2 inline-flex w-fit max-w-full items-center rounded-full border border-brand-mid/25 bg-brand-pale px-2.5 py-1 text-[11px] font-semibold leading-snug text-brand-dark dark:border-brand-light/25 dark:bg-brand-mid/30 dark:text-brand-light"
-            >
-              {delta ?? <span aria-hidden className="inline-block h-[1em] w-24 rounded bg-brand-mid/10 motion-safe:animate-pulse" />}
-            </span>
-          </div>
+              aria-hidden
+              className="mt-0.5 inline-block h-3 w-24 rounded bg-muted/70 motion-safe:animate-pulse"
+            />
+          )}
         </div>
       ))}
     </div>

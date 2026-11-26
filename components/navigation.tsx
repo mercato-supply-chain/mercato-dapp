@@ -19,7 +19,6 @@ import { useI18n } from '@/lib/i18n/provider'
 import { useNavAuth } from '@/components/providers/nav-auth-provider'
 
 const NAV_HEIGHT_PX = 64
-const SCROLL_FADE_DISTANCE = 80
 
 export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const router = useRouter()
@@ -27,14 +26,18 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const { user, profile, ready: authReady, clear: clearNavAuth } = useNavAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const subscribeScroll = useCallback((onStoreChange: () => void) => {
-    window.addEventListener('scroll', onStoreChange, { passive: true })
-    return () => window.removeEventListener('scroll', onStoreChange)
-  }, [])
-  const scrollFade = useSyncExternalStore(
+  const subscribeScroll = useCallback(
+    (onStoreChange: () => void) => {
+      if (overHero) return () => {}
+      window.addEventListener('scroll', onStoreChange, { passive: true })
+      return () => window.removeEventListener('scroll', onStoreChange)
+    },
+    [overHero],
+  )
+  const isScrolled = useSyncExternalStore(
     subscribeScroll,
-    () => Math.min(1, window.scrollY / SCROLL_FADE_DISTANCE),
-    () => 0,
+    () => (overHero ? true : window.scrollY > 8),
+    () => overHero,
   )
 
   const wallet = useOptionalWallet()
@@ -82,29 +85,12 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
       <header
         className={cn(
           'fixed inset-x-0 top-0 z-50 w-full',
-          'transition-[box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none',
-          (overHero || scrollFade > 0.02) && 'border-b',
+          'transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 ease-out motion-reduce:transition-none',
+          (overHero || isScrolled) && 'border-b',
+          overHero || isScrolled
+            ? 'border-border/60 bg-background shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]'
+            : 'border-transparent bg-transparent',
         )}
-        style={
-          overHero
-            ? {
-                // Solid themed bar (white in light, near-black in dark) — the
-                // hero photo sits below it rather than behind it.
-                backgroundColor: 'hsl(var(--background))',
-                borderColor: 'hsl(var(--border) / 0.6)',
-                boxShadow: '0 1px 3px hsl(var(--foreground) / 0.04)',
-              }
-            : {
-                backgroundColor: `hsl(var(--background) / ${scrollFade * 0.62})`,
-                borderColor:
-                  scrollFade > 0.02 ? `hsl(var(--border) / ${scrollFade * 0.45})` : 'transparent',
-                boxShadow:
-                  scrollFade > 0.25
-                    ? `0 1px 3px hsl(var(--foreground) / ${scrollFade * 0.04})`
-                    : 'none',
-                backdropFilter: scrollFade > 0.08 ? `blur(${Math.round(12 * scrollFade)}px)` : 'none',
-              }
-        }
       >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <div className="flex min-w-0 items-center gap-4 lg:gap-8">
