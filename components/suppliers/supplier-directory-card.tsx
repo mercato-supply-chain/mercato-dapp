@@ -26,6 +26,7 @@ export function SupplierDirectoryCard({ supplier }: SupplierDirectoryCardProps) 
     <Link
       href={`/suppliers/${supplier.id}`}
       className="group flex flex-col rounded-2xl border-2 border-border bg-card transition-all hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0px 380px' }}
     >
       {/* Card header */}
       <div className="flex-1 p-5">

@@ -58,6 +58,11 @@ export function DealCard({ deal }: { deal: Deal; listIndex?: number }) {
         'hover:bg-muted/30 sm:px-3',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0px 420px',
+        ...(staggerMs != null ? { animationDelay: `${staggerMs}ms` } : undefined),
+      }}
     >
       <div className="min-w-0">
         {(deal.pymeName || deal.supplier) && (

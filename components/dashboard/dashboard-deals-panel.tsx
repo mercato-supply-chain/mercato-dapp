@@ -100,7 +100,7 @@ export function DashboardDealsPanel({
         </Button>
       </div>
 
-      <div className="space-y-3 lg:hidden">
+      <div className="space-y-3 lg:hidden" style={{ contain: 'content' }}>
         {deals.map((deal) => (
           <DealCardMobile
             key={deal.id}
@@ -115,7 +115,7 @@ export function DashboardDealsPanel({
 
       <Card className="hidden overflow-hidden lg:block">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ contain: 'content' }}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -211,6 +211,7 @@ function DealCardMobile({
     <Link
       href={`/deals/${deal.id}`}
       className="block rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all hover:border-brand-light/40 hover:shadow-md"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0px 120px' }}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <p className="font-semibold leading-snug">{deal.product_name || deal.title || labels.dealUntitled}</p>
@@ -244,7 +245,10 @@ function DealTableRow({
   const statusLabel = statusLabels[deal.status] ?? deal.status
 
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-muted/20">
+    <tr
+      className="border-b border-border last:border-0 hover:bg-muted/20"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0px 80px' }}
+    >
       <td className="p-4">
         <Link href={`/deals/${deal.id}`} className="font-medium hover:underline">
           {deal.product_name || deal.title || labels.dealUntitled}

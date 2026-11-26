@@ -429,6 +429,11 @@ export function DealsBrowse({
           </div>
         ) : deals.length > 0 ? (
           <>
+            <div
+              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+              aria-busy={isLoading}
+              style={{ contain: 'content' }}
+            >
             <div aria-busy={isLoading}>
               {deals.map((deal, index) => (
                 <DealCard key={deal.id} deal={deal} listIndex={index} />
