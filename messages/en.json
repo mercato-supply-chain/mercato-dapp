@@ -98,7 +98,7 @@
     "badge": "Built on Stellar · Direct supplier pay + repayment escrow",
     "titlePrefix": "Supply chain finance,",
     "titleAccent": "on-chain",
-    "description": "PyMEs get working capital, investors earn 8-15% APR on USDC deals, and suppliers receive payment up front — with platform fees on investment and repayment, secured on Stellar.",
+    "description": "PyMEs get working capital, investors fund USDC purchase orders, and suppliers receive payment up front — with platform fees on investment and repayment, secured on Stellar.",
     "primaryCta": "Get started free",
     "secondaryCta": "Explore deals",
     "trustEscrow": "Non-custodial escrow",
@@ -136,7 +136,7 @@
     "trustCard4Title": "Full on-chain proof",
     "trustCard4Body": "Every payment, milestone approval, and delivery confirmation is recorded on Stellar — verifiable by anyone, at any time, without trusting MERCATO.",
     "trustCard5Title": "USDC denominated",
-    "trustCard5Body": "All deals are denominated in USDC on Stellar — a stable, dollar-pegged asset. Investors earn 8–15% APR with no crypto-volatility exposure.",
+    "trustCard5Body": "All deals are denominated in USDC on Stellar — a stable, dollar-pegged asset — so funding is not exposed to crypto-asset volatility.",
     "trustCard6Title": "Fiat on/off ramps",
     "trustCard6Body": "Convert between local currency and USDC within the app via Etherfuse (Mexico, SPEI), Alfred Pay (LATAM), or BlindPay (global) — no third-party exchange needed.",
     "footerCopyright": "© 2026 MERCATO. Supply Chain Finance on Stellar."
@@ -2638,7 +2638,7 @@
         "label": "Investors",
         "headline": "Yield on real trade.",
         "subhead": "Not speculation.",
-        "body": "Browse open purchase orders, fund escrow on Stellar, and earn 8–15% APR while production and delivery milestones protect your capital.",
+        "body": "Browse open purchase orders and fund them on Stellar. You see each order's terms before you invest, and production and delivery milestones protect your capital.",
         "bullet1": "See exactly what you fund",
         "bullet2": "Milestone-gated releases",
         "bullet3": "30–90 day terms",
@@ -2664,22 +2664,22 @@
       "footerLine": "One purchase order links all three — pick your role and enter the flow.",
       "chooseRoleAria": "Choose your role",
       "investorMockupTitle": "Open deals",
-      "investorMockupAvg": "12.3% avg",
+      "investorMockupAvg": "Open orders",
       "smeMockupOpenCta": "Open for investors →",
       "smeMockupOrders": "156 orders"
     },
     "rates": {
       "eyebrow": "Why Mercato",
-      "titleLine1": "Bank-grade pricing.",
+      "titleLine1": "Working capital on the PO.",
       "titleAccent": "Without the bank-grade barriers.",
-      "description": "SMEs face 19–21% CAT at banks they often cannot access — or 60%+ from informal lenders. Mercato sits in the middle: {apr} on the full purchase order, validated by the deal itself — not your credit file.",
-      "aprHighlight": "18–24% APR",
+      "description": "SMEs face 19–21% CAT at banks they often cannot access — or 60%+ from informal lenders. Mercato finances the full purchase order through milestone escrow, with terms set on each deal — not a published APR.",
+      "aprHighlight": "Per purchase order",
       "stat1Value": "85%",
       "stat1Label": "of SMEs in LATAM lack access to formal bank credit",
       "stat2Value": "100%",
       "stat2Label": "of the PO financed on Mercato — not 80% like factoring",
-      "stat3Value": "18–24%",
-      "stat3Label": "APR range — comparable to banks, without their barriers",
+      "stat3Value": "Per PO",
+      "stat3Label": "Terms set on the purchase order — not a platform APR",
       "chartLabel": "Annual cost (APR / CAT)",
       "chartLegendMercato": "Mercato",
       "chartLegendAlt": "Alternatives",
@@ -2694,13 +2694,13 @@
       "closingTitle": "Mercato isn't cheaper than an informal lender — it's as {accessible} as one, priced closer to a {bank}, and built around the purchase order itself.",
       "closingAccessible": "accessible",
       "closingBank": "bank",
-      "closingDisclaimer": "Rates shown reflect verified public data (banks, business cards, factoring platforms) and Mercato's target model. Individual deal APR depends on risk, term, and milestones.",
+      "closingDisclaimer": "Rates shown for banks, cards, and factoring reflect verified public data. Mercato does not publish a platform APR — each purchase order sets its own terms.",
       "closingCta": "Start with your next PO",
       "options": {
         "mercato": {
           "label": "Mercato",
           "subtitle": "PO-backed escrow on Stellar",
-          "rate": "18–24% APR",
+          "rate": "Per purchase order",
           "requirements": "Live PO + verified supplier — no banking history",
           "caveat": "100% of the production order financed"
         },
@@ -2799,7 +2799,7 @@
       "highlight1Label": "SMEs ship faster",
       "highlight1Sub": "PO-funded in hours",
       "highlight2Label": "Investors earn yield",
-      "highlight2Sub": "8–15% on real trade",
+      "highlight2Sub": "Terms on each order",
       "highlight3Label": "Suppliers get paid",
       "highlight3Sub": "Milestone by milestone",
       "tagline": "No bank paperwork · Milestone escrow · LATAM supply chains"
@@ -2965,7 +2965,7 @@
       "event2Time": "1d ago",
       "pillSuppliers": "127 verified suppliers",
       "pillReputation": "4.8 avg reputation",
-      "pillApr": "8–15% investor APR"
+      "pillApr": "Terms on each order"
     }
   },
   "events": {

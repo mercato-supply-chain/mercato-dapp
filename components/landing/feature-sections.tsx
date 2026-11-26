@@ -105,9 +105,9 @@ function InvestorMockup({ visible }: { visible: boolean }) {
   }, [visible])
 
   const deals = [
-    { company: 'Industrias NOVA', cat: 'Steel Sheets', apr: '12.5%', days: 45, amt: '$48,500', pct: 100, status: 'Funded' },
-    { company: 'GranoMex SA', cat: 'Premium Corn', apr: '10.2%', days: 30, amt: '$22,000', pct: 60, status: 'Open' },
-    { company: 'TechParts MX', cat: 'Electronics', apr: '14.1%', days: 60, amt: '$91,200', pct: 35, status: 'Open' },
+    { company: 'Industrias NOVA', cat: 'Steel Sheets', days: 45, amt: '$48,500', pct: 100, status: 'Funded' },
+    { company: 'GranoMex SA', cat: 'Premium Corn', days: 30, amt: '$22,000', pct: 60, status: 'Open' },
+    { company: 'TechParts MX', cat: 'Electronics', days: 60, amt: '$91,200', pct: 35, status: 'Open' },
   ]
 
   return (
@@ -122,7 +122,7 @@ function InvestorMockup({ visible }: { visible: boolean }) {
         </div>
         <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ background: '#e8f4ec', border: '1px solid #c8e6d0' }}>
           <TrendingUp className="h-3.5 w-3.5" style={{ color: '#267046' }} />
-          <span className="text-[11px] font-bold" style={{ color: '#1A4530' }}>Avg 12.3% APR</span>
+          <span className="text-[11px] font-bold" style={{ color: '#1A4530' }}>3 open</span>
         </div>
       </div>
       <div className="space-y-2.5 p-4">
@@ -134,8 +134,8 @@ function InvestorMockup({ visible }: { visible: boolean }) {
                 <p className="text-[10px] text-slate-400">{d.cat} · {d.days}d term</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold" style={{ color: '#267046' }}>{d.apr}</p>
-                <p className="text-[10px] text-slate-400">APR</p>
+                <p className="text-sm font-bold text-slate-700">{d.status}</p>
+                <p className="text-[10px] text-slate-400">{d.days}d</p>
               </div>
             </div>
             <div className="mb-1.5 flex items-center justify-between">
@@ -329,9 +329,9 @@ export function FeatureSections() {
         eyebrow="For Investors"
         eyebrowColor="#267046"
         headline={<>Capital that moves<br /><span className="text-muted-foreground">with real goods.</span></>}
-        body="Fund verified purchase orders and earn 8–15% APR. Your capital is tied to real economic activity — goods that move, milestones that are confirmed, and SMEs with skin in the game."
+        body="Fund verified purchase orders tied to real economic activity — goods that move, milestones that are confirmed, and SMEs with skin in the game. Each order shows its own terms before you invest."
         bullets={[
-          '8–15% APR on 30–90 day terms',
+          '30–90 day purchase-order terms',
           'See exactly what your capital is funding',
           'Milestone-secured — capital protected until delivery',
         ]}

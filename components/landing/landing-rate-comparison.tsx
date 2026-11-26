@@ -40,8 +40,8 @@ function getFinancingOptions(t: (key: string) => string): FinancingOption[] {
       label: t('landing.rates.options.mercato.label'),
       subtitle: t('landing.rates.options.mercato.subtitle'),
       rateLabel: t('landing.rates.options.mercato.rate'),
-      rateMin: 18,
-      rateMax: 24,
+      rateMin: 0,
+      rateMax: 0,
       requirements: t('landing.rates.options.mercato.requirements'),
       access: 'high',
       icon: BadgeCheck,
@@ -204,7 +204,7 @@ export function LandingRateComparison() {
               {t('landing.rates.titleLine1')} {t('landing.rates.titleAccent')}
             </h2>
             <p className="text-lg leading-relaxed text-muted-foreground">
-              {t('landing.rates.description', { apr: t('landing.rates.aprHighlight') })}
+              {t('landing.rates.description')}
             </p>
           </div>
 
@@ -256,8 +256,10 @@ export function LandingRateComparison() {
                             <div className="text-right">
                               <p
                                 className={cn(
-                                  'text-3xl font-bold tabular-nums tracking-tight',
-                                  option.mercato ? 'text-brand-mid dark:text-brand-light' : 'text-foreground',
+                                  'font-bold tracking-tight',
+                                  option.mercato
+                                    ? 'max-w-[9rem] text-right text-lg leading-tight text-brand-mid dark:text-brand-light'
+                                    : 'text-3xl tabular-nums text-foreground',
                                 )}
                               >
                                 {option.rateLabel}
@@ -266,22 +268,20 @@ export function LandingRateComparison() {
                             </div>
                           </div>
 
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                              <span>{t('landing.rates.chartLabel')}</span>
-                              <div className="flex items-center gap-4">
-                                <span className="flex items-center gap-1.5">
-                                  <span className="h-2 w-4 rounded-full bg-brand-mid" />
-                                  {t('landing.rates.chartLegendMercato')}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="h-2 w-4 rounded-full bg-muted-foreground/35" />
-                                  {t('landing.rates.chartLegendAlt')}
-                                </span>
+                          {!option.mercato ? (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                <span>{t('landing.rates.chartLabel')}</span>
+                                <div className="flex items-center gap-4">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="h-2 w-4 rounded-full bg-muted-foreground/35" />
+                                    {t('landing.rates.chartLegendAlt')}
+                                  </span>
+                                </div>
                               </div>
+                              <RateBar min={option.rateMin} max={option.rateMax} />
                             </div>
-                            <RateBar min={option.rateMin} max={option.rateMax} highlighted={option.mercato} />
-                          </div>
+                          ) : null}
 
                           <div className="grid gap-6 md:grid-cols-2">
                             <div className="rounded-2xl bg-muted/30 p-5 dark:bg-white/[0.02]">

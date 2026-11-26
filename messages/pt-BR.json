@@ -98,7 +98,7 @@
     "badge": "Na Stellar · pagamento direto ao fornecedor + escrow de repagamento",
     "titlePrefix": "Financiamento de cadeia de suprimentos,",
     "titleAccent": "on-chain",
-    "description": "PMEs recebem capital de giro, investidores ganham 8–15% APR em operações em USDC e fornecedores recebem à vista — com taxas da plataforma no investimento e no repagamento, garantido na Stellar.",
+    "description": "PMEs recebem capital de giro, investidores financiam pedidos de compra em USDC e fornecedores recebem à vista — com taxas da plataforma no investimento e no repagamento, garantido na Stellar.",
     "primaryCta": "Comece grátis",
     "secondaryCta": "Explorar operações",
     "trustEscrow": "Escrow não custodial",
@@ -136,7 +136,7 @@
     "trustCard4Title": "Prova on-chain completa",
     "trustCard4Body": "Cada pagamento, aprovação de marco e confirmação de entrega fica na Stellar — qualquer pessoa verifica, a qualquer momento, sem confiar na MERCATO.",
     "trustCard5Title": "Denominado em USDC",
-    "trustCard5Body": "Todas as operações são em USDC na Stellar — um ativo estável, pareado ao dólar. Investidores ganham 8–15% APR sem exposição à volatilidade de cripto.",
+    "trustCard5Body": "Todas as operações são em USDC na Stellar — um ativo estável, pareado ao dólar — para o financiamento não ficar exposto à volatilidade de criptoativos.",
     "trustCard6Title": "Ramps de entrada e saída",
     "trustCard6Body": "Converta moeda local e USDC no app via Etherfuse (México, SPEI), Alfred Pay (América Latina) ou BlindPay (global) — sem exchange de terceiro.",
     "footerCopyright": "© 2026 MERCATO. Financiamento de cadeia de suprimentos na Stellar."
@@ -2638,7 +2638,7 @@
         "label": "Investidores",
         "headline": "Rendimento em comércio real.",
         "subhead": "Sem especulação.",
-        "body": "Explore pedidos abertos, financie o escrow na Stellar e ganhe 8–15% APR enquanto os marcos de produção e entrega protegem o capital.",
+        "body": "Explore pedidos abertos e financie-os na Stellar. Você vê as condições de cada pedido antes de investir, e os marcos de produção e entrega protegem o capital.",
         "bullet1": "Veja exatamente o que você financia",
         "bullet2": "Liberações por marco",
         "bullet3": "Prazos de 30–90 dias",
@@ -2664,22 +2664,22 @@
       "footerLine": "Um pedido de compra liga os três — escolha sua função e entre no fluxo.",
       "chooseRoleAria": "Escolha sua função",
       "investorMockupTitle": "Operações abertas",
-      "investorMockupAvg": "média de 12,3%",
+      "investorMockupAvg": "Pedidos abertos",
       "smeMockupOpenCta": "Abrir para investidores →",
       "smeMockupOrders": "156 pedidos"
     },
     "rates": {
       "eyebrow": "Por que a Mercato",
-      "titleLine1": "Preço de banco.",
+      "titleLine1": "Capital de giro no pedido.",
       "titleAccent": "Sem as barreiras de banco.",
-      "description": "PMEs enfrentam 19–21% CAT em bancos que muitas vezes não acessam — ou 60%+ com credores informais. A Mercato fica no meio: {apr} sobre o pedido inteiro, validado pela própria operação — não pelo seu cadastro de crédito.",
-      "aprHighlight": "18–24% APR",
+      "description": "PMEs enfrentam 19–21% CAT em bancos que muitas vezes não acessam — ou 60%+ com credores informais. A Mercato financia o pedido inteiro com escrow por marcos, com condições definidas em cada operação — sem um APR publicado.",
+      "aprHighlight": "Por pedido",
       "stat1Value": "85%",
       "stat1Label": "das PMEs na América Latina não acessam crédito bancário formal",
       "stat2Value": "100%",
       "stat2Label": "do pedido financiado na Mercato — não 80% como na antecipação",
-      "stat3Value": "18–24%",
-      "stat3Label": "Faixa de APR — comparável aos bancos, sem as barreiras deles",
+      "stat3Value": "Por pedido",
+      "stat3Label": "Condições do pedido de compra — não um APR da plataforma",
       "chartLabel": "Custo anual (APR / CAT)",
       "chartLegendMercato": "Mercato",
       "chartLegendAlt": "Alternativas",
@@ -2694,13 +2694,13 @@
       "closingTitle": "A Mercato não é mais barata que um credor informal — é tão {accessible} quanto, com preço mais perto de um {bank}, e construída em torno do próprio pedido.",
       "closingAccessible": "acessível",
       "closingBank": "banco",
-      "closingDisclaimer": "As taxas refletem dados públicos verificados (bancos, cartões empresariais, plataformas de antecipação) e o modelo-alvo da Mercato. O APR de cada operação depende de risco, prazo e marcos.",
+      "closingDisclaimer": "As taxas de bancos, cartões e antecipação refletem dados públicos verificados. A Mercato não publica um APR de plataforma — cada pedido define as próprias condições.",
       "closingCta": "Comece pelo próximo pedido",
       "options": {
         "mercato": {
           "label": "Mercato",
           "subtitle": "Escrow lastreado no pedido, na Stellar",
-          "rate": "18–24% APR",
+          "rate": "Por pedido",
           "requirements": "Pedido ativo + fornecedor verificado — sem histórico bancário",
           "caveat": "100% do pedido de produção financiado"
         },
@@ -2799,7 +2799,7 @@
       "highlight1Label": "PMEs enviam mais rápido",
       "highlight1Sub": "Pedido financiado em horas",
       "highlight2Label": "Investidores ganham rendimento",
-      "highlight2Sub": "8–15% em comércio real",
+      "highlight2Sub": "Condições em cada pedido",
       "highlight3Label": "Fornecedores recebem",
       "highlight3Sub": "Marco a marco",
       "tagline": "Sem papelada de banco · escrow por marcos · cadeias da América Latina"
@@ -2965,7 +2965,7 @@
       "event2Time": "há 1 d",
       "pillSuppliers": "127 fornecedores verificados",
       "pillReputation": "reputação média 4,8",
-      "pillApr": "APR de 8–15% para o investidor"
+      "pillApr": "Condições em cada pedido"
     }
   },
   "events": {

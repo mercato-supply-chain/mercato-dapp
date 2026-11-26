@@ -98,7 +98,7 @@
     "badge": "Construido en Stellar · Escrow de Trustless Work",
     "titlePrefix": "Financiamiento de cadena de suministro,",
     "titleAccent": "on-chain",
-    "description": "Las PyMEs obtienen capital de trabajo, los inversionistas ganan 8-15% APR en órdenes USDC y los proveedores reciben pagos garantizados por hitos, todo protegido por escrow no custodial en Stellar.",
+    "description": "Las PyMEs obtienen capital de trabajo, los inversionistas financian órdenes de compra en USDC y los proveedores reciben el pago por adelantado — con comisiones de la plataforma en inversión y reembolso, asegurado en Stellar.",
     "primaryCta": "Comenzar gratis",
     "secondaryCta": "Explorar órdenes",
     "trustEscrow": "Escrow no custodial",
@@ -136,7 +136,7 @@
     "trustCard4Title": "Prueba completa on-chain",
     "trustCard4Body": "Cada pago, aprobación de hito y confirmación de entrega queda registrado en Stellar — verificable por cualquiera, en cualquier momento, sin confiar en MERCATO.",
     "trustCard5Title": "Denominado en USDC",
-    "trustCard5Body": "Todos los negocios están denominados en USDC en Stellar — un activo estable vinculado al dólar. Los inversionistas ganan 8–15% APR sin exposición a la volatilidad cripto.",
+    "trustCard5Body": "Todos los negocios están denominados en USDC en Stellar — un activo estable vinculado al dólar — así el fondeo no queda expuesto a la volatilidad de criptoactivos.",
     "trustCard6Title": "Rampas fiat",
     "trustCard6Body": "Convierte entre moneda local y USDC dentro de la app vía Etherfuse (México, SPEI), Alfred Pay (LATAM) o BlindPay (global) — sin necesidad de un exchange externo.",
     "footerCopyright": "© 2026 MERCATO. Financiamiento de cadena de suministro en Stellar."
@@ -2638,7 +2638,7 @@
         "label": "Inversionistas",
         "headline": "Rendimiento en comercio real.",
         "subhead": "No especulación.",
-        "body": "Explora órdenes de compra abiertas, financia el escrow en Stellar y gana 8–15% APR mientras los hitos de producción y entrega protegen tu capital.",
+        "body": "Explora órdenes de compra abiertas y fóndealas en Stellar. Ves las condiciones de cada orden antes de invertir, y los hitos de producción y entrega protegen tu capital.",
         "bullet1": "Ve exactamente qué financias",
         "bullet2": "Liberaciones por hitos",
         "bullet3": "Plazos de 30–90 días",
@@ -2664,22 +2664,22 @@
       "footerLine": "Una orden de compra conecta a los tres — elige tu rol y entra al flujo.",
       "chooseRoleAria": "Elige tu rol",
       "investorMockupTitle": "Órdenes abiertas",
-      "investorMockupAvg": "12.3% prom.",
+      "investorMockupAvg": "Órdenes abiertas",
       "smeMockupOpenCta": "Abrir a inversionistas →",
       "smeMockupOrders": "156 órdenes"
     },
     "rates": {
       "eyebrow": "Por qué Mercato",
-      "titleLine1": "Precios de banco.",
+      "titleLine1": "Capital de trabajo sobre la OC.",
       "titleAccent": "Sin las barreras de un banco.",
-      "description": "Las PyMEs enfrentan 19–21% CAT en bancos a los que a menudo no pueden acceder — o 60%+ de prestamistas informales. Mercato queda en el medio: {apr} sobre la orden de compra completa, validada por el negocio — no por tu historial crediticio.",
-      "aprHighlight": "18–24% APR",
+      "description": "Las PyMEs enfrentan 19–21% CAT en bancos a los que a menudo no pueden acceder — o 60%+ de prestamistas informales. Mercato financia la orden de compra completa con escrow por hitos, con condiciones definidas en cada negocio — no un APR publicado.",
+      "aprHighlight": "Por cada orden",
       "stat1Value": "85%",
       "stat1Label": "de las PyMEs en LATAM no tienen acceso a crédito bancario formal",
       "stat2Value": "100%",
       "stat2Label": "de la OC financiada en Mercato — no 80% como en factoraje",
-      "stat3Value": "18–24%",
-      "stat3Label": "Rango APR — comparable a bancos, sin sus barreras",
+      "stat3Value": "Por OC",
+      "stat3Label": "Condiciones de cada orden de compra — no un APR de plataforma",
       "chartLabel": "Costo anual (APR / CAT)",
       "chartLegendMercato": "Mercato",
       "chartLegendAlt": "Alternativas",
@@ -2694,13 +2694,13 @@
       "closingTitle": "Mercato no es más barato que un prestamista informal — es tan {accessible} como uno, con precio más cercano a un {bank}, y construido alrededor de la orden de compra.",
       "closingAccessible": "accesible",
       "closingBank": "banco",
-      "closingDisclaimer": "Las tasas reflejan datos públicos verificados (bancos, tarjetas empresariales, plataformas de factoraje) y el modelo objetivo de Mercato. El APR de cada negocio depende de riesgo, plazo e hitos.",
+      "closingDisclaimer": "Las tasas de bancos, tarjetas y factoraje reflejan datos públicos verificados. Mercato no publica un APR de plataforma — cada orden de compra define sus propias condiciones.",
       "closingCta": "Empieza con tu próxima OC",
       "options": {
         "mercato": {
           "label": "Mercato",
           "subtitle": "Escrow respaldado por OC en Stellar",
-          "rate": "18–24% APR",
+          "rate": "Por cada orden",
           "requirements": "OC activa + proveedor verificado — sin historial bancario",
           "caveat": "100% de la orden de producción financiada"
         },
@@ -2799,7 +2799,7 @@
       "highlight1Label": "PyMEs envían más rápido",
       "highlight1Sub": "OC financiada en horas",
       "highlight2Label": "Inversionistas ganan rendimiento",
-      "highlight2Sub": "8–15% en comercio real",
+      "highlight2Sub": "Condiciones en cada orden",
       "highlight3Label": "Proveedores cobran",
       "highlight3Sub": "Hito por hito",
       "tagline": "Sin papeleo bancario · Escrow por hitos · Cadenas LATAM"
@@ -2965,7 +2965,7 @@
       "event2Time": "hace 1 d",
       "pillSuppliers": "127 proveedores verificados",
       "pillReputation": "4.8 reputación prom.",
-      "pillApr": "8–15% APR inversionista"
+      "pillApr": "Condiciones en cada orden"
     }
   },
   "events": {

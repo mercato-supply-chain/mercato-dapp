@@ -48,7 +48,7 @@ const ROLES: {
     icon: TrendingUp,
     headline: 'Yield on real trade.',
     subhead: 'Not speculation.',
-    body: 'Browse open purchase orders, fund escrow on Stellar, and earn 8–15% APR while production and delivery milestones protect your capital.',
+    body: 'Browse open purchase orders and fund them on Stellar. You see each order\'s terms before you invest, and production and delivery milestones protect your capital.',
     bullets: [
       'See exactly what you fund',
       'Milestone-gated releases',
@@ -110,14 +110,14 @@ function InvestorMockup() {
       </div>
       <div className="space-y-2 p-3">
         {[
-          { n: 'Industrias NOVA', apr: '12.5%', a: '$48,500', w: 100 },
-          { n: 'GranoMex SA', apr: '10.2%', a: '$22,000', w: 62 },
-          { n: 'TechParts MX', apr: '14.1%', a: '$91,200', w: 38 },
+          { n: 'Industrias NOVA', term: '45d', a: '$48,500', w: 100 },
+          { n: 'GranoMex SA', term: '30d', a: '$22,000', w: 62 },
+          { n: 'TechParts MX', term: '60d', a: '$91,200', w: 38 },
         ].map((d) => (
           <div key={d.n} className="rounded-xl border border-border bg-background p-3">
             <div className="mb-1 flex justify-between gap-2">
               <p className="truncate text-sm font-semibold">{d.n}</p>
-              <p className="shrink-0 text-sm font-bold text-emerald-600">{d.apr}</p>
+              <p className="shrink-0 text-sm font-medium text-muted-foreground">{d.term}</p>
             </div>
             <p className="mb-1.5 text-xs text-muted-foreground">{d.a}</p>
             <div className="h-1 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950">

@@ -122,7 +122,7 @@ function StepVisual({ stepId, t }: { stepId: StepId; t: (key: string) => string 
           <p className="mb-3 text-xs text-muted-foreground">USDC on Stellar · milestone-gated</p>
           <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2">
             <TrendingUp className="h-4 w-4 text-emerald-600" aria-hidden />
-            <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">12.5% APR · InverCap SA funded</p>
+            <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">InverCap SA funded</p>
           </div>
         </div>
       )
