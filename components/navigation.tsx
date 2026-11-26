@@ -135,7 +135,7 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 md:hidden">
+          <div className={cn('flex items-center gap-1.5', isAuthenticated ? 'md:hidden' : 'xl:hidden')}>
             <MobileNavSheet
               open={mobileOpen}
               onOpenChange={setMobileOpen}

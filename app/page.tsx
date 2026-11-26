@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
 import { LandingHero } from '@/components/landing/landing-hero'
+import { LandingHeroDeal } from '@/components/landing/landing-hero-deal'
 import { LandingRoles } from '@/components/landing/landing-roles'
 import { LandingRateComparison } from '@/components/landing/landing-rate-comparison'
 import { LandingLiveDeals } from '@/components/landing/landing-live-deals'
@@ -43,6 +44,10 @@ function HowItWorksFallback() {
   return <div className="h-16 w-full" aria-hidden />
 }
 
+function HeroOrderFallback() {
+  return <div className="min-h-72 rounded-2xl border border-border bg-card lg:min-h-44" aria-hidden />
+}
+
 function LiveDealsFallback() {
   return (
     <section className="py-16 md:py-20">
@@ -66,7 +71,13 @@ export default function HomePage() {
       <LandingHashScroll />
 
       <main id="main" tabIndex={-1} className="flex-1">
-        <LandingHero />
+        <LandingHero
+          orderPreview={
+            <Suspense fallback={<HeroOrderFallback />}>
+              <LandingHeroDeal />
+            </Suspense>
+          }
+        />
 
         <section
           id={LANDING_SECTION_IDS.howItWorks}
