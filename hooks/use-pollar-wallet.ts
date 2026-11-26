@@ -13,6 +13,27 @@ function wait(ms: number) {
   })
 }
 
+function messageFromUnknown(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (value instanceof Error && value.message.trim()) return value.message.trim()
+  if (value && typeof value === 'object') {
+    const record = value as { message?: unknown; error?: unknown }
+    if (typeof record.message === 'string' && record.message.trim()) return record.message.trim()
+    if (typeof record.error === 'string' && record.error.trim()) return record.error.trim()
+  }
+  return null
+}
+
+function syncFailureMessage(payload: unknown, status: number): string {
+  const fromBody = messageFromUnknown(
+    payload && typeof payload === 'object' ? (payload as { error?: unknown }).error : payload,
+  )
+  if (fromBody) return fromBody
+  return status
+    ? `Could not link Pollar to your Mercato account (${status})`
+    : 'Could not link Pollar to your Mercato account'
+}
+
 export function usePollarWallet() {
   const supabase = useMemo(() => createClient(), [])
   const pollar = usePollarSession()
@@ -23,6 +44,7 @@ export function usePollarWallet() {
   const pathname = usePathname()
   const pollarSupabaseSyncCompletedRef = useRef<string | null>(null)
   const pollarSupabaseSyncInFlightRef = useRef<string | null>(null)
+  const pollarSupabaseSyncFailedRef = useRef<string | null>(null)
 
   const connectPollarWallet = useCallback(async () => {
     if (!process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY) {
@@ -52,6 +74,7 @@ export function usePollarWallet() {
 
     if (pollarSupabaseSyncCompletedRef.current === accessToken) return
     if (pollarSupabaseSyncInFlightRef.current === accessToken) return
+    if (pollarSupabaseSyncFailedRef.current === accessToken) return
 
     let cancelled = false
     pollarSupabaseSyncInFlightRef.current = accessToken
@@ -88,18 +111,18 @@ export function usePollarWallet() {
           }),
         })
 
-        const payload = (await res.json().catch(() => ({}))) as {
-          error?: string
+        const payload = (await res.json().catch(() => null)) as {
+          error?: unknown
           token_hash?: string
-        }
+        } | null
 
         if (cancelled) return
 
         if (!res.ok) {
-          throw new Error(payload.error || 'Could not link Pollar to your Mercato account')
+          throw new Error(syncFailureMessage(payload, res.status))
         }
 
-        const tokenHash = payload.token_hash
+        const tokenHash = payload?.token_hash
         if (!tokenHash) {
           throw new Error('Sign-in response was incomplete')
         }
@@ -138,8 +161,10 @@ export function usePollarWallet() {
         }
       } catch (error) {
         pollarSupabaseSyncCompletedRef.current = null
-        console.error('[pollar-wallet] Pollar ↔ Supabase sync failed', error)
-        toast.error(error instanceof Error ? error.message : 'Sign-in failed')
+        pollarSupabaseSyncFailedRef.current = accessToken
+        const message = messageFromUnknown(error) ?? 'Sign-in failed'
+        console.warn(`[pollar-wallet] Pollar ↔ Supabase sync failed: ${message}`)
+        toast.error(message)
       } finally {
         pollarSupabaseSyncInFlightRef.current = null
       }
@@ -161,6 +186,7 @@ export function usePollarWallet() {
   const clearPollarSyncRefs = useCallback(() => {
     pollarSupabaseSyncCompletedRef.current = null
     pollarSupabaseSyncInFlightRef.current = null
+    pollarSupabaseSyncFailedRef.current = null
   }, [])
 
   return { connectPollarWallet, clearPollarSyncRefs }

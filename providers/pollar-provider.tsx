@@ -15,7 +15,8 @@ import '@pollar/react/styles.css'
 import { PollarProvider as SDKPollarProvider, usePollar } from '@pollar/react'
 import {
   isWalletNotReady,
-  type PollarClient,
+  PollarClient,
+  type PollarClientConfig,
   type PollarLoginOptions,
   type PollarPersistedSession,
   type SubmitOutcome,
@@ -84,6 +85,16 @@ const emptyContext: PollarSessionValue = {
 }
 
 const PollarSessionContext = createContext<PollarSessionValue>(emptyContext)
+
+let sharedPollarClient: PollarClient | null = null
+
+function getSharedPollarClient(config: PollarClientConfig): PollarClient {
+  if (sharedPollarClient && sharedPollarClient.apiKey === config.apiKey) {
+    return sharedPollarClient
+  }
+  sharedPollarClient = new PollarClient(config)
+  return sharedPollarClient
+}
 
 const cachedClientSessions = new WeakMap<
   object,
@@ -444,8 +455,10 @@ export function PollarProvider({
     return <PollarSessionContext.Provider value={emptyContext}>{children}</PollarSessionContext.Provider>
   }
 
+  const pollarClient = getSharedPollarClient(clientConfig)
+
   return (
-    <SDKPollarProvider client={clientConfig}>
+    <SDKPollarProvider client={pollarClient}>
       <PollarSessionBridge>{children}</PollarSessionBridge>
     </SDKPollarProvider>
   )
