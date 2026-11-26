@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
 import { LandingHero } from '@/components/landing/landing-hero'
 import { LandingRoles } from '@/components/landing/landing-roles'
@@ -8,8 +9,11 @@ import { LandingPartnersStrip } from '@/components/landing/landing-page-intro'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
-import { getLandingHeroDeal } from '@/lib/landing/get-hero-deal'
-import { getLandingPlatformStats } from '@/lib/landing/get-platform-stats'
+import { LandingStats } from '@/components/landing/landing-stats'
+import { HeroStatsBar } from '@/components/landing/hero-stats-bar'
+import { LandingHeroDeal } from '@/components/landing/landing-hero-deal'
+import { HeroDealSheet } from '@/components/landing/hero-deal-sheet'
+import { sampleHeroDeal } from '@/lib/landing/hero-deal'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,19 +44,22 @@ const breadcrumbSchema = {
   ],
 }
 
-export default async function HomePage() {
-  const [heroDeal, platformStats] = await Promise.all([
-    getLandingHeroDeal(),
-    getLandingPlatformStats(),
-  ])
-
+export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-background">
       <JsonLd data={breadcrumbSchema} />
       <Navigation overHero />
       <LandingHashScroll />
 
-      <LandingHero deal={heroDeal} stats={platformStats} />
+      <LandingHero deal={
+        <Suspense fallback={<HeroDealSheet deal={sampleHeroDeal()} className="hero-stagger-4 w-full lg:justify-self-end" />}>
+          <LandingHeroDeal />
+        </Suspense>
+      } stats={
+        <Suspense fallback={<HeroStatsBar />}>
+          <LandingStats />
+        </Suspense>
+      } />
 
       <LandingRoles />
 

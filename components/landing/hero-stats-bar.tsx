@@ -16,13 +16,14 @@ const STATS = [
 ] as const
 
 type HeroStatsBarProps = {
-  stats: LandingPlatformStats
+  stats?: LandingPlatformStats
 }
 
 export function HeroStatsBar({ stats }: HeroStatsBarProps) {
   const { locale, t } = useI18n()
 
   const items = STATS.map((item) => {
+    if (!stats) return { ...item, value: null, delta: null }
     switch (item.key) {
       case 'orders':
         return {
@@ -75,7 +76,7 @@ export function HeroStatsBar({ stats }: HeroStatsBarProps) {
   })
 
   return (
-    <div className="hero-stats-grid grid w-full grid-cols-2 gap-x-3 gap-y-4 min-[480px]:grid-cols-2 sm:gap-x-4 lg:grid-cols-4 lg:items-start lg:gap-x-4 lg:gap-y-0 xl:gap-x-5">
+    <div aria-busy={!stats} className="hero-stats-grid grid w-full grid-cols-2 gap-x-3 gap-y-4 min-[480px]:grid-cols-2 sm:gap-x-4 lg:grid-cols-4 lg:items-start lg:gap-x-4 lg:gap-y-0 xl:gap-x-5">
       {items.map(({ key, icon: Icon, label, value, delta }) => (
         <div key={key} className="flex min-w-0 items-start gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-pale text-brand-mid md:h-8 md:w-8 dark:bg-brand-mid/20 dark:text-brand-light">
@@ -86,13 +87,13 @@ export function HeroStatsBar({ stats }: HeroStatsBarProps) {
               {t(label)}
             </p>
             <p className="mt-0.5 font-display text-base font-normal tracking-tight text-foreground min-[480px]:text-lg md:text-xl lg:text-[1.35rem] dark:text-white">
-              {value}
+              {value ?? <span aria-hidden className="inline-block h-[1em] w-16 rounded bg-muted motion-safe:animate-pulse" />}
             </p>
             <span
-              title={delta}
+              title={delta ?? undefined}
               className="mt-2 inline-flex w-fit max-w-full items-center rounded-full border border-brand-mid/25 bg-brand-pale px-2.5 py-1 text-[11px] font-semibold leading-snug text-brand-dark dark:border-brand-light/25 dark:bg-brand-mid/30 dark:text-brand-light"
             >
-              {delta}
+              {delta ?? <span aria-hidden className="inline-block h-[1em] w-24 rounded bg-brand-mid/10 motion-safe:animate-pulse" />}
             </span>
           </div>
         </div>
