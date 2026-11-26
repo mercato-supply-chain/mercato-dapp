@@ -2523,11 +2523,12 @@
   "landing": {
     "hero": {
       "badge": "Escrow en Stellar",
-      "titleLine1": "Págale al proveedor hoy.",
-      "titleLine2": "Cobra con el pedido.",
-      "description": "Una PyME necesita inventario. Tú financias la factura del proveedor en USDC. La PyME devuelve capital más rendimiento mediante un escrow on-chain.",
+      "titleLine1": "Financia la factura.",
+      "titleLine2": "Activa el pedido.",
+      "description": "Los inversionistas pagan por adelantado al proveedor en USDC. Tras recibir el pedido, la PyME devuelve el dinero al inversionista mediante escrow en Stellar.",
       "primaryCta": "Ver órdenes abiertas",
-      "flowLink": "Cómo se mueve un trato",
+      "flowLink": "Cómo funciona",
+      "photoAlt": "Un equipo de almacén empaca inventario y revisa un pedido.",
       "secondaryCta": "Financiar una orden",
       "deal": {
         "ariaLabel": "Operación destacada",
@@ -2746,21 +2747,21 @@
       "stepAria": "Ir al paso {n}",
       "footnote": "Paso ilustrativo · escrow por hitos en Stellar",
       "order": {
-        "short": "Crear OC",
+        "short": "Crear un pedido",
         "title": "La PyME crea la orden",
         "body": "Elige un proveedor verificado, define hitos de envío y entrega, y publica la orden de compra en el marketplace.",
         "actor": "PyME",
         "badge": "PyME verificada y referida"
       },
       "fund": {
-        "short": "Financiar escrow",
+        "short": "Financiar la factura",
         "title": "El inversionista financia",
         "body": "El USDC se bloquea en escrow por hitos en Stellar. El capital queda protegido hasta cumplir cada condición de liberación on-chain.",
         "actor": "Inversionista",
         "badge": "Capital comprometido en escrow"
       },
       "produce": {
-        "short": "Producir",
+        "short": "Enviar el pedido",
         "title": "El proveedor produce",
         "body": "La producción comienza con el pago asegurado. El primer hito puede liberarse al iniciar fabricación o envío.",
         "actor": "Proveedor",
@@ -2774,10 +2775,10 @@
         "badge": "Entrega confirmada con prueba"
       },
       "complete": {
-        "short": "Repagar",
+        "short": "Pagar mediante escrow",
         "title": "Todos ganan",
         "body": "La PyME repaga principal más rendimiento con las ventas. Los inversionistas ganan, los proveedores cobraron y el ciclo puede repetirse.",
-        "actor": "Todas las partes",
+        "actor": "PyME",
         "badge": "Repago y negocio cerrado"
       },
       "visual": {

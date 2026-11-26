@@ -2523,11 +2523,12 @@
   "landing": {
     "hero": {
       "badge": "Escrow on Stellar",
-      "titleLine1": "Pay the supplier today.",
-      "titleLine2": "Get repaid from the order.",
-      "description": "An SME needs inventory. You fund the supplier’s invoice in USDC. The SME repays principal plus yield through on-chain escrow.",
+      "titleLine1": "Fund the invoice.",
+      "titleLine2": "Move the goods.",
+      "description": "Investors pay suppliers up front in USDC so businesses can stock up. After delivery, businesses repay investors through escrow on Stellar.",
       "primaryCta": "Browse open orders",
-      "flowLink": "See how a deal moves",
+      "flowLink": "How it works",
+      "photoAlt": "A warehouse team packs inventory and reviews an order.",
       "secondaryCta": "Fund an order",
       "deal": {
         "ariaLabel": "Featured deal",
@@ -2746,21 +2747,21 @@
       "stepAria": "Go to step {n}",
       "footnote": "Illustrative step · milestone escrow on Stellar",
       "order": {
-        "short": "Create PO",
+        "short": "Create an order",
         "title": "SME creates the order",
         "body": "Pick a verified supplier, define shipment & delivery milestones, and publish the purchase order to the marketplace.",
         "actor": "SME",
         "badge": "Verified & referred SME"
       },
       "fund": {
-        "short": "Fund escrow",
+        "short": "Fund the invoice",
         "title": "Investor funds it",
         "body": "USDC locks in milestone escrow on Stellar. Capital stays protected until each release condition is met on-chain.",
         "actor": "Investor",
         "badge": "Capital committed in escrow"
       },
       "produce": {
-        "short": "Produce",
+        "short": "Ship the order",
         "title": "Supplier produces",
         "body": "Production begins with payment secured. The first milestone can release when manufacturing or shipment starts.",
         "actor": "Supplier",
@@ -2774,10 +2775,10 @@
         "badge": "Delivery confirmed with proof"
       },
       "complete": {
-        "short": "Repay",
+        "short": "Repay through escrow",
         "title": "Everyone wins",
         "body": "The SME repays principal plus yield from sales. Investors earn, suppliers were paid, and the cycle can repeat.",
-        "actor": "All parties",
+        "actor": "SME",
         "badge": "Repaid · deal closed"
       },
       "visual": {

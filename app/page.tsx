@@ -10,6 +10,7 @@ import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
 import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
+import { LANDING_SECTION_IDS } from '@/lib/navigation/landing-nav'
 
 export async function generateMetadata() {
   return {
@@ -68,7 +69,7 @@ export default function HomePage() {
         <LandingHero />
 
         <section
-          id="how-it-works"
+          id={LANDING_SECTION_IDS.howItWorks}
           className="landing-section-anchor border-b border-border bg-background"
         >
           <div className="container mx-auto px-4 py-8 md:py-10">
