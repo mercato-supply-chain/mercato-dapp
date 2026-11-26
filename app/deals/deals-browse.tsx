@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigation } from '@/components/navigation'
 import { DealCard } from '@/components/deal-card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -200,8 +199,6 @@ export function DealsBrowse({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navigation />
-
       <div className="container mx-auto px-4 py-10">
         {/* Page header */}
         <header className="mb-8">
@@ -419,7 +416,7 @@ export function DealsBrowse({
         </p>
 
         {/* Invoice list */}
-        {isLoading && deals.length === 0 ? (
+        {isLoading && deals.length === 0 && initialDeals.length === 0 ? (
           <div className="border-t border-border" aria-busy="true">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div

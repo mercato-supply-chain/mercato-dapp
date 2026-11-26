@@ -65,7 +65,9 @@ export function buildDealsBrowseUrl(
 /**
  * Deduplicating client data layer for subsequent pages and filter changes.
  * Coalesces identical in-flight requests (React Strict Mode, fast typing) and
- * reuses recent responses briefly.
+ * reuses recent responses briefly. The first page is rendered on the server
+ * as part of the browse shell, so this fetcher is only used after hydration
+ * for filter changes and "load more" actions.
  */
 export const fetchDealsBrowse = createDedupedFetcher(
   async (filters: DealBrowseFilters): Promise<DealsBrowseResponse> => {
