@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { AdminUserListItem } from '@/lib/admin/types'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 
 type AdminUsersTableProps = {
@@ -39,7 +40,7 @@ export function AdminUsersTable({ rows, total, page, pageSize }: AdminUsersTable
   const searchParams = useSearchParams()
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const dateFormat = new Intl.DateTimeFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+  const dateFormat = new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
   })
 

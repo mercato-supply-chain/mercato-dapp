@@ -332,7 +332,7 @@ flowchart TB
 | **Wallets** | Stellar Wallets Kit (Freighter, Albedo) + Pollar embedded + Privy embedded (planned) | 1.9 / 0.6 / TBD |
 | **Stellar** | @stellar/stellar-sdk | 14.5 |
 | **Yield vaults (Soroban)** | [DeFindex](https://docs.defindex.io) (@defindex/sdk) — investor vault, planned reputation-gated PyME/supplier access, admin monitor | 0.3 |
-| **i18n** | en/es dictionaries, locale cookie | — |
+| **i18n** | en / es / pt-BR dictionaries, locale cookie | — |
 | **Validation** | Zod, react-hook-form | 3.24 / 7.54 |
 | **Ramps** | Custom anchor clients + SEP modules (lib/anchors) | — |
 
@@ -389,7 +389,7 @@ mercato-dapp/
 │   ├── anchor-factory.ts, ramp-api.ts
 │   ├── anchors/                  # Legacy provider POC code + SEP modules; MoneyGram target adapter
 │   ├── admin/, dashboard/, investments/
-│   ├── i18n/                     # en/es dictionaries, locale
+│   ├── i18n/                     # en/es/pt-BR dictionaries, locale
 │   └── supabase/                 # Client, server, service, proxy
 │
 ├── hooks/                        # use-wallet, use-repayment-escrow, use-deal-detail, useDefindex, …

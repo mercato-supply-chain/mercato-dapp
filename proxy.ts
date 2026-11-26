@@ -1,18 +1,18 @@
 import { updateSession } from '@/lib/supabase/proxy'
 import { type NextRequest } from 'next/server'
-import { isLocale, localeCookieName } from '@/lib/i18n/config'
+import { coerceLocale, localeCookieName } from '@/lib/i18n/config'
 
 export async function proxy(request: NextRequest) {
   const { searchParams } = request.nextUrl
-  const lang = searchParams.get('lang') || searchParams.get('locale')
+  const lang = coerceLocale(searchParams.get('lang') || searchParams.get('locale'))
 
-  if (lang && isLocale(lang)) {
+  if (lang) {
     request.cookies.set(localeCookieName, lang)
   }
 
   const response = await updateSession(request)
 
-  if (lang && isLocale(lang)) {
+  if (lang) {
     response.cookies.set(localeCookieName, lang, {
       path: '/',
       maxAge: 31536000,

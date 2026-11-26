@@ -290,7 +290,7 @@ Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 | Admin queues | `lib/admin/get-admin-queue-data.ts` |
 | Dashboard data | `lib/dashboard/get-dashboard-data.ts` |
 | Investor portfolio | `lib/investments/get-investor-portfolio.ts` |
-| i18n (en/es) | `lib/i18n/` — locale cookie `mercato-locale`, `?lang=` param |
+| i18n (en/es/pt-BR) | `lib/i18n/` — locale cookie `mercato-locale`, `?lang=` (`en`, `es`, `pt-BR` / `pt`) |
 | Proxy | `proxy.ts` — Supabase session refresh + locale |
 
 ## Project layout (abbreviated)

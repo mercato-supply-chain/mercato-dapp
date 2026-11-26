@@ -3,6 +3,7 @@ import { BlogPostView } from '@/components/blog/blog-views'
 import { JsonLd } from '@/components/seo/json-ld'
 import { getBlogPost, getBlogPostSlugs } from '@/lib/blog/posts'
 import { getBlogLocaleContent } from '@/lib/blog/content'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerLocale } from '@/lib/i18n/server'
 
 type PageProps = {
@@ -35,10 +36,7 @@ export async function generateMetadata({ params }: PageProps) {
     },
     alternates: {
       canonical: `/blog/${slug}`,
-      languages: {
-        en: `/blog/${slug}?lang=en`,
-        es: `/blog/${slug}?lang=es`,
-      },
+      languages: languageAlternates(`/blog/${slug}`),
     },
   }
 }

@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerDictionary, tr } from '@/lib/i18n/server'
 import { InvestorsData } from './investors-data'
 import { InvestorsSkeleton } from './investors-skeleton'
@@ -11,10 +12,7 @@ export async function generateMetadata() {
     description: 'Explore the directory of active investors funding supply chain deals in Latin America on Mercato.',
     alternates: {
       canonical: '/investors',
-      languages: {
-        en: '/investors?lang=en',
-        es: '/investors?lang=es',
-      },
+      languages: languageAlternates('/investors'),
     },
   }
 }

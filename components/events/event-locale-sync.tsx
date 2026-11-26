@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { isLocale, localeCookieName, type Locale } from '@/lib/i18n/config'
+import { coerceLocale, localeCookieName, type Locale } from '@/lib/i18n/config'
 import { useI18n } from '@/lib/i18n/provider'
 
 type EventLocaleSyncProps = {
@@ -15,14 +15,14 @@ export function EventLocaleSync({ defaultLocale }: EventLocaleSyncProps) {
 
   useEffect(() => {
     const langParam = searchParams.get('lang') ?? searchParams.get('locale')
-    if (langParam && isLocale(langParam)) return
+    if (langParam && coerceLocale(langParam)) return
 
     const cookieLocale = document.cookie
       .split('; ')
       .find((row) => row.startsWith(`${localeCookieName}=`))
       ?.split('=')[1]
 
-    if (cookieLocale && isLocale(cookieLocale)) return
+    if (cookieLocale && coerceLocale(cookieLocale)) return
     if (locale !== defaultLocale) setLocale(defaultLocale)
   }, [defaultLocale, locale, searchParams, setLocale])
 

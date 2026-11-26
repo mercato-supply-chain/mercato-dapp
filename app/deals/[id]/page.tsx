@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getDealSummary } from '@/lib/deals/detail'
 import DealDetailPageClient from './deal-detail-view'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -31,10 +32,7 @@ export async function generateMetadata({ params }: PageProps) {
     },
     alternates: {
       canonical: `/deals/${id}`,
-      languages: {
-        en: `/deals/${id}?lang=en`,
-        es: `/deals/${id}?lang=es`,
-      },
+      languages: languageAlternates(`/deals/${id}`),
     },
   }
 }

@@ -20,6 +20,7 @@ import {
   canReleaseMilestoneInOrder,
 } from '@/lib/admin/milestone-flags'
 import { SupplierLogoInline } from '@/components/admin/supplier-logo-inline'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import {
   AdminResolveDisputeDialog,
@@ -43,7 +44,7 @@ export function ReleaseFundsFallback({
   const { t, locale } = useI18n()
   const { epoch, refreshAfterCommand } = useRepaymentCommandRefresh()
   const completeCommand = onAfterCommand ?? refreshAfterCommand
-  const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
+  const numLocale = toIntlLocale(locale)
   const [resyncingId, setResyncingId] = useState<string | null>(null)
   const [disputeTarget, setDisputeTarget] = useState<ResolveDisputeTarget | null>(
     null,

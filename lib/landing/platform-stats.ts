@@ -1,4 +1,5 @@
 import type { Locale } from '@/lib/i18n/config'
+import { toIntlLocale } from '@/lib/i18n/format'
 
 export type LandingPlatformStats = {
   ordersFunded: number
@@ -13,12 +14,12 @@ export type LandingPlatformStats = {
 }
 
 export function formatStatCount(locale: Locale, value: number): string {
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US').format(value)
+  return new Intl.NumberFormat(toIntlLocale(locale)).format(value)
 }
 
 export function formatStatMoney(locale: Locale, value: number): string {
   if (value >= 1_000_000) {
-    return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+    return new Intl.NumberFormat(toIntlLocale(locale), {
       style: 'currency',
       currency: 'USD',
       notation: 'compact',
@@ -26,7 +27,7 @@ export function formatStatMoney(locale: Locale, value: number): string {
       maximumFractionDigits: 1,
     }).format(value)
   }
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+  return new Intl.NumberFormat(toIntlLocale(locale), {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,

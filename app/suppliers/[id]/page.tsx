@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -85,10 +86,7 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: `/suppliers/${id}`,
-      languages: {
-        en: `/suppliers/${id}?lang=en`,
-        es: `/suppliers/${id}?lang=es`,
-      },
+      languages: languageAlternates(`/suppliers/${id}`),
     },
   }
 }
@@ -394,7 +392,18 @@ export default async function SupplierDetailPage({
                       <p className="pt-1 text-center text-xs text-muted-foreground">
                         {tr(m, 'supplierDetail.moreDealsOnPlatform', {
                           count: totalDeals - 5,
-                          dealsWord: locale === 'es' ? (totalDeals - 5 === 1 ? 'orden' : 'órdenes') : totalDeals - 5 === 1 ? 'deal' : 'deals',
+                          dealsWord:
+                            locale === 'pt-BR'
+                              ? totalDeals - 5 === 1
+                                ? 'pedido'
+                                : 'pedidos'
+                              : locale === 'es'
+                                ? totalDeals - 5 === 1
+                                  ? 'orden'
+                                  : 'órdenes'
+                                : totalDeals - 5 === 1
+                                  ? 'deal'
+                                  : 'deals',
                         })}
                       </p>
                     )}

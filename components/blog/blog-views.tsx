@@ -7,12 +7,19 @@ import { BlogIndexExplorer, type BlogExplorerCopy } from '@/components/blog/blog
 import { Button } from '@/components/ui/button'
 import { getAllBlogPosts } from '@/lib/blog/posts'
 import { getBlogLocaleContent } from '@/lib/blog/content'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { getServerLocale } from '@/lib/i18n/server'
 import { ArrowRight } from 'lucide-react'
 
 const COPY = {
   en: {
     title: 'Mercato Blog',
+    blog: 'Blog',
+    home: 'Home',
+    vaultGuide: 'Vault guide',
+    mercatoGuide: 'Mercato guide',
+    minRead: 'min read',
+    continueReading: 'Continue reading',
     tagline: 'Learn · Grow · Succeed',
     subtitle:
       'Plain-language guides on supply chain finance for PyMEs, suppliers, and investors — no crypto background required.',
@@ -42,6 +49,12 @@ const COPY = {
   },
   es: {
     title: 'Blog de Mercato',
+    blog: 'Blog',
+    home: 'Inicio',
+    vaultGuide: 'Guía de vault',
+    mercatoGuide: 'Guía de Mercato',
+    minRead: 'min de lectura',
+    continueReading: 'Sigue leyendo',
     tagline: 'Aprende · Crece · Triunfa',
     subtitle:
       'Guías en lenguaje claro sobre financiamiento de cadena de suministro para PyMEs, proveedores e inversionistas.',
@@ -69,6 +82,41 @@ const COPY = {
       empty: 'Aún no hay artículos para esta audiencia — vuelve pronto.',
     } satisfies BlogExplorerCopy,
   },
+  'pt-BR': {
+    title: 'Blog da Mercato',
+    blog: 'Blog',
+    home: 'Início',
+    vaultGuide: 'Guia do vault',
+    mercatoGuide: 'Guia da Mercato',
+    minRead: 'min de leitura',
+    continueReading: 'Continue lendo',
+    tagline: 'Aprenda · Cresça · Prospere',
+    subtitle:
+      'Guias em linguagem simples sobre financiamento da cadeia de suprimentos para PMEs, fornecedores e investidores.',
+    howItWorks: 'Como a Mercato funciona',
+    openVault: 'Abrir vault da Mercato',
+    explorer: {
+      tabs: { all: 'Todos', pyme: 'PMEs', supplier: 'Fornecedores', investor: 'Investidores' },
+      sections: {
+        pyme: {
+          title: 'Para PMEs',
+          description:
+            'Guias práticos para compradores: crie pedidos, entenda o financiamento de ordens de compra e como o escrow protege o seu negócio.',
+        },
+        supplier: {
+          title: 'Para fornecedores',
+          description:
+            'Para fornecedores: configure o perfil, mostre seus produtos e veja como os pedidos de compra pagam você.',
+        },
+        investor: {
+          title: 'Para investidores',
+          description:
+            'Novo em vaults e pedidos? Entenda de onde vem o rendimento e como colocar USDC ocioso para trabalhar entre pedidos.',
+        },
+      },
+      empty: 'Ainda não há artigos para este público — volte em breve.',
+    } satisfies BlogExplorerCopy,
+  },
 } as const
 
 export async function BlogIndexView() {
@@ -79,7 +127,7 @@ export async function BlogIndexView() {
   return (
     <BlogLayout>
       <main id="main" tabIndex={-1} className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:py-16">
-        <BlogBreadcrumbs items={[{ label: 'Home', href: '/' }, { label: copy.title }]} />
+        <BlogBreadcrumbs items={[{ label: copy.home, href: '/' }, { label: copy.title }]} />
 
         <div className="mb-12 max-w-3xl">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
@@ -115,6 +163,7 @@ export async function BlogPostView({ slug }: { slug: string }) {
   if (!post) return null
 
   const content = getBlogLocaleContent(post, locale)
+  const copy = COPY[locale]
   const related = posts.filter((item) => item.slug !== slug).slice(0, 2)
 
   return (
@@ -122,28 +171,30 @@ export async function BlogPostView({ slug }: { slug: string }) {
       <main id="main" tabIndex={-1} className="container mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:py-16">
         <BlogBreadcrumbs
           items={[
-            { label: 'Home', href: '/' },
-            { label: locale === 'es' ? 'Blog' : 'Blog', href: '/blog' },
+            { label: copy.home, href: '/' },
+            { label: copy.blog, href: '/blog' },
             { label: content.title },
           ]}
         />
 
         <header className="mb-10 border-b border-border/60 pb-8">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
-            {post.category === 'vault' ? 'Vault guide' : 'Mercato guide'}
+            {post.category === 'vault' ? copy.vaultGuide : copy.mercatoGuide}
           </p>
           <h1 className="font-display text-3xl font-normal tracking-tight sm:text-4xl">{content.title}</h1>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{content.excerpt}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <time dateTime={post.publishedAt}>
-              {new Date(post.publishedAt).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
+              {new Date(post.publishedAt).toLocaleDateString(toIntlLocale(locale), {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
               })}
             </time>
             <span aria-hidden>·</span>
-            <span>{post.readingTimeMinutes} min read</span>
+            <span>
+              {post.readingTimeMinutes} {copy.minRead}
+            </span>
           </div>
         </header>
 
@@ -153,7 +204,7 @@ export async function BlogPostView({ slug }: { slug: string }) {
 
         {related.length > 0 && (
           <section className="mt-16">
-            <h2 className="mb-5 font-display text-2xl font-normal tracking-tight">Continue reading</h2>
+            <h2 className="mb-5 font-display text-2xl font-normal tracking-tight">{copy.continueReading}</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               {related.map((item) => (
                 <BlogPostCard key={item.slug} post={item} locale={locale} />

@@ -1,10 +1,11 @@
 import { getStellarNetworkPulse } from '@/lib/stellar/network-pulse'
 import { getDictionary } from '@/lib/i18n/dictionaries'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { getServerLocale, tr } from '@/lib/i18n/server'
 import { cn } from '@/lib/utils'
 
 function formatLedger(ledger: number, locale: string) {
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US').format(ledger)
+  return new Intl.NumberFormat(toIntlLocale(locale)).format(ledger)
 }
 
 export async function LandingNetworkPulse({ className }: { className?: string }) {

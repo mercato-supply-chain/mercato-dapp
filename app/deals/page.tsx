@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { DealsBrowse } from './deals-browse'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerDictionary } from '@/lib/i18n/server'
 import { JsonLd } from '@/components/seo/json-ld'
 import { createClient } from '@/lib/supabase/server'
@@ -18,10 +19,7 @@ export async function generateMetadata() {
     description: 'Explore live supply chain invoice financing deals in Latin America. Support PyMEs and earn short-term yield secured by smart contracts.',
     alternates: {
       canonical: '/deals',
-      languages: {
-        en: '/deals?lang=en',
-        es: '/deals?lang=es',
-      },
+      languages: languageAlternates('/deals'),
     },
   }
 }

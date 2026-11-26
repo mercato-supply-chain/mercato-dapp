@@ -8,6 +8,7 @@ import {
 import { AdminVaultHealthCard } from '@/components/dashboard/admin/admin-vault-health-card'
 import { getAdminAnalytics } from '@/lib/admin/get-admin-analytics'
 import { getConfiguredVaultAddress, requireAdminProfile } from '@/lib/admin/require-admin'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { getServerDictionary, getServerLocale, tr } from '@/lib/i18n/server'
 
 type SearchParams =
@@ -45,7 +46,7 @@ export default async function AdminAnalyticsPage({
     getServerLocale(),
   ])
 
-  const dateFormat = new Intl.DateTimeFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+  const dateFormat = new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     timeZone: 'UTC',
   })

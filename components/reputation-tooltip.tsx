@@ -9,6 +9,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import { cn } from '@/lib/utils'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import type {
   PymeReputation,
@@ -61,7 +62,7 @@ export function ReputationTooltip({
   const completionPct = Math.round(reputation.completionRate * 100)
 
   const formatPrice = (value: number) =>
-    new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+    new Intl.NumberFormat(toIntlLocale(locale), {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0,

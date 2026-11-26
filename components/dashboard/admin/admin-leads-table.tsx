@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import type { LeadRow } from '@/lib/admin/get-leads'
 import { cn } from '@/lib/utils'
@@ -30,7 +31,7 @@ type AdminLeadsTableProps = {
 }
 
 function formatDate(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'es' ? 'es-AR' : 'en-US', {
+  return new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))

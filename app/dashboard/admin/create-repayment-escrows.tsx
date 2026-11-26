@@ -8,6 +8,7 @@ import { Wallet, ExternalLink, Building2 } from 'lucide-react'
 import { useWallet } from '@/hooks/use-wallet'
 import { useRepaymentEscrow } from '@/hooks/use-repayment-escrow'
 import { useRepaymentCommandRefresh } from '@/hooks/use-repayment-command-refresh'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import type { CreateEscrowItem } from '@/lib/admin/types'
 import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
@@ -24,7 +25,7 @@ interface CreateRepaymentEscrowsProps {
 
 export function CreateRepaymentEscrows({ items, onAfterCommand }: CreateRepaymentEscrowsProps) {
   const { t, locale } = useI18n()
-  const numLocale = locale === 'es' ? 'es-MX' : 'en-US'
+  const numLocale = toIntlLocale(locale)
   const { walletInfo, isConnected, handleConnect, provider } = useWallet()
   const { isWorking, deployRepaymentEscrow } = useRepaymentEscrow()
   const { refreshAfterCommand } = useRepaymentCommandRefresh()

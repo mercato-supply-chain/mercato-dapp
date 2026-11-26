@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import type { PymeReputation, PymeReputationTier } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
@@ -75,7 +76,7 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
   const sectorLabel = (code: string) =>
     messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
   const fmtUsd = (value: number) =>
-    new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+    new Intl.NumberFormat(toIntlLocale(locale), {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0,

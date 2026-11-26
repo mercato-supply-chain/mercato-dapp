@@ -12,6 +12,7 @@ import { LandingHashScroll } from '@/components/landing/landing-hash-scroll'
 import { JsonLd } from '@/components/seo/json-ld'
 import { HeroHowItWorksSteps } from '@/components/landing/hero-how-it-works-steps'
 import { LANDING_SECTION_IDS } from '@/lib/navigation/landing-nav'
+import { languageAlternates } from '@/lib/i18n/config'
 
 export async function generateMetadata() {
   return {
@@ -19,10 +20,7 @@ export async function generateMetadata() {
     description: 'Connect PyMEs, investors, and suppliers through transparent, blockchain-secured escrow for supply chain financing in Latin America.',
     alternates: {
       canonical: '/',
-      languages: {
-        en: '/?lang=en',
-        es: '/?lang=es',
-      },
+      languages: languageAlternates('/'),
     },
   }
 }

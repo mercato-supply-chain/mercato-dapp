@@ -2,7 +2,15 @@ import type { Locale } from './config'
 import { formatCurrency, formatDecimal } from '@/lib/format'
 
 /** Explicit regional locales keep SSR and browser output independent of host defaults. */
-export const intlLocales: Record<Locale, string> = { en: 'en-US', es: 'es-ES' }
+export const intlLocales: Record<Locale, string> = {
+  en: 'en-US',
+  es: 'es-MX',
+  'pt-BR': 'pt-BR',
+}
+
+export function toIntlLocale(locale: string | undefined | null): string {
+  return locale && locale in intlLocales ? intlLocales[locale as Locale] : intlLocales.en
+}
 
 export function formatMoney(locale: Locale, value: number): string {
   return formatCurrency(value, 'USD', intlLocales[locale], {

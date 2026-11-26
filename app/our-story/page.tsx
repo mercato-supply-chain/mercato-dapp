@@ -1,5 +1,6 @@
 import { OurStoryView } from '@/components/our-story/our-story-view'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 
 export async function generateMetadata() {
   return {
@@ -14,7 +15,7 @@ export async function generateMetadata() {
     },
     alternates: {
       canonical: '/our-story',
-      languages: { es: '/our-story?lang=es', en: '/our-story?lang=en' },
+      languages: languageAlternates('/our-story'),
     },
   }
 }

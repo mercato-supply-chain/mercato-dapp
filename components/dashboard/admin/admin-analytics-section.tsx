@@ -21,6 +21,7 @@ import { LazyAdminAnalyticsChart } from '@/components/dashboard/admin/admin-anal
 import { pctChange } from '@/lib/admin/analytics-definitions'
 import type { MetricPair } from '@/lib/admin/get-admin-analytics'
 import type { Locale } from '@/lib/i18n/config'
+import { toIntlLocale } from '@/lib/i18n/format'
 import type { Messages } from '@/lib/i18n/dictionaries'
 import { formatMoneyServer, tr } from '@/lib/i18n/server'
 import { cn } from '@/lib/utils'
@@ -58,7 +59,7 @@ function formatValue(
       return tr(m, 'adminAnalytics.durationDays', { count: Math.round(hours / 24) })
     }
     default:
-      return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US').format(value)
+      return new Intl.NumberFormat(toIntlLocale(locale)).format(value)
   }
 }
 

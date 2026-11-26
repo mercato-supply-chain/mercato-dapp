@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { languageAlternates } from '@/lib/i18n/config'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Navigation } from '@/components/navigation'
@@ -73,10 +74,7 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: `/pymes/${id}`,
-      languages: {
-        en: `/pymes/${id}?lang=en`,
-        es: `/pymes/${id}?lang=es`,
-      },
+      languages: languageAlternates(`/pymes/${id}`),
     },
   }
 }

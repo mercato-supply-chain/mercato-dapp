@@ -26,7 +26,8 @@
   "locale": {
     "label": "Language",
     "en": "English",
-    "es": "Spanish"
+    "es": "Spanish",
+    "pt-BR": "Portuguese (Brazil)"
   },
   "nav": {
     "main": "Main",

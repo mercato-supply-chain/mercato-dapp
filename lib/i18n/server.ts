@@ -1,12 +1,13 @@
 import { cookies } from 'next/headers'
-import { defaultLocale, isLocale, localeCookieName, type Locale } from './config'
+import { coerceLocale, defaultLocale, localeCookieName, type Locale } from './config'
 import { getDictionary, enDict, type Messages } from './dictionaries'
 import { translate } from './messages'
+import { toIntlLocale } from './format'
 
 export async function getServerLocale(): Promise<Locale> {
   const store = await cookies()
   const value = store.get(localeCookieName)?.value
-  return isLocale(value) ? value : defaultLocale
+  return coerceLocale(value) ?? defaultLocale
 }
 
 /** Server-side translate + `{placeholder}` interpolation (same rules as client `t`). */
@@ -19,7 +20,7 @@ export function tr(
 }
 
 export function formatMoneyServer(locale: Locale, value: number): string {
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+  return new Intl.NumberFormat(toIntlLocale(locale), {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,

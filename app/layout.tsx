@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    alternateLocale: 'es_MX',
+    alternateLocale: ['es_MX', 'pt_BR'],
     siteName: 'MERCATO',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'MERCATO Supply Chain Finance' }],
   },

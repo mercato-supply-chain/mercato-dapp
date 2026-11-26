@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Building2 } from 'lucide-react'
 import { Navigation } from '@/components/navigation'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerDictionary, tr } from '@/lib/i18n/server'
 import { SuppliersData } from './suppliers-data'
 import { SuppliersSkeleton } from './suppliers-skeleton'
@@ -13,10 +14,7 @@ export async function generateMetadata() {
       'Browse verified suppliers across Latin America. Connect suppliers to deals for milestone-based payments secured by escrow.',
     alternates: {
       canonical: '/suppliers',
-      languages: {
-        en: '/suppliers?lang=en',
-        es: '/suppliers?lang=es',
-      },
+      languages: languageAlternates('/suppliers'),
     },
   }
 }
