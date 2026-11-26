@@ -29,7 +29,7 @@ mock.module('@/providers/pollar-provider', () => ({
   usePollarSession: () => ({
     walletBalance: g.__pollarWalletBalance ?? { step: 'idle' },
     txHistory: g.__pollarTxHistory ?? { step: 'idle' },
-    refreshWalletBalance: (...args: unknown[]) => g.__pollarRefreshWalletBalance?.(...args),
+    refreshWalletBalance: () => g.__pollarRefreshWalletBalance?.(),
   }),
 }))
 
@@ -109,7 +109,7 @@ describe('useWalletBalance', () => {
 
     const { result, rerender } = renderHook(
       ({ wallet }: { wallet: ConnectedWallet | null }) => useWalletBalance(wallet),
-      { initialProps: { wallet: WALLET_A } },
+      { initialProps: { wallet: WALLET_A as ConnectedWallet | null } },
     )
 
     // Trigger manual refresh for wallet A
@@ -147,7 +147,7 @@ describe('useWalletBalance', () => {
 
     const { result, rerender } = renderHook(
       ({ wallet }: { wallet: ConnectedWallet | null }) => useWalletBalance(wallet),
-      { initialProps: { wallet: WALLET_A } },
+      { initialProps: { wallet: WALLET_A as ConnectedWallet | null } },
     )
 
     let refreshPromiseA: Promise<void>
@@ -261,7 +261,7 @@ describe('useWalletBalance', () => {
 
     const { result, rerender } = renderHook(
       ({ wallet }: { wallet: ConnectedWallet | null }) => useWalletBalance(wallet),
-      { initialProps: { wallet: WALLET_A } },
+      { initialProps: { wallet: WALLET_A as ConnectedWallet | null } },
     )
 
     let refreshPromise: Promise<void>

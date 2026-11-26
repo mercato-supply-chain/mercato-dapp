@@ -3,6 +3,20 @@ import { Keypair } from '@stellar/stellar-sdk'
 
 type AuthState = { ok: boolean; status: number }
 
+type ReserveRow = {
+  attempt_id: string
+  status: string
+  nonce: number
+  contribution_ref: string
+  principal_units: number
+  asset_id: string
+  network: string
+  funding_pool_contract_id: string
+  investor_address: string
+  reservation_expires_at: null
+  replayed: boolean
+}
+
 const state = {
   auth: { ok: true, status: 200 } as AuthState,
   admin: { ok: true, status: 200 } as AuthState,
@@ -21,7 +35,7 @@ const state = {
       investor_address: '',
       reservation_expires_at: null,
       replayed: false,
-    },
+    } as ReserveRow | null,
     error: null as unknown,
   },
 }

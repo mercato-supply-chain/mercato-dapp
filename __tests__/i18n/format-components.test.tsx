@@ -19,8 +19,7 @@ const dashboardProps: ComponentProps<typeof DashboardDealsPanel> = {
   totalCount: 1, viewAllHref: '/deals', statusLabels: {}, columns: { showCreated: true },
   labels: {
     title: 'Deals', viewAll: 'All', emptyTitle: 'Empty', emptyBody: '', showing: '1',
-    viewAllFooter: 'All', dealUntitled: 'Deal', tableView: 'View', tableAct: 'Act',
-    tableApprove: 'Approve', openLabel: 'Open', milestoneActionNeeded: '', aprSummary: '',
+    viewAllFooter: 'All', dealUntitled: 'Deal', tableView: 'View', aprSummary: '',
   },
 }
 

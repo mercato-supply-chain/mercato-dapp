@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/provider'
 
-function useSteps(t: (key: string) => string) {
+function heroHowItWorksSteps(_t: (key: string) => string) {
   return [
     { id: 'order', n: 1, icon: FileText, titleKey: 'landing.flow.order.title', bodyKey: 'landing.flow.order.body', badgeKey: 'landing.flow.order.badge' },
     { id: 'fund', n: 2, icon: Wallet, titleKey: 'landing.flow.fund.title', bodyKey: 'landing.flow.fund.body', badgeKey: 'landing.flow.fund.badge' },
@@ -21,7 +21,7 @@ function useSteps(t: (key: string) => string) {
 
 export function HeroHowItWorksSteps() {
   const { t } = useI18n()
-  const steps = React.useMemo(() => useSteps(t), [t])
+  const steps = React.useMemo(() => heroHowItWorksSteps(t), [t])
 
   return (
     <div className="grid w-full grid-cols-1 divide-y divide-border/70 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-y-0 dark:divide-white/10">

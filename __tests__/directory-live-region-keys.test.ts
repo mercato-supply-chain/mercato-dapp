@@ -9,11 +9,11 @@ describe('new a11y label keys resolve in both locales', () => {
   for (const [ns, keys] of Object.entries(REQUIRED_KEYS)) {
     for (const key of keys) {
       test(`${ns}.${key} present in en and es dictionaries`, async () => {
-        const en = (await import('@/messages/en.json')).default as Record<
+        const en = (await import('@/messages/en.json')).default as unknown as Record<
           string,
           Record<string, string>
         >
-        const es = (await import('@/messages/es.json')).default as Record<
+        const es = (await import('@/messages/es.json')).default as unknown as Record<
           string,
           Record<string, string>
         >

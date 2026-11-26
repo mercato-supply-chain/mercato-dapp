@@ -70,8 +70,14 @@ describe('public directory shells use translated headings in both locales', () =
   for (const route of Object.keys(HEADING_KEYS)) {
     for (const key of HEADING_KEYS[route]) {
       test(`${route}: ${key} resolves in en and es dictionaries`, async () => {
-        const en = (await import('@/messages/en.json')).default as Record<string, Record<string, string>>
-        const es = (await import('@/messages/es.json')).default as Record<string, Record<string, string>>
+        const en = (await import('@/messages/en.json')).default as unknown as Record<
+          string,
+          Record<string, string>
+        >
+        const es = (await import('@/messages/es.json')).default as unknown as Record<
+          string,
+          Record<string, string>
+        >
         const [ns, prop] = key.split('.')
         expect(en[ns]?.[prop]).toBeDefined()
         expect(en[ns]?.[prop]?.length).toBeGreaterThan(0)

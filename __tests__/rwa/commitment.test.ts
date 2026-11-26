@@ -15,6 +15,8 @@ import {
   hashRwaCommitment,
   toAtomicString,
   unitsForContribution,
+  type RwaDocumentCommitment,
+  type RwaFinancialSnapshot,
 } from '@/lib/rwa/commitment'
 
 const FIXTURE_DIR = join(import.meta.dir, 'fixtures', 'snapshot-v1')
@@ -36,7 +38,7 @@ const termsChanged = readFixture('terms-changed.json')
 const feesChanged = readFixture('fees-changed.json')
 const documentVector = readFixture('document.json')
 
-const baseSnapshot = buildFinancialSnapshot(base.payload as never)
+const baseSnapshot = buildFinancialSnapshot(base.payload as unknown as RwaFinancialSnapshot)
 
 describe('canonical encoding', () => {
   test('sorts keys and emits no whitespace', () => {
@@ -78,19 +80,19 @@ describe('financial snapshot vectors', () => {
   })
 
   test('reordered input produces an identical digest', () => {
-    const reorderedSnapshot = buildFinancialSnapshot(reordered.payload as never)
+    const reorderedSnapshot = buildFinancialSnapshot(reordered.payload as unknown as RwaFinancialSnapshot)
     expect(reordered.expected_hash).toBe(base.expected_hash)
     expect(hashFinancialSnapshot(reorderedSnapshot)).toBe(base.expected_hash)
   })
 
   test('a changed frozen term changes the digest', () => {
-    const changed = buildFinancialSnapshot(termsChanged.payload as never)
+    const changed = buildFinancialSnapshot(termsChanged.payload as unknown as RwaFinancialSnapshot)
     expect(hashFinancialSnapshot(changed)).toBe(termsChanged.expected_hash)
     expect(termsChanged.expected_hash).not.toBe(base.expected_hash)
   })
 
   test('a changed fee changes the digest', () => {
-    const changed = buildFinancialSnapshot(feesChanged.payload as never)
+    const changed = buildFinancialSnapshot(feesChanged.payload as unknown as RwaFinancialSnapshot)
     expect(hashFinancialSnapshot(changed)).toBe(feesChanged.expected_hash)
     expect(feesChanged.expected_hash).not.toBe(base.expected_hash)
   })
@@ -125,7 +127,7 @@ describe('financial snapshot vectors', () => {
 })
 
 describe('snapshot validation', () => {
-  const valid = base.payload as never
+  const valid = base.payload as unknown as RwaFinancialSnapshot
 
   test('rejects a float or negative principal', () => {
     expect(() => buildFinancialSnapshot({ ...valid, principal_atomic: '2500.5' })).toThrow(
@@ -138,7 +140,10 @@ describe('snapshot validation', () => {
 
   test('rejects an unknown maturity policy', () => {
     expect(() =>
-      buildFinancialSnapshot({ ...valid, maturity_policy: 'fixed_absolute' }),
+      buildFinancialSnapshot({
+        ...valid,
+        maturity_policy: 'fixed_absolute',
+      } as unknown as RwaFinancialSnapshot),
     ).toThrow('maturity_policy must be delivery_relative')
   })
 
@@ -165,21 +170,21 @@ describe('snapshot validation', () => {
       buildFinancialSnapshot({
         ...valid,
         fees: { platform_fee_bps: 100, tw_fee_bps: 30, charged_at: 'funding' },
-      }),
+      } as unknown as RwaFinancialSnapshot),
     ).toThrow('fees.rounding_policy is required')
   })
 })
 
 describe('document commitments', () => {
   test('matches the frozen document vector', () => {
-    const payload = documentVector.payload as never
+    const payload = documentVector.payload as unknown as RwaDocumentCommitment
     const document = buildDocumentCommitment(payload)
     expect(hashDocumentCommitment(document)).toBe(documentVector.expected_hash)
     expect(documentVector.expected_hash).toMatch(HEX64)
   })
 
   test('a changed document changes the digest', () => {
-    const payload = documentVector.payload as never
+    const payload = documentVector.payload as unknown as RwaDocumentCommitment
     const changed = buildDocumentCommitment({
       ...payload,
       content_hash: '0'.repeat(64),
@@ -188,7 +193,7 @@ describe('document commitments', () => {
   })
 
   test('rejects a hash that is not 64 lowercase hex characters', () => {
-    const payload = documentVector.payload as never
+    const payload = documentVector.payload as unknown as RwaDocumentCommitment
     expect(() => buildDocumentCommitment({ ...payload, content_hash: 'ABC123' })).toThrow(
       'content_hash must be 64 lowercase hex characters',
     )

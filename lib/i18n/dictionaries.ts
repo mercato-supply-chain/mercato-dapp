@@ -1,4 +1,5 @@
 import en from '@/messages/en.json'
+import es from '@/messages/es.json'
 import { defaultLocale, isLocale } from './config'
 import type { MessageTree } from './messages'
 
@@ -7,8 +8,13 @@ export type Messages = typeof en
 
 export type { MessageTree }
 
+export const dictionaries: Record<'en' | 'es', Messages> = {
+  en,
+  es: es as Messages,
+}
+
 // Cache for Spanish dictionary (loaded lazily)
-let esDict: Messages | null = null
+let esDict: Messages | null = dictionaries.es
 
 /**
  * English dictionary, statically imported for synchronous fallback.
@@ -23,8 +29,8 @@ export const enDict: Messages = en
  */
 async function loadSpanishDictionary(): Promise<Messages> {
   if (!esDict) {
-    const module = await import('@/messages/es.json')
-    esDict = module.default as Messages
+    const loaded = await import('@/messages/es.json')
+    esDict = loaded.default as Messages
   }
   return esDict
 }

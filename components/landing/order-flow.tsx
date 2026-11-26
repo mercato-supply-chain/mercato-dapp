@@ -19,7 +19,7 @@ import {
 
 type StepId = 'order' | 'fund' | 'produce' | 'deliver' | 'complete'
 
-function useFlowSteps(t: (key: string, replacements?: Record<string, string | number>) => string) {
+function flowSteps(t: (key: string, replacements?: Record<string, string | number>) => string) {
   return [
     {
       id: 'order' as const,
@@ -188,7 +188,7 @@ export function OrderFlow() {
   const { ref, visible } = useReveal(0.12)
   const [active, setActive] = React.useState(0)
   const [panelKey, setPanelKey] = React.useState(0)
-  const steps = React.useMemo(() => useFlowSteps(t), [t])
+  const steps = React.useMemo(() => flowSteps(t), [t])
 
   const step = steps[active]
   const StepIcon = step.icon

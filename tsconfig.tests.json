@@ -13,5 +13,5 @@
     ".next/dev/types/**/*.ts",
     "happydom.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".next"]
 }

@@ -17,8 +17,10 @@ const STATUS_LABEL_KEY: Record<string, string> = {
   released: 'dealStatus.released',
 }
 
-export function DealCard({ deal }: { deal: Deal; listIndex?: number }) {
+export function DealCard({ deal, listIndex }: { deal: Deal; listIndex?: number }) {
   const { t } = useI18n()
+  const staggerMs =
+    listIndex != null ? Math.min(listIndex * 42, 360) : undefined
   const statusLabelKey =
     STATUS_LABEL_KEY[deal.status] ?? STATUS_LABEL_KEY.awaiting_funding
   const isOpen = deal.status === 'awaiting_funding'

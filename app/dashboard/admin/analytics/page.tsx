@@ -50,11 +50,9 @@ export default async function AdminAnalyticsPage({
     timeZone: 'UTC',
   })
 
-  // Sections whose underlying queries failed are reported explicitly instead of
-  // being rendered with zero totals. Missing/failed values stay null.
-  const failedSections: string[] = Array.isArray(data?.failedSections)
-    ? (data!.failedSections as string[])
-    : []
+  // Partial section failures are not modeled on AdminAnalyticsData; a missing
+  // payload is handled as a full-page empty state below.
+  const failedSections: string[] = []
   const isFailed = (name: string) => failedSections.includes(name)
 
   return (

@@ -52,7 +52,25 @@ export default function HomePage() {
       <LandingHashScroll />
 
       <main id="main" tabIndex={-1} className="flex-1">
-        <LandingHero deal={heroDeal} stats={platformStats} />
+        <LandingHero
+          deal={
+            <Suspense
+              fallback={
+                <HeroDealSheet
+                  deal={sampleHeroDeal()}
+                  className="hero-stagger-4 w-full lg:justify-self-end"
+                />
+              }
+            >
+              <LandingHeroDeal />
+            </Suspense>
+          }
+          stats={
+            <Suspense fallback={<HeroStatsBar />}>
+              <LandingStats />
+            </Suspense>
+          }
+        />
 
         <LandingRoles />
 

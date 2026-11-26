@@ -320,38 +320,77 @@ export async function getDashboardData(
       ])
       pendingEscrowApprovals = unwrapCount('admin.pendingEscrow', pendingEscrowRes)
       releaseQueue = unwrapCount('admin.releaseQueue', releaseCountRes)
-      unwrap('admin.previewMilestones', previewMilestonesRes)
+      const previewMilestones = unwrap('admin.previewMilestones', previewMilestonesRes) ?? []
+
+      const dealsById = new Map(
+        escrowDealRows.map((d) => [
+          d.id as string,
+          d as {
+            id: string
+            title?: string
+            pyme?: { company_name?: string; full_name?: string; contact_name?: string } | null
+            supplier?: {
+              company_name?: string
+              full_name?: string
+              contact_name?: string
+              logo_url?: string | null
+            } | null
+          },
+        ]),
+      )
+
+      adminApprovalPreview = previewMilestones.map((row) => {
+        const deal = dealsById.get(row.deal_id as string)
+        return {
+          milestoneId: row.id as string,
+          dealId: row.deal_id as string,
+          dealTitle: (deal?.title as string) || 'Deal',
+          milestoneTitle: (row.title as string) || 'Milestone',
+          pymeName:
+            deal?.pyme?.company_name || deal?.pyme?.full_name || deal?.pyme?.contact_name || '—',
+          supplierName:
+            deal?.supplier?.company_name ||
+            deal?.supplier?.full_name ||
+            deal?.supplier?.contact_name ||
+            '—',
+          amount: Number(row.amount ?? 0),
+        }
+      })
     }
 
-    // Remaining admin derivation (volume totals, approval preview, adminStats)
-    // continues below; the adjacent section is unchanged by this fix.
-    void {
+    const totalVolume = volumeRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
+    const activeVolume = volumeRows
+      .filter((row) => row.status === 'funded' || row.status === 'in_progress')
+      .reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
+
+    deals = (recentDeals || []) as DashboardDealRow[]
+    adminStats = {
       totalDeals,
       seekingFunding,
-      fundedCount,
-      inProgressCount,
-      completedCount,
-      recentDeals,
+      activeDeals: fundedCount + inProgressCount,
+      completedDeals: completedCount,
       pendingApprovals,
+      pendingEscrowApprovals,
+      releaseQueue,
       escrowDeals,
+      totalVolume,
+      activeVolume,
       pymeCount,
       investorCount,
       supplierCount,
       supplierCompanyCount,
-      volumeRows,
       vaultConfigured,
     }
   }
 
   return {
-    userType,
-    fullName,
-    companyName,
+    profile: { fullName, companyName, userType },
     deals,
+    companyFilterId,
     supplierCompanies,
     supplierProductsForCard,
+    roleStats,
     adminStats,
     adminApprovalPreview,
-    roleStats,
-  } as DashboardPayload
+  }
 }

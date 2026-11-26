@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DealCard } from '@/components/deal-card'
+import { Navigation } from '@/components/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -429,17 +430,12 @@ export function DealsBrowse({
           </div>
         ) : deals.length > 0 ? (
           <>
-            <div
-              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-              aria-busy={isLoading}
-              style={{ contain: 'content' }}
-            >
-            <div aria-busy={isLoading}>
+            <div aria-busy={isLoading} style={{ contain: 'content' }}>
               {deals.map((deal, index) => (
                 <DealCard key={deal.id} deal={deal} listIndex={index} />
               ))}
             </div>
-            {hasMore && (
+            {hasMore ? (
               <div className="mt-8 flex justify-center">
                 <Button
                   variant="outline"
@@ -449,7 +445,7 @@ export function DealsBrowse({
                   {isLoading ? t('deals.loadingDeals') : t('deals.loadMore')}
                 </Button>
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           <div className="border-y border-border py-16 text-center">

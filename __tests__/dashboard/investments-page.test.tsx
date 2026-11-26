@@ -10,6 +10,7 @@ const real = {
   redirect: nextNavigation.redirect,
   getServerDictionary: i18nServer.getServerDictionary,
   getInvestorPortfolio: investorPortfolio.getInvestorPortfolio,
+  getDashboardSession: dashboardSession.getDashboardSession,
 }
 
 type Deferred<T> = {

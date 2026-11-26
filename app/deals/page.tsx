@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import { DealsBrowse } from './deals-browse'
-import { DealCardList } from './deal-card-list'
 import { getServerDictionary } from '@/lib/i18n/server'
 import { JsonLd } from '@/components/seo/json-ld'
 import { createClient } from '@/lib/supabase/server'
@@ -97,8 +96,8 @@ export default async function DealsPage({
           </div>
         }
       >
-        <DealCardList deals={page.deals} />
         <DealsBrowse
+          initialDeals={page.deals}
           initialPage={page.page}
           initialHasMore={page.hasMore}
           initialMatchCount={page.matchCount}

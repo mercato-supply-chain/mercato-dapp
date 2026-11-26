@@ -10,6 +10,14 @@ import {
   type RwaRawEvent,
 } from '@/lib/rwa/chain'
 
+function scvU64(value: bigint): xdr.ScVal {
+  return xdr.ScVal.scvU64(value as unknown as xdr.Uint64)
+}
+
+function scvI128(value: bigint): xdr.ScVal {
+  return xdr.ScVal.scvI128(value as unknown as xdr.Int128Parts)
+}
+
 const INVESTOR = accountAddress(1)
 const OTHER_INVESTOR = accountAddress(2)
 const POOL = accountAddress(3)
@@ -88,11 +96,11 @@ function contributionEvent(overrides: {
       addressVal(investor),
     ],
     value: xdr.ScVal.scvVec([
-      xdr.ScVal.scvU64(nonce),
+      scvU64(nonce),
       xdr.ScVal.scvBytes(ref),
-      xdr.ScVal.scvI128(principal),
-      xdr.ScVal.scvI128(fee),
-      xdr.ScVal.scvI128(ownership),
+      scvI128(principal),
+      scvI128(fee),
+      scvI128(ownership),
     ]),
   })
 }
@@ -136,7 +144,7 @@ describe('parseContributionEvent', () => {
       id: raw.id,
       txHash: raw.txHash,
       topic: raw.topic,
-      value: xdr.ScVal.scvVec([xdr.ScVal.scvU64(BigInt(1))]),
+      value: xdr.ScVal.scvVec([scvU64(BigInt(1))]),
     })
 
     expect(parseContributionEvent(truncated)).toBeNull()
@@ -183,9 +191,9 @@ describe('parseSettlementEvent', () => {
       ],
       value: xdr.ScVal.scvVec([
         addressVal(INVESTOR),
-        xdr.ScVal.scvI128(BigInt(1_000_000)),
+        scvI128(BigInt(1_000_000)),
         addressVal(OTHER_INVESTOR),
-        xdr.ScVal.scvI128(BigInt(10_000)),
+        scvI128(BigInt(10_000)),
         xdr.ScVal.scvU32(2),
       ]),
     })
@@ -217,8 +225,8 @@ describe('parseRefundEvent', () => {
         addressVal(INVESTOR),
       ],
       value: xdr.ScVal.scvVec([
-        xdr.ScVal.scvI128(BigInt(500_000)),
-        xdr.ScVal.scvI128(BigInt(5_000)),
+        scvI128(BigInt(500_000)),
+        scvI128(BigInt(5_000)),
       ]),
     })
 

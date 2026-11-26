@@ -206,6 +206,7 @@ function DealCardMobile({
   columns: DashboardDealsPanelProps['columns']
 }) {
   const statusLabel = statusLabels[deal.status] ?? deal.status
+  const { locale } = useI18n()
 
   return (
     <Link
@@ -243,6 +244,7 @@ function DealTableRow({
   columns: DashboardDealsPanelProps['columns']
 }) {
   const statusLabel = statusLabels[deal.status] ?? deal.status
+  const { locale } = useI18n()
 
   return (
     <tr

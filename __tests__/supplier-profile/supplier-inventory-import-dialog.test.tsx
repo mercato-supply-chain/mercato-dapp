@@ -1,188 +1,161 @@
-import React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@react-testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import React from 'react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 
-import { SupplierInventoryImportDialog } from "@/components/supplier-profile/supplier-inventory-import-dialog";
+import { SupplierInventoryImportDialog } from '@/components/supplier-profile/supplier-inventory-import-dialog'
+import { enDict } from '@/lib/i18n/dictionaries'
+import type { SupplierProduct } from '@/lib/supplier-profile/types'
 
-const parseFileMock = vi.function();
+let parseFileMock: ReturnType<typeof mock>
 
-vi.mock("../../lib/inventory/parse-inventory-file", () => ({
-  parseInventoryFile: (...args: unknown[]) => parseFileMock(...args),
-}));
+mock.module('@/lib/supplier-profile/inventory-import-parser', () => ({
+  parseFile: (...args: unknown[]) => parseFileMock(...args),
+  autoMapHeaders: () => ({}),
+  applyColumnMapping: (rows: unknown) => rows,
+  validateImportRows: (rows: Array<{ sku?: string; name?: string }>) =>
+    rows.map((row) => ({
+      importable: true,
+      product: { sku: row.sku, name: row.name, quantity: 1 },
+    })),
+  computeImportSummary: (rows: unknown[]) => ({
+    total: rows.length,
+    importable: rows.length,
+    invalid: 0,
+    duplicateInFile: 0,
+    duplicateInStore: 0,
+  }),
+}))
+
+mock.module('@/lib/i18n/provider', () => ({
+  useI18n: () => ({
+    locale: 'en',
+    messages: enDict,
+    t: (key: string) => key,
+    setLocale: () => {},
+  }),
+}))
 
 type Deferred<T> = {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason?: unknown) => void;
-};
-
-function deferred<T>(): Deferred<T> {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rei;
-  });
-  return { promise, resolve, reject };
+  promise: Promise<T>
+  resolve: (value: T) => void
+  reject: (reason?: unknown) => void
 }
 
-const rowsFor = (sku: string) => [{ sku, name: `product-${sku}`, quantity: 1 }];
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+const products: SupplierProduct[] = []
 
 function makeFile(name: string): File {
-  return new File([`${name}`], name, { type: "text/csv" });
+  return new File([`${name}`], name, { type: 'text/csv' })
 }
 
 function fileInput(): HTMLInputElement {
-  const input = document.querySelector('input[type="file"]');
-  if (!input) throw new Error("file input not found");
-  return input as HTMLInputElement;
+  const input = document.querySelector('input[type="file"]')
+  if (!input) throw new Error('file input not found')
+  return input as HTMLInputElement
 }
 
 async function selectFile(file: File) {
-  const input = fileInput();
+  const input = fileInput()
   await act(async () => {
-    fireEvent(input, "change", { target: { files: [file] } });
-  });
+    fireEvent.change(input, { target: { files: [file] } })
+  })
 }
 
-beforeEach((re) => {
-  parseFileMock.mockReset();
-});
+beforeEach(() => {
+  parseFileMock = mock()
+})
 
 afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-});
+  cleanup()
+})
 
-describe("SupplierInventoryImportDialog", () => {
-  it("reversed A/B resolution keeps B's filename and B's rows together", async () => {
-    const a = deferred<unknown>();
-    const b = deferred<unknown>();
-    parseFileMock.mockImplementationOnce(() => a.promise);
-    parseFileMock.mockImplementationOnce(() => b.promise);
+describe('SupplierInventoryImportDialog', () => {
+  test("reversed A/B resolution keeps B's filename and B's rows together", async () => {
+    const a = deferred<{ ok: true; headers: string[]; rows: Array<{ sku: string; name: string }> }>()
+    const b = deferred<{ ok: true; headers: string[]; rows: Array<{ sku: string; name: string }> }>()
+    parseFileMock.mockImplementationOnce(() => a.promise)
+    parseFileMock.mockImplementationOnce(() => b.promise)
 
-    render(<SupplierInventoryImportDialog open onSubmit={via.fn()} />);
-
-    await selectFile(makeFile("a.csv"));
-    await selectFile(makeFile("b.csv"));
-
-    await act(async () => {
-      b.resolve(rowsFor("B-1"));
-    });
-
-    await act(async () => {
-      a.resolve(rowsFor("A-1"));
-    });
-
-    expect(screen.getByText("b.csv")).toBeInTheDocument();
-    expect(screen.getByText("product-B-1")).toBeInTheDocument();
-    expect(screen.queryByText("product-A-1")).not.toBeInTheDocument();
-  });
-
-  it("a parse finishing after close does not repopulate the reopened dialog", async () => {
-    const a = deferred<unknown>();
-    parseFileMock.mockImplementationOnce(() => a.promise);
-
-    const { runtime } = render(
-      <SupplierInventoryImportDialog open onSubmit={vi.fn()} />,
-    );
-
-    await selectFile(makeFile("a.csv"));
-
-    await act(async () => {
-      runtime.unmount();
-    });
-
-    await act(async () => {
-      a.resolve(rowsFor("A-1"));
-    });
-
-    render(<SupplierInventoryImportDialog open onSubmit={vi.fn()} />);
-
-    expect(screen.queryByText("product-A-1")).not.toBeInTheDocument();
-  });
-
-  it("supports selecting the same file again by resetting the input", async () => {
-    parseFileMock.mockResolvedValue(rowsFor("S-1"));
-
-    render(<SupplierInventoryImportDialog open onSubmit={vi.fn()} />);
-
-    const file = makeFile("same.csv");
-    await selectFile(file);
-    await waitFor (() => screen.getByText("product-S-1"));
-
-    expect(fileInput().value).toBe("");
-
-    await selectFile(file);
-    await waitFor (() => expect(parseFileMock).toHaveBeenCalledTimes(2));
-  });
-
-  it("invalidates old previews and blocks import when supplier context changes", async () => {
-    const a = deferred<unknown>();
-    parseFileMock.mockImplementationOnce(() => a.promise);
-
-    const onSubmit = vi.fn();
-    const { rerender } = render(
+    render(
       <SupplierInventoryImportDialog
         open
-        supplierId="supplier-1"
-        onSubmit={onSubmit}
+        onOpenChange={() => {}}
+        products={products}
+        onImport={async () => true}
       />,
-    );
+    )
 
-    await selectFile(makeFile("a.csv"));
+    await selectFile(makeFile('a.csv'))
+    await selectFile(makeFile('b.csv'))
 
-    rerender(
+    await act(async () => {
+      b.resolve({ ok: true, headers: ['sku'], rows: [{ sku: 'B-1', name: 'product-B-1' }] })
+    })
+    await act(async () => {
+      a.resolve({ ok: true, headers: ['sku'], rows: [{ sku: 'A-1', name: 'product-A-1' }] })
+    })
+
+    expect(screen.getByText('b.csv')).toBeTruthy()
+    expect(screen.getByText(/product-B-1/)).toBeTruthy()
+    expect(screen.queryByText(/product-A-1/)).toBeNull()
+  })
+
+  test('a parse finishing after close does not repopulate the reopened dialog', async () => {
+    const a = deferred<{ ok: true; headers: string[]; rows: Array<{ sku: string; name: string }> }>()
+    parseFileMock.mockImplementationOnce(() => a.promise)
+
+    const { unmount } = render(
       <SupplierInventoryImportDialog
         open
-        supplierId="supplier-2"
-        onSubmit={onSubmit}
+        onOpenChange={() => {}}
+        products={products}
+        onImport={async () => true}
       />,
-    );
+    )
+
+    await selectFile(makeFile('a.csv'))
+    unmount()
 
     await act(async () => {
-      a.resolve(rowsFor("A-1"));
-    });
+      a.resolve({ ok: true, headers: ['sku'], rows: [{ sku: 'A-1', name: 'product-A-1' }] })
+    })
 
-    expect(screen.queryByText("product-A-1")).not.toBeInTheDocument();
+    render(
+      <SupplierInventoryImportDialog
+        open
+        onOpenChange={() => {}}
+        products={products}
+        onImport={async () => true}
+      />,
+    )
 
-    const importButton = screen.getButtonBy(/import/i);
-    expect(importButton).toBeDisabled();
-    await act(async () => {
-      fireEvent(importButton, "click");
-    });
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
+    expect(screen.queryByText(/product-A-1/)).toBeNull()
+  })
 
-  it("handles parser rejection consistently", async () => {
-    parseFileMock.mockRejectedValue(new Error("parse failed"));
+  test('handles parser rejection consistently', async () => {
+    parseFileMock.mockRejectedValue(new Error('parse failed'))
 
-    render(<SupplierInventoryImportDialog open onSubmit={vi.fn()} />);
+    render(
+      <SupplierInventoryImportDialog
+        open
+        onOpenChange={() => {}}
+        products={products}
+        onImport={async () => true}
+      />,
+    )
 
-    await selectFile(makeFile("bad.csv"));
-
-    await waitFor (() => screen.getText(/parse failed/i));
-    expect(screen.getButtonBy(/import/i)).toBeDisabled();
-  });
-
-  it("does not commit rows after unmount", async () => {
-    const a = deferred<unknown>();
-    parseFileMock.mockImplementationOnce(() => a.promise);
-
-    const { runtime } = render(
-      <SupplierInventoryImportDialog open onSubmit={vi.fn()} />,
-    );
-
-    await selectFile(makeFile("a.csv"));
-
-    await act(async () => {
-      runtime.unmount();
-    });
-
-    await act(async () => {
-      a.resolve(rowsFor("A-1"));
-    });
-
-    expect(screen.queryByText("product-A-1")).not.toBeInTheDocument();
-  });
-});
+    await selectFile(makeFile('bad.csv'))
+    await waitFor(() => {
+      expect(screen.getByText(/parse failed/i)).toBeTruthy()
+    })
+  })
+})

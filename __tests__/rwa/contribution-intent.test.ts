@@ -8,6 +8,14 @@ import {
   type RwaActor,
   type RwaDependencies,
 } from '@/lib/rwa/contribution-intent'
+
+function scvU64(value: bigint): xdr.ScVal {
+  return xdr.ScVal.scvU64(value as unknown as xdr.Uint64)
+}
+
+function scvI128(value: bigint): xdr.ScVal {
+  return xdr.ScVal.scvI128(value as unknown as xdr.Int128Parts)
+}
 import { RwaError } from '@/lib/rwa/errors'
 import type { RwaRawEvent } from '@/lib/rwa/chain'
 
@@ -153,11 +161,11 @@ function contributionEvent(params: {
       xdr.ScVal.scvAddress(new Address(investor).toScAddress()),
     ],
     value: xdr.ScVal.scvVec([
-      xdr.ScVal.scvU64(nonce),
+      scvU64(nonce),
       xdr.ScVal.scvBytes(ref),
-      xdr.ScVal.scvI128(principal),
-      xdr.ScVal.scvI128(fee),
-      xdr.ScVal.scvI128(ownership),
+      scvI128(principal),
+      scvI128(fee),
+      scvI128(ownership),
     ]),
   }
 }
@@ -181,6 +189,9 @@ function buildDeps(options: {
       registryContractId: null,
       usdcSacAddress: null,
       enabled: true,
+      registryAdminAddress: null,
+      platformAddress: null,
+      usdcIssuer: null,
     },
     rpcCalls: supabase.rpcCalls,
   }
