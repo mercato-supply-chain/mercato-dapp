@@ -28,6 +28,7 @@ Read documents in this order depending on your task:
 | **[SETUP.md](SETUP.md)** | Step-by-step local setup checklist |
 | **[env.sample](env.sample)** | Complete environment variable list |
 | **[doc/rwa-architecture.md](doc/rwa-architecture.md)** | Credit-asset schema, allowed state edges, issuance → contribute → settle → redeem |
+| **[doc/how-money-moves.md](doc/how-money-moves.md)** | Which screen calls which contract, and which calls have no screen |
 | **[doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md)** | Testnet contract ids and tx hashes. Lifecycle tables under that deploy record are a template. |
 | **[lib/anchors/README.md](lib/anchors/README.md)** | Fiat ramp anchor interface and provider clients |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Branch policy (`develop`), PR expectations, Drips Wave |
