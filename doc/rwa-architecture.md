@@ -4,8 +4,7 @@
 > **Migrations:** `supabase/migrations/20261021071817_rwa_credit_assets_and_positions.sql`, `supabase/migrations/20261110120000_rwa_credit_pool_link.sql`
 > **App entry:** `lib/rwa/issuance.ts`, `lib/rwa/contribution-intent.ts`, `lib/rwa/position-servicing.ts`
 > **Agent orientation:** [AGENTS.md](../AGENTS.md)
-> **Commitments:** `lib/rwa/commitment.ts` · **Fixtures:** `__tests__/rwa/fixtures/snapshot-v1/`
-> **SQL tests:** `supabase/tests/rwa/`
+> **Commitments:** `lib/rwa/commitment.ts`
 
 This record is the contract that downstream contract and API contributors implement against.
 It contains no open policy TODOs: every rule below is either enforced by the migration or
@@ -285,18 +284,8 @@ presentation approximation and must never be used to compute a payout.
   Document bytes, customer data and signed URLs stay private; the database stores an opaque
   `opaque_ref` that rejects URL schemes.
 
-**Cross-language fixtures.** `__tests__/rwa/fixtures/snapshot-v1/` contains the frozen vectors:
-
-| File | Proves |
-|------|--------|
-| `base.json` | Canonical bytes + digest of the reference snapshot |
-| `reordered-input.json` | Reordered input yields the **same** digest |
-| `terms-changed.json` | A changed frozen term yields a **different** digest |
-| `fees-changed.json` | A changed fee yields a **different** digest |
-| `document.json` | Document commitment vector |
-
-A Rust implementation must reproduce `expected_canonical` and `expected_hash` from the same
-files; the TypeScript suite asserts exactly those values.
+Canonical field order and digest rules live in `lib/rwa/commitment.ts`. A Rust implementation
+must reproduce the same canonical bytes and SHA-256 digest from the same snapshot input.
 
 ## 7. Actors and permissions
 
@@ -387,10 +376,8 @@ npx supabase db reset
 npx supabase test db
 
 # application checks
-bun test __tests__/rwa
-bun test
 bun lint
-bunx tsc --noEmit
+bun typecheck
 bun build
 
 npx supabase stop

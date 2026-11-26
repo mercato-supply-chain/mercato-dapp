@@ -13,7 +13,7 @@
 | **Primary network** | Stellar (testnet by default) |
 | **Auth & data** | Supabase (Postgres + Auth) |
 | **Settlement** | Classic USDC for default deals. Opt-in deals use the Soroban credit registry and funding pool, then Trustless Work for repayment. |
-| **Package manager** | Bun (`bun install`, `bun dev`, `bun test`) |
+| **Package manager** | Bun (`bun install`, `bun dev`) |
 
 ## Documentation map
 
@@ -303,7 +303,6 @@ lib/                    # Business logic, Stellar, anchors, defindex, supabase
 providers/              # wallet-provider, pollar-provider
 contracts/              # Soroban credit registry, funding pool, and shared types
 supabase/migrations/    # Schema (source of truth for DB)
-__tests__/              # Bun tests
 doc/                    # Architecture docs
 ```
 
@@ -328,16 +327,14 @@ Full list: [env.sample](env.sample). Architecture reference: [doc/architecture.m
 ```bash
 bun install
 bun lint
-bun typecheck        # app source (tsconfig.json, excludes __tests__)
-bun typecheck:tests  # tests + app (tsconfig.tests.json, includes Bun test types)
+bun typecheck
 bun build
-bun test
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Before opening a PR: lint + typecheck + typecheck:tests + build must pass. Schema changes: new file under `supabase/migrations/` via `supabase migration new <name>`.
+Before opening a PR: lint + typecheck + build must pass. Schema changes: new file under `supabase/migrations/` via `supabase migration new <name>`.
 
 ## Common agent tasks
 

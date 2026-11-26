@@ -171,15 +171,7 @@ Each step asserts both the authoritative chain state and the database projection
 
 ## 7. Reproducible commands
 
-### 7.1 Local deterministic integration harness
-
-The local harness under `__tests__/rwa/` runs the full lifecycle against a deterministic fixture set with no external vendor access. It covers the failure paths listed in Section 8.
-
-```bash
-bun test __tests__/rwa
-```
-
-### 7.2 Testnet lifecycle script
+### 7.1 Testnet lifecycle script
 
 The Testnet script is opt-in and requires the environment variables documented in `env.sample`. It reports an explicit result manifest and exits non-zero on any unmet invariant.
 
@@ -189,16 +181,15 @@ bun run scripts/rwa/testnet-lifecycle.ts
 
 The script writes `run-manifest.json` next to the run and regenerates this document from that manifest. It rejects a run whose WASM hash or contract ID does not match the configured artifacts.
 
-### 7.3 Rust, Bun and migration/RLS verification
+### 7.2 Rust, Bun and migration/RLS verification
 
 ```bash
 cargo test --workspace
 cargo fmt --workspace --check
 cargo clippy --workspace --all-targets - -D warnings
 cargo build --workspace --target wasm32-unknown-unknown
-bun test
 bun lint
-bunx tsc --noEmit
+bun typecheck
 bun build
 supabase test db
 ```
@@ -207,7 +198,7 @@ The RLS migration tests establish investor isolation (investor A cannot read inv
 
 ## 8. Negative and recovery scenarios
 
-Each scenario is automated in the local harness with explicit assertions. Critical chain behaviors are recorded with Testnet receipts in `run-manifest.json`.
+Critical chain behaviors are recorded with Testnet receipts in `run-manifest.json`.
 
 | Scenario | Assertion |
 | --- | --- |

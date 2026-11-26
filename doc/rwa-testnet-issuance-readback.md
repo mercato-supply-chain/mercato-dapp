@@ -57,8 +57,7 @@ investor wallet.
 
 Using the repository's pinned Bun 1.3.14:
 
-- `bun test __tests__/rwa`: 38 passed, 0 failed.
-- `bunx eslint lib/rwa app/api/rwa __tests__/rwa`: passed.
+- `bunx eslint lib/rwa app/api/rwa`: passed.
 - `bun build`: passed. The existing Next.js configuration skips type checking.
 - `bun lint`: 91 errors and 47 warnings, identical to base commit
   `763f9901bbcd46bf06f5102bf14de82a1fc388d0` after normalizing checkout paths.

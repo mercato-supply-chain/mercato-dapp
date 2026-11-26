@@ -48,7 +48,6 @@ Before opening a PR:
 ```bash
 bun lint
 bun typecheck
-bun typecheck:tests
 bun build
 ```
 
@@ -78,7 +77,7 @@ If you need to fixup during review, **squash or reorganize** commits before merg
 ### Pull request checklist
 
 - [ ] Addresses the issue scope; no unrelated refactors.
-- [ ] `bun lint`, `bun typecheck`, `bun typecheck:tests`, and `bun build` pass locally.
+- [ ] `bun lint`, `bun typecheck`, and `bun build` pass locally.
 - [ ] No secrets or `.env` files committed — use `env.sample` for documenting new variables only.
 - [ ] PR description states **what** changed and **why**, and links the issue (`Closes #…` / `Fixes #…` where appropriate).
 

@@ -179,14 +179,3 @@ Raw amounts are integer stroops. `parseAmounts` floors defensively, and client c
 (`displayToRawAmount`) round, so fractional raw values never reach the SDK. Display
 conversion uses `NEXT_PUBLIC_DEFINDEX_ASSET_DECIMALS` (default 7, matching USDC/XLM on
 Stellar).
-
-## Testing
-
-Pure helpers are covered by `bun test` under `__tests__/defindex/`: amount math, route
-helpers (status mapping, slippage, amounts/caller parsing), create-vault validation,
-address validators, vault-position ownership math, extract-vault-address resolution, and
-vault-monitor address resolution + alert building.
-
-```bash
-bun test __tests__/defindex/
-```

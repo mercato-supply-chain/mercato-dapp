@@ -26,16 +26,3 @@ required.
 Supabase query errors are thrown out of the cached operation. The existing
 zero-valued failure fallback is returned outside the persistent cache, so a
 transient error is not stored as a successful aggregate for the cache window.
-
-Run the isolated streaming and query regression scenarios with:
-
-```sh
-bun test __tests__/landing/landing.test.ts
-```
-
-The streaming scenario holds both the stats and live-deal promises pending and
-checks initial HTML for the real hero, roles, FAQ, sample deal, and skeleton
-before resolving and checking the live deal, funded-order, open-deal, and
-month-over-month output. Query scenarios use real
-Supabase query builders against a controlled HTTP transport to verify aggregation,
-anonymous client configuration, cache configuration, and failure recovery.
