@@ -44,21 +44,6 @@ export function LandingPartnersStrip({ variant = 'section' }: LandingPartnersStr
               <span className={cn('text-sm font-semibold', isHero ? 'text-foreground/70 group-hover:text-foreground dark:text-white/60 dark:group-hover:text-white' : 'text-foreground/70 group-hover:text-foreground')}>Trustless Work</span>
             </a>
             <a
-              href="https://etherfuse.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="opacity-50 transition-all duration-300 hover:opacity-100 hover:scale-105"
-            >
-              <Image
-                src="/etherfuse-logo.svg"
-                alt="Etherfuse"
-                width={96}
-                height={24}
-                loading={isHero ? undefined : 'lazy'}
-                className="h-6 w-auto object-contain dark:invert"
-              />
-            </a>
-            <a
               href="https://defindex.io"
               target="_blank"
               rel="noopener noreferrer"
