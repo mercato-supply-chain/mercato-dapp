@@ -49,7 +49,7 @@ function HeroOrderFallback() {
 function LiveDealsFallback() {
   return (
     <section className="py-16 md:py-20">
-      <div className="container mx-auto px-4">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
         <div className="mb-8 h-24 rounded bg-muted/40" />
         <div className="space-y-0 border-t border-border">
           {Array.from({ length: 3 }, (_, i) => (

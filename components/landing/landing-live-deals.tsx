@@ -41,8 +41,8 @@ export async function LandingLiveDeals() {
       className="landing-section-anchor bg-background py-16 md:py-20"
       aria-labelledby="live-deals-heading"
     >
-      <div className="container mx-auto px-4">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+        <div className="mb-8 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
             <p className="mb-2 text-sm font-medium text-brand-mid dark:text-brand-light">
               {hasLive
@@ -73,7 +73,7 @@ export async function LandingLiveDeals() {
           </Button>
         </div>
 
-        <div className="border-t border-border">
+        <div className="grid auto-rows-fr border-t border-border">
           {localizedFeed.map((item) => (
             <LandingDealCard key={item.id} item={item} />
           ))}
