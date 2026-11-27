@@ -9,11 +9,12 @@ export function scrollToId(id: string) {
   const el = document.getElementById(id)
   if (!el) return
 
+  const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
   let attempts = 0
   const maxAttempts = 10
   const tryScroll = () => {
     attempts++
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    el.scrollIntoView({ behavior, block: 'start' })
     // Check if scroll reached the target (within a tolerance for the nav offset).
     // If the body is still scroll-locked (e.g. mobile sheet closing) the element
     // stays far below the viewport — retry after the lock releases.

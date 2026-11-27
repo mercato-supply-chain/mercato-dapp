@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { LATAM_COUNTRIES, SECTORS, getCountryLabel, getSectorLabel } from '@/lib/constants'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { useI18n } from '@/lib/i18n/provider'
 import type { PymeReputation, PymeReputationTier } from '@/lib/pyme-reputation'
 import { ReputationTooltip } from '@/components/reputation-tooltip'
@@ -75,7 +76,7 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
   const sectorLabel = (code: string) =>
     messages.geo.sectors[code as keyof typeof messages.geo.sectors] ?? getSectorLabel(code)
   const fmtUsd = (value: number) =>
-    new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+    new Intl.NumberFormat(toIntlLocale(locale), {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0,
@@ -192,10 +193,13 @@ export function PymesList({ initialSmbs }: { initialSmbs: Smb[] }) {
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'content' }}>
             {filteredSmbs.map((smb) => (
               <Link key={smb.id} href={`/pymes/${smb.id}`}>
-                <Card className="group h-full transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5">
+                <Card
+                  className="group h-full transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '0px 320px' }}
+                >
                   <CardHeader className="pb-3">
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-semibold text-base select-none">

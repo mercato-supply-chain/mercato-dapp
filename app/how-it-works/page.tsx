@@ -1,5 +1,6 @@
 import { HowItWorksView } from './how-it-works-view'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 
 export async function generateMetadata() {
   return {
@@ -13,10 +14,7 @@ export async function generateMetadata() {
     },
     alternates: {
       canonical: '/how-it-works',
-      languages: {
-        en: '/how-it-works?lang=en',
-        es: '/how-it-works?lang=es',
-      },
+      languages: languageAlternates('/how-it-works'),
     },
   }
 }

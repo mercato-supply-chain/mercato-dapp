@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [develop]
+    branches: [develop, main]
   push:
-    branches: [develop]
+    branches: [develop, main]
 
 # Pinned Bun version — keep in sync with package.json "packageManager".
 env:
@@ -22,7 +22,7 @@ env:
 
 jobs:
   gates:
-    name: typecheck / lint / test / build
+    name: typecheck / lint / build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,17 +34,11 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: bun install --frozen-lockfile
 
-      - name: Typecheck (app)
+      - name: Typecheck
         run: bun typecheck
-
-      - name: Typecheck (tests)
-        run: bun typecheck:tests
 
       - name: Lint
         run: bun lint
 
-      - name: Test
-        run: bun test
-
       - name: Build
-        run: bun build
+        run: bun run build

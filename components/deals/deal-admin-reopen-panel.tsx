@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { RotateCcw } from 'lucide-react'
@@ -20,9 +20,8 @@ import { useAdminReopenDeal } from '@/hooks/use-admin-reopen-deal'
 import { useI18n } from '@/lib/i18n/provider'
 import { formatDate } from '@/lib/date-utils'
 
-type DealAdminReopenPanelProps = {
+export type DealAdminReopenPanelProps = {
   deal: Deal
-  isAdmin: boolean
   onReopened?: () => void | Promise<void>
   /** When true, renders the trigger button inline without dialog wrapper styling */
   inline?: boolean
@@ -30,46 +29,60 @@ type DealAdminReopenPanelProps = {
 
 export function DealAdminReopenPanel({
   deal,
-  isAdmin,
   onReopened,
   inline = false,
 }: DealAdminReopenPanelProps) {
   const { t } = useI18n()
   const { submit, isSubmitting } = useAdminReopenDeal()
+  const isSubmittingRef = useRef(false)
   const [open, setOpen] = useState(false)
+  const [referenceTimeMs, setReferenceTimeMs] = useState<number | null>(null)
   const [fundingWindowDays, setFundingWindowDays] = useState(
     String(deal.fundingWindowDays ?? 7),
   )
 
   const canReopen =
-    isAdmin &&
     deal.status === 'awaiting_funding' &&
     deal.fundingStatus === 'expired'
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      setReferenceTimeMs(Date.now())
+    }
+  }
+
   const nextExpirationPreview = useMemo(() => {
+    if (referenceTimeMs === null) return null
     const days = Number(fundingWindowDays)
     if (!Number.isInteger(days) || days <= 0) return null
-    return new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-  }, [fundingWindowDays])
+    return new Date(referenceTimeMs + days * 24 * 60 * 60 * 1000)
+  }, [fundingWindowDays, referenceTimeMs])
 
   if (!canReopen) return null
 
   const handleReopen = async () => {
+    if (isSubmittingRef.current) return
     const days = Number(fundingWindowDays)
     if (!Number.isInteger(days) || days <= 0) {
       toast.error(t('dealDetail.adminReopenInvalidDays'))
       return
     }
 
-    const result = await submit({ dealId: deal.id, fundingWindowDays: days })
-    if (!result.ok) {
-      toast.error(result.error || t('dealDetail.adminReopenFail'))
-      return
-    }
+    isSubmittingRef.current = true
+    try {
+      const result = await submit({ dealId: deal.id, fundingWindowDays: days })
+      if (!result.ok) {
+        toast.error(result.error || t('dealDetail.adminReopenFail'))
+        return
+      }
 
-    toast.success(t('dealDetail.adminReopenSuccess'))
-    setOpen(false)
-    await onReopened?.()
+      toast.success(t('dealDetail.adminReopenSuccess'))
+      setOpen(false)
+      await onReopened?.()
+    } finally {
+      isSubmittingRef.current = false
+    }
   }
 
   const dialogBody = (
@@ -112,7 +125,7 @@ export function DealAdminReopenPanel({
 
   if (inline) {
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="default" className="gap-1.5">
             <RotateCcw className="h-4 w-4" aria-hidden />
@@ -126,7 +139,7 @@ export function DealAdminReopenPanel({
 
   return (
     <div className="space-y-2">
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="default" className="gap-1.5">
             <RotateCcw className="h-4 w-4" aria-hidden />

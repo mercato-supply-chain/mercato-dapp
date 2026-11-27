@@ -1,5 +1,6 @@
 'use client'
 
+import { formatAmount } from '@/lib/i18n/format'
 import { useState } from 'react'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -41,7 +42,7 @@ export function ApproveMilestoneReviewDialog({
   onApprove,
   triggerDisabled = false,
 }: ApproveMilestoneReviewDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -115,14 +116,14 @@ export function ApproveMilestoneReviewDialog({
             </div>
             <div className="space-y-0.5">
               <p className="text-xs text-muted-foreground">{t('repaymentEscrow.approve.amount')}</p>
-              <p className="font-medium tabular-nums">{item.milestoneAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC · {item.milestonePercentage}%</p>
+              <p className="font-medium tabular-nums">{formatAmount(locale, item.milestoneAmount)} USDC · {item.milestonePercentage}%</p>
               <p className="text-xs text-muted-foreground">{t('repaymentEscrow.approve.status')}: {milestone?.status ?? '—'} {alreadyApproved && <Badge className="ml-1 text-[10px]">{t('repaymentEscrow.approve.alreadyApproved')}</Badge>}</p>
             </div>
           </div>
           <Separator />
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-muted-foreground">{t('repaymentEscrow.approve.balance')}</span>
-            <span className="font-medium tabular-nums">{balance.toLocaleString('es-MX', { minimumFractionDigits: 2 })} USDC</span>
+            <span className="font-medium tabular-nums">{formatAmount(locale, balance)} USDC</span>
           </div>
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-muted-foreground">{t('repaymentEscrow.approve.requiredSigner')}</span>

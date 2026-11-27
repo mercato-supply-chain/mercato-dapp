@@ -1,63 +1,39 @@
-'use client'
+import { getServerDictionary, tr } from '@/lib/i18n/server'
 
-import * as React from 'react'
-import {
-  CheckCircle2,
-  FileText,
-  Package,
-  RefreshCw,
-  Wallet,
-} from 'lucide-react'
-import { useI18n } from '@/lib/i18n/provider'
+const STEPS = ['order', 'fund', 'produce', 'complete'] as const
 
-function useSteps(t: (key: string) => string) {
-  return [
-    { id: 'order', n: 1, icon: FileText, titleKey: 'landing.flow.order.title', bodyKey: 'landing.flow.order.body', badgeKey: 'landing.flow.order.badge' },
-    { id: 'fund', n: 2, icon: Wallet, titleKey: 'landing.flow.fund.title', bodyKey: 'landing.flow.fund.body', badgeKey: 'landing.flow.fund.badge' },
-    { id: 'produce', n: 3, icon: Package, titleKey: 'landing.flow.produce.title', bodyKey: 'landing.flow.produce.body', badgeKey: 'landing.flow.produce.badge' },
-    { id: 'complete', n: 4, icon: RefreshCw, titleKey: 'landing.flow.complete.title', bodyKey: 'landing.flow.complete.body', badgeKey: 'landing.flow.complete.badge' },
-  ] as const
-}
-
-export function HeroHowItWorksSteps() {
-  const { t } = useI18n()
-  const steps = React.useMemo(() => useSteps(t), [t])
+export async function HeroHowItWorksSteps() {
+  const messages = await getServerDictionary()
 
   return (
-    <div className="grid w-full grid-cols-1 divide-y divide-border/70 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-y-0 dark:divide-white/10">
-      {steps.map((step) => {
-        const Icon = step.icon
-        return (
-          <article
-            key={step.id}
-            className="flex h-full min-h-0 flex-col bg-card px-5 py-4 sm:px-6 md:py-5 dark:bg-[hsl(0_0%_4%)]"
+    <div className="mx-auto grid max-w-7xl gap-7 px-5 py-10 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:gap-12 lg:px-12 lg:py-16">
+      <h2 id="landing-flow-title" className="font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-none tracking-tight">
+        {tr(messages, 'landing.hero.flowLink')}
+      </h2>
+
+      <ol className="list-none" role="list">
+        {STEPS.map((step, index) => (
+          <li
+            key={step}
+            className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-4 pb-5 last:pb-0 before:absolute before:bottom-0 before:left-[1.0625rem] before:top-9 before:w-0.5 before:bg-[#c1d9c9] last:before:hidden dark:before:bg-[#345444]"
           >
-            <div className="mb-4 flex items-center gap-3">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-brand-mid/20 bg-brand-ultra text-sm font-bold text-brand-mid dark:border-brand-light/25 dark:bg-brand-mid/15 dark:text-brand-light"
-                aria-hidden
-              >
-                {step.n}
-              </span>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-pale text-brand-mid shadow-sm dark:bg-brand-mid/25 dark:text-brand-light dark:shadow-[0_0_20px_-4px_hsl(var(--brand-light)/0.35)]">
-                <Icon className="h-7 w-7 stroke-[1.75]" aria-hidden />
-              </span>
-            </div>
-
-            <h3 className="mb-1.5 text-[13px] font-semibold leading-snug text-foreground">
-              {t(step.titleKey)}
-            </h3>
-            <p className="mb-3 flex-1 text-[12px] leading-relaxed text-muted-foreground">
-              {t(step.bodyKey)}
-            </p>
-
-            <span className="mt-auto inline-flex w-fit max-w-full items-center gap-1 self-start rounded-full border border-brand-mid/12 bg-brand-pale/70 px-2 py-0.5 text-[9px] font-medium leading-none text-brand-dark dark:border-brand-light/12 dark:bg-brand-mid/15 dark:text-brand-light">
-              <CheckCircle2 className="h-2.5 w-2.5 shrink-0 text-brand-mid dark:text-brand-light" aria-hidden />
-              <span className="truncate">{t(step.badgeKey)}</span>
+            <span
+              className="grid size-9 place-items-center rounded-full bg-brand-pale text-sm font-semibold tabular-nums text-brand-dark dark:bg-[#19362a] dark:text-[#bde8c8]"
+              aria-hidden="true"
+            >
+              {index + 1}
             </span>
-          </article>
-        )
-      })}
+            <div className="min-w-0 pt-1">
+              <h3 className="text-base font-semibold leading-6 tracking-tight sm:text-lg">
+                {tr(messages, `landing.flow.${step}.short`)}
+              </h3>
+              <p className="mt-1 max-w-[54ch] text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {tr(messages, `landing.flow.${step}.summary`)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }

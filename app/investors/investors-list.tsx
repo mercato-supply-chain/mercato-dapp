@@ -172,10 +172,13 @@ export function InvestorsList({ initialInvestors }: { initialInvestors: Investor
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'content' }}>
             {filtered.map((inv) => (
               <Link key={inv.id} href={`/investors/${inv.id}`}>
-                <Card className="group h-full transition-all duration-200 hover:border-emerald-400/60 hover:shadow-md hover:-translate-y-0.5">
+                <Card
+                  className="group h-full transition-all duration-200 hover:border-emerald-400/60 hover:shadow-md hover:-translate-y-0.5"
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '0px 320px' }}
+                >
                   <CardHeader className="pb-3">
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-base select-none">

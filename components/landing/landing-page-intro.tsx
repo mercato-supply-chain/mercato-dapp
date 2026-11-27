@@ -3,6 +3,7 @@
 import { useI18n } from '@/lib/i18n/provider'
 import { ScrollReveal } from '@/components/landing/scroll-reveal'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
 
 type LandingPartnersStripProps = {
   variant?: 'section' | 'hero'
@@ -16,7 +17,7 @@ export function LandingPartnersStrip({ variant = 'section' }: LandingPartnersStr
     <div className={cn('mx-auto max-w-6xl', isHero && 'px-4')}>
       <p
         className={cn(
-          'text-center text-[11px] font-semibold uppercase tracking-[0.2em]',
+          'text-center text-sm font-medium',
           isHero ? 'mb-6 text-brand-mid/60 dark:text-white/40' : 'mb-8 text-brand-mid/60',
         )}
       >
@@ -32,18 +33,15 @@ export function LandingPartnersStrip({ variant = 'section' }: LandingPartnersStr
                 isHero && 'hover:opacity-90',
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/trustless-work-logo.png" alt="" width={28} height={28} className={cn('h-7 w-auto object-contain', isHero && 'dark:brightness-0 dark:invert')} />
+              <Image
+                src="/trustless-work-logo.png"
+                alt=""
+                width={28}
+                height={28}
+                loading={isHero ? undefined : 'lazy'}
+                className={cn('h-7 w-auto object-contain', isHero && 'dark:brightness-0 dark:invert')}
+              />
               <span className={cn('text-sm font-semibold', isHero ? 'text-foreground/70 group-hover:text-foreground dark:text-white/60 dark:group-hover:text-white' : 'text-foreground/70 group-hover:text-foreground')}>Trustless Work</span>
-            </a>
-            <a
-              href="https://etherfuse.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="opacity-50 transition-all duration-300 hover:opacity-100 hover:scale-105"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/etherfuse-logo.svg" alt="Etherfuse" height={24} className="h-6 w-auto object-contain dark:invert" />
             </a>
             <a
               href="https://defindex.io"
@@ -52,8 +50,14 @@ export function LandingPartnersStrip({ variant = 'section' }: LandingPartnersStr
               className="opacity-50 transition-all duration-300 hover:opacity-100 hover:scale-105"
             >
               <span className="flex items-center rounded-lg bg-brand-dark px-3 py-1.5 dark:bg-transparent dark:px-0 dark:py-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/defindex-logo.svg" alt="DeFindex" height={28} className="h-7 w-auto object-contain" />
+                <Image
+                  src="/defindex-logo.svg"
+                  alt="DeFindex"
+                  width={112}
+                  height={28}
+                  loading={isHero ? undefined : 'lazy'}
+                  className="h-7 w-auto object-contain"
+                />
               </span>
             </a>
           </div>

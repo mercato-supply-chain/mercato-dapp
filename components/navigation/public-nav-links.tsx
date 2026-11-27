@@ -90,7 +90,7 @@ export function PublicNavLinks({ variant, onNavigate }: PublicNavLinksProps) {
 
   if (variant === 'desktop') {
     return (
-      <nav className="hidden items-center gap-5 md:flex xl:gap-6" aria-label={t('nav.marketing')}>
+      <nav className="hidden items-center gap-5 xl:flex 2xl:gap-6" aria-label={t('nav.marketing')}>
         {items}
       </nav>
     )

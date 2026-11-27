@@ -26,12 +26,14 @@
   "locale": {
     "label": "Idioma",
     "en": "Inglés",
-    "es": "Español"
+    "es": "Español",
+    "pt-BR": "Portugués (Brasil)"
   },
   "nav": {
     "main": "Principal",
     "marketing": "Página principal",
     "openMenu": "Abrir menú",
+    "skipToContent": "Saltar al contenido",
     "whyMercato": "Por qué Mercato",
     "roles": "Quién participa",
     "builtWith": "Construido con",
@@ -96,7 +98,7 @@
     "badge": "Construido en Stellar · Escrow de Trustless Work",
     "titlePrefix": "Financiamiento de cadena de suministro,",
     "titleAccent": "on-chain",
-    "description": "Las PyMEs obtienen capital de trabajo, los inversionistas ganan 8-15% APR en órdenes USDC y los proveedores reciben pagos garantizados por hitos, todo protegido por escrow no custodial en Stellar.",
+    "description": "Las PyMEs obtienen capital de trabajo, los inversionistas financian órdenes de compra en USDC y los proveedores reciben el pago por adelantado — con comisiones de la plataforma en inversión y reembolso, asegurado en Stellar.",
     "primaryCta": "Comenzar gratis",
     "secondaryCta": "Explorar órdenes",
     "trustEscrow": "Escrow no custodial",
@@ -134,7 +136,7 @@
     "trustCard4Title": "Prueba completa on-chain",
     "trustCard4Body": "Cada pago, aprobación de hito y confirmación de entrega queda registrado en Stellar — verificable por cualquiera, en cualquier momento, sin confiar en MERCATO.",
     "trustCard5Title": "Denominado en USDC",
-    "trustCard5Body": "Todos los negocios están denominados en USDC en Stellar — un activo estable vinculado al dólar. Los inversionistas ganan 8–15% APR sin exposición a la volatilidad cripto.",
+    "trustCard5Body": "Todos los negocios están denominados en USDC en Stellar — un activo estable vinculado al dólar — así el fondeo no queda expuesto a la volatilidad de criptoactivos.",
     "trustCard6Title": "Rampas fiat",
     "trustCard6Body": "Convierte entre moneda local y USDC dentro de la app vía Etherfuse (México, SPEI), Alfred Pay (LATAM) o BlindPay (global) — sin necesidad de un exchange externo.",
     "footerCopyright": "© 2026 MERCATO. Financiamiento de cadena de suministro en Stellar."
@@ -739,12 +741,15 @@
     "refreshBalance": "Actualizar saldo",
     "copyAddress": "Copiar dirección",
     "viewExplorer": "Ver en explorador",
+    "viewExplorerAriaLabel": "Ver en explorador (se abre en una pestaña nueva)",
+    "balanceRefreshed": "Saldo actualizado",
     "disconnect": "Desconectar",
     "activateEmbedded": "Activar billetera integrada",
     "defaultWalletName": "Billetera"
   },
   "notifications": {
     "ariaLabel": "Notificaciones",
+    "loading": "Cargando notificaciones",
     "unreadCount": "{count} sin leer",
     "title": "Notificaciones",
     "markAllRead": "Marcar todas leídas",
@@ -2518,15 +2523,31 @@
   },
   "landing": {
     "hero": {
-      "badge": "Financiamos producción real",
-      "titleLine1": "Capital para producir.",
-      "titleLine2": "Crecimiento para todos.",
-      "description": "Conectamos PYMEs, proveedores e inversores para financiar órdenes reales con pagos seguros y transparentes en cada etapa.",
-      "primaryCta": "Explorar oportunidades",
+      "badge": "Escrow en Stellar",
+      "titleLine1": "Financia tu próximo",
+      "titleLine2": "pedido.",
+      "description": "Los inversionistas pagan a tu proveedor en USDC. Cuando recibas la mercadería, devuelve el financiamiento mediante escrow en Stellar.",
+      "primaryCta": "Ver órdenes abiertas",
+      "flowLink": "Cómo funciona",
       "secondaryCta": "Financiar una orden",
-      "trust1": "Pagos protegidos por hitos",
-      "trust2": "Transparente en cada etapa",
-      "trust3": "Sin garantías personales",
+      "deal": {
+        "repaymentHint": "Capital y rendimiento en un plazo de {days} días",
+        "orderLabel": "Orden de compra",
+        "statusOpen": "Abierta para financiar",
+        "statusSample": "Orden de ejemplo",
+        "units": "{count} unidades",
+        "buyer": "Comprador",
+        "supplier": "Proveedor",
+        "invoice": "Factura del proveedor",
+        "invoiceHint": "Se paga por adelantado al completar el financiamiento",
+        "investorReceives": "Repago estimado",
+        "ctaLive": "Ver esta operación",
+        "sample": {
+          "product": "Hilo de algodón",
+          "buyer": "Manufacturas del Norte",
+          "supplier": "Hilados del Bajío"
+        }
+      },
       "liveDeal": {
         "centerTagline": "Mediamos para que los acuerdos se cumplan.",
         "order": {
@@ -2588,68 +2609,45 @@
         }
       }
     },
+    "network": {
+      "testnet": "testnet",
+      "mainnet": "mainnet",
+      "healthy": "Stellar {network} está en línea",
+      "degraded": "Stellar {network} no responde",
+      "ledger": "Ledger {ledger}",
+      "protocol": "Protocolo {version}",
+      "explorer": "Abrir Stellar Expert"
+    },
     "roles": {
-      "eyebrow": "Quién participa",
-      "titleLine1": "Una plataforma.",
-      "titleLine2": "Tres formas de crecer.",
+      "heading": "Un pedido, tres formas de participar.",
       "sme": {
         "label": "PyMEs",
-        "headline": "Deja de esperar capital.",
-        "subhead": "Empieza a enviar.",
-        "body": "Crea una orden de compra, elige un proveedor verificado, define hitos — y ábrela a inversionistas. Capital de trabajo en horas, no en ciclos bancarios.",
-        "bullet1": "Publica una OC en minutos",
-        "bullet2": "Construye reputación en cada negocio",
-        "bullet3": "Repaga con ventas de inventario",
-        "cta": "Crea tu primer negocio",
-        "mockupTitle": "Nueva orden de compra",
-        "mockupSubtitle": "Proveedor e hitos"
+        "body": "Publica una orden de compra para financiar tu inventario. Confirma la entrega y devuelve el financiamiento mediante escrow en Stellar.",
+        "cta": "Crea tu primer negocio"
       },
       "investor": {
         "label": "Inversionistas",
-        "headline": "Rendimiento en comercio real.",
-        "subhead": "No especulación.",
-        "body": "Explora órdenes de compra abiertas, financia el escrow en Stellar y gana 8–15% APR mientras los hitos de producción y entrega protegen tu capital.",
-        "bullet1": "Ve exactamente qué financias",
-        "bullet2": "Liberaciones por hitos",
-        "bullet3": "Plazos de 30–90 días",
+        "body": "Revisa la factura, el plazo y el rendimiento esperado antes de financiar un pedido en USDC.",
         "cta": "Ver órdenes abiertas"
       },
       "supplier": {
         "label": "Proveedores",
-        "headline": "Cobra al entregar.",
-        "subhead": "Cada hito.",
-        "body": "El USDC queda bloqueado antes de producir. Los pagos se liberan al confirmar envío y entrega — sin perseguir facturas entre fronteras.",
-        "bullet1": "Fondos asegurados desde el inicio",
-        "bullet2": "Perfil de proveedor verificado",
-        "bullet3": "Compradores recurrentes en Mercato",
-        "cta": "Únete como proveedor",
-        "mockupVerified": "Verificado · Top 3%",
-        "mockupProduction": "Inicio de producción",
-        "mockupDelivery": "Entrega confirmada",
-        "mockupPaid": "Pagado",
-        "mockupPending": "Pendiente"
-      },
-      "forRole": "Para {role}",
-      "escrowNote": "Escrow por hitos en Stellar",
-      "footerLine": "Una orden de compra conecta a los tres — elige tu rol y entra al flujo.",
-      "chooseRoleAria": "Elige tu rol",
-      "investorMockupTitle": "Órdenes abiertas",
-      "investorMockupAvg": "12.3% prom.",
-      "smeMockupOpenCta": "Abrir a inversionistas →",
-      "smeMockupOrders": "156 órdenes"
+        "body": "Cobra el total de la factura en USDC cuando se complete el financiamiento y luego envía la mercadería.",
+        "cta": "Únete como proveedor"
+      }
     },
     "rates": {
       "eyebrow": "Por qué Mercato",
-      "titleLine1": "Precios de banco.",
+      "titleLine1": "Capital de trabajo sobre la OC.",
       "titleAccent": "Sin las barreras de un banco.",
-      "description": "Las PyMEs enfrentan 19–21% CAT en bancos a los que a menudo no pueden acceder — o 60%+ de prestamistas informales. Mercato queda en el medio: {apr} sobre la orden de compra completa, validada por el negocio — no por tu historial crediticio.",
-      "aprHighlight": "18–24% APR",
+      "description": "Mercato financia facturas de proveedores en USDC. Cada orden de compra define sus condiciones de pago.",
+      "aprHighlight": "Por cada orden",
       "stat1Value": "85%",
       "stat1Label": "de las PyMEs en LATAM no tienen acceso a crédito bancario formal",
       "stat2Value": "100%",
       "stat2Label": "de la OC financiada en Mercato — no 80% como en factoraje",
-      "stat3Value": "18–24%",
-      "stat3Label": "Rango APR — comparable a bancos, sin sus barreras",
+      "stat3Value": "Por OC",
+      "stat3Label": "Condiciones de cada orden de compra — no un APR de plataforma",
       "chartLabel": "Costo anual (APR / CAT)",
       "chartLegendMercato": "Mercato",
       "chartLegendAlt": "Alternativas",
@@ -2664,13 +2662,13 @@
       "closingTitle": "Mercato no es más barato que un prestamista informal — es tan {accessible} como uno, con precio más cercano a un {bank}, y construido alrededor de la orden de compra.",
       "closingAccessible": "accesible",
       "closingBank": "banco",
-      "closingDisclaimer": "Las tasas reflejan datos públicos verificados (bancos, tarjetas empresariales, plataformas de factoraje) y el modelo objetivo de Mercato. El APR de cada negocio depende de riesgo, plazo e hitos.",
+      "closingDisclaimer": "Las tasas de bancos, tarjetas y factoraje reflejan datos públicos verificados. Mercato no publica un APR de plataforma — cada orden de compra define sus propias condiciones.",
       "closingCta": "Empieza con tu próxima OC",
       "options": {
         "mercato": {
           "label": "Mercato",
-          "subtitle": "Escrow respaldado por OC en Stellar",
-          "rate": "18–24% APR",
+          "subtitle": "Financiamiento de facturas en USDC",
+          "rate": "Por cada orden",
           "requirements": "OC activa + proveedor verificado — sin historial bancario",
           "caveat": "100% de la orden de producción financiada"
         },
@@ -2711,21 +2709,24 @@
       "stepAria": "Ir al paso {n}",
       "footnote": "Paso ilustrativo · escrow por hitos en Stellar",
       "order": {
-        "short": "Crear OC",
+        "short": "Crear un pedido",
+        "summary": "La PyME publica una orden de compra por el inventario que necesita.",
         "title": "La PyME crea la orden",
         "body": "Elige un proveedor verificado, define hitos de envío y entrega, y publica la orden de compra en el marketplace.",
         "actor": "PyME",
         "badge": "PyME verificada y referida"
       },
       "fund": {
-        "short": "Financiar escrow",
+        "short": "Financiar la factura",
+        "summary": "Los inversionistas financian la factura en USDC. El proveedor cobra cuando se completa el financiamiento.",
         "title": "El inversionista financia",
         "body": "El USDC se bloquea en escrow por hitos en Stellar. El capital queda protegido hasta cumplir cada condición de liberación on-chain.",
         "actor": "Inversionista",
         "badge": "Capital comprometido en escrow"
       },
       "produce": {
-        "short": "Producir",
+        "short": "Enviar el pedido",
+        "summary": "El proveedor envía la mercadería y la PyME confirma la entrega.",
         "title": "El proveedor produce",
         "body": "La producción comienza con el pago asegurado. El primer hito puede liberarse al iniciar fabricación o envío.",
         "actor": "Proveedor",
@@ -2739,10 +2740,11 @@
         "badge": "Entrega confirmada con prueba"
       },
       "complete": {
-        "short": "Repagar",
+        "short": "Pagar mediante escrow",
+        "summary": "La PyME deposita fondos en escrow en Stellar y los inversionistas reciben los pagos programados.",
         "title": "Todos ganan",
         "body": "La PyME repaga principal más rendimiento con las ventas. Los inversionistas ganan, los proveedores cobraron y el ciclo puede repetirse.",
-        "actor": "Todas las partes",
+        "actor": "PyME",
         "badge": "Repago y negocio cerrado"
       },
       "visual": {
@@ -2769,7 +2771,7 @@
       "highlight1Label": "PyMEs envían más rápido",
       "highlight1Sub": "OC financiada en horas",
       "highlight2Label": "Inversionistas ganan rendimiento",
-      "highlight2Sub": "8–15% en comercio real",
+      "highlight2Sub": "Condiciones en cada orden",
       "highlight3Label": "Proveedores cobran",
       "highlight3Sub": "Hito por hito",
       "tagline": "Sin papeleo bancario · Escrow por hitos · Cadenas LATAM"
@@ -2811,7 +2813,6 @@
       "card": {
         "example": "Ejemplo",
         "amount": "Monto",
-        "apr": "APR",
         "term": "Plazo",
         "milestones": "Hitos",
         "fundDeal": "Financiar este negocio",
@@ -2855,33 +2856,33 @@
       "eyebrow": "Preguntas frecuentes",
       "titlePrefix": "Preguntas antes de",
       "titleAccent": "unirte al flujo.",
-      "description": "Cómo funciona el financiamiento, quién participa y qué protege el capital en Mercato.",
+      "description": "Cómo se financian los pedidos, cuándo cobran los proveedores y cómo se devuelve el financiamiento.",
       "walkthroughCta": "Guía completa",
       "signUpCta": "Crear cuenta gratis",
       "items": {
         "whatIsMercato": {
           "q": "¿Qué es Mercato?",
-          "a": "Mercato es un marketplace de financiamiento de cadena de suministro para Latinoamérica. Las PyMEs publican órdenes de compra reales, los inversionistas las financian con escrow por hitos en Stellar, y los proveedores cobran conforme avanza la mercancía — todo en un negocio transparente."
+          "a": "Mercato conecta a las PyMEs de América Latina con inversionistas que financian compras de inventario. Los proveedores reciben USDC cuando se completa el financiamiento y las PyMEs pagan a los inversionistas mediante escrow en Stellar tras la entrega."
         },
         "whoCanUse": {
           "q": "¿Quién puede usar la plataforma?",
-          "a": "Las PyMEs (compradoras) crean y gestionan órdenes de compra. Los inversionistas exploran negocios abiertos y financian el escrow. Los proveedores verificados cumplen pedidos y reciben pagos por hitos. Cada rol tiene un flujo dedicado tras registrarse."
+          "a": "Las PyMEs crean órdenes de compra. Los inversionistas revisan y financian las órdenes abiertas. Los proveedores cobran y envían la mercadería."
         },
         "howFunded": {
           "q": "¿Cómo se financian los negocios?",
-          "a": "Cuando una PyME publica una OC, los inversionistas comprometen USDC en un contrato de escrow no custodial. El capital permanece bloqueado hasta confirmar hitos predefinidos — como inicio de producción o entrega — on-chain."
+          "a": "En una orden estándar, un inversionista paga la factura del proveedor en USDC y abona la comisión de la plataforma por separado. Algunas órdenes usan un fondo común que permite a varios inversionistas aportar a la misma factura."
         },
         "milestones": {
           "q": "¿Qué son los hitos de pago?",
-          "a": "Los hitos dividen el negocio en etapas (por ejemplo 50% al enviar, 50% al entregar). Los fondos se liberan al proveedor solo cuando se presenta y aprueba la prueba acordada, reduciendo el riesgo para todas las partes."
+          "a": "Los hitos de pago dividen en cuotas el monto que se debe a los inversionistas. Tras confirmar la entrega, la PyME deposita los fondos en escrow y Mercato aprueba y libera cada cuota financiada."
         },
         "investorRisk": {
-          "q": "¿Cómo se protege el capital del inversionista?",
-          "a": "Tus fondos están en escrow y ligados a una orden de compra específica — no a una línea de crédito genérica. Ves producto, proveedor, términos y APR por adelantado, y las liberaciones dependen de hitos, no de pagos discrecionales."
+          "q": "¿Qué deben revisar los inversionistas antes de financiar?",
+          "a": "Revisa la factura del proveedor, el plazo de pago y el rendimiento esperado de cada orden. El pago se realiza mediante escrow en Stellar y depende de que la PyME deposite los fondos de cada cuota programada."
         },
         "supplierPayment": {
           "q": "¿Cuándo cobran los proveedores?",
-          "a": "Tras financiar el negocio, los pagos se liberan en cada hito confirmado. Los proveedores saben que los fondos están asegurados antes de producir, en lugar de esperar largos ciclos de facturación tras la entrega."
+          "a": "Los proveedores reciben el importe total de la factura en USDC cuando se completa el financiamiento, antes del envío."
         },
         "stellar": {
           "q": "¿Por qué Stellar?",
@@ -2935,7 +2936,7 @@
       "event2Time": "hace 1 d",
       "pillSuppliers": "127 proveedores verificados",
       "pillReputation": "4.8 reputación prom.",
-      "pillApr": "8–15% APR inversionista"
+      "pillApr": "Condiciones en cada orden"
     }
   },
   "events": {
@@ -3439,5 +3440,11 @@
     "directoryTitle": "No se pudo cargar el directorio",
     "directoryDescription": "No se pudieron cargar los listados del directorio. Por favor intenta de nuevo.",
     "diagnosticLabel": "Referencia del error"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o pudo haber sido movida.",
+    "backHome": "Volver al inicio",
+    "browseDeals": "Ver órdenes"
   }
 }

@@ -122,6 +122,7 @@ export function HowItWorksView() {
     <div className="flex min-h-screen flex-col">
       <Navigation />
 
+      <main id="main" tabIndex={-1} className="flex-1">
       <section className="border-b border-border bg-gradient-to-b from-muted/40 to-transparent">
         <div className="container mx-auto max-w-4xl px-4 py-20 text-center">
           <Badge variant="secondary" className={cn('mb-5 gap-1.5 px-3 py-1', hiwEnter)}>
@@ -492,6 +493,7 @@ export function HowItWorksView() {
           </div>
         </div>
       </section>
+      </main>
     </div>
   )
 }

@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback, useSyncExternalStore } from 'react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOutApp } from '@/lib/auth/sign-out-app'
-import { useWallet } from '@/hooks/use-wallet'
+import { useOptionalWallet } from '@/hooks/use-wallet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { MobileNavSheet } from '@/components/navigation/mobile-nav-sheet'
@@ -19,49 +19,45 @@ import { useI18n } from '@/lib/i18n/provider'
 import { useNavAuth } from '@/components/providers/nav-auth-provider'
 
 const NAV_HEIGHT_PX = 64
-const SCROLL_FADE_DISTANCE = 80
 
 export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const router = useRouter()
   const { t } = useI18n()
   const { user, profile, ready: authReady, clear: clearNavAuth } = useNavAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrollFade, setScrollFade] = useState(0)
 
-  const updateScrollFade = useCallback(() => {
-    const fade = Math.min(1, window.scrollY / SCROLL_FADE_DISTANCE)
-    setScrollFade(fade)
-  }, [])
+  const subscribeScroll = useCallback(
+    (onStoreChange: () => void) => {
+      if (overHero) return () => {}
+      window.addEventListener('scroll', onStoreChange, { passive: true })
+      return () => window.removeEventListener('scroll', onStoreChange)
+    },
+    [overHero],
+  )
+  const isScrolled = useSyncExternalStore(
+    subscribeScroll,
+    () => (overHero ? true : window.scrollY > 8),
+    () => overHero,
+  )
 
-  useEffect(() => {
-    updateScrollFade()
-    window.addEventListener('scroll', updateScrollFade, { passive: true })
-    return () => window.removeEventListener('scroll', updateScrollFade)
-  }, [updateScrollFade])
-
-  const {
-    walletInfo,
-    isConnected,
-    truncatedAddress,
-    handleConnect,
-    handleDisconnect,
-    connectPollarWallet,
-    provider,
-    status,
-    isEmbedded,
-  } = useWallet()
+  const wallet = useOptionalWallet()
 
   const handleLogout = async () => {
     clearNavAuth()
-    try {
-      await handleDisconnect()
-    } catch (e) {
-      console.error('[Navigation] wallet disconnect during logout failed', e)
+    const disconnectSignsOutApp = wallet?.provider === 'pollar'
+    if (wallet) {
+      try {
+        await wallet.handleDisconnect()
+      } catch (e) {
+        console.error('[Navigation] wallet disconnect during logout failed', e)
+      }
     }
-    try {
-      await signOutApp()
-    } catch (e) {
-      console.error('[Navigation] signOutApp failed', e)
+    if (!disconnectSignsOutApp) {
+      try {
+        await signOutApp()
+      } catch (e) {
+        console.error('[Navigation] signOutApp failed', e)
+      }
     }
     router.replace('/')
     router.refresh()
@@ -70,46 +66,31 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
   const isAuthenticated = authReady && !!user
   const closeMobile = () => setMobileOpen(false)
   const logoHref = isAuthenticated ? '/dashboard' : '/'
-  const walletProps = {
-    isConnected,
-    address: walletInfo?.address,
-    truncatedAddress,
-    onConnect: handleConnect,
-    onConnectPollar: connectPollarWallet,
-    onDisconnect: handleDisconnect,
-    provider,
-    status,
-    isEmbedded,
-  }
+  const walletProps = wallet
+    ? {
+        isConnected: wallet.isConnected,
+        address: wallet.walletInfo?.address,
+        truncatedAddress: wallet.truncatedAddress,
+        onConnect: wallet.handleConnect,
+        onConnectPollar: wallet.connectPollarWallet,
+        onDisconnect: wallet.handleDisconnect,
+        provider: wallet.provider,
+        status: wallet.status,
+        isEmbedded: wallet.isEmbedded,
+      }
+    : undefined
 
   return (
     <>
       <header
         className={cn(
           'fixed inset-x-0 top-0 z-50 w-full',
-          'transition-[box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none',
-          (overHero || scrollFade > 0.02) && 'border-b',
+          'transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 ease-out motion-reduce:transition-none',
+          (overHero || isScrolled) && 'border-b',
+          overHero || isScrolled
+            ? 'border-border/60 bg-background shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]'
+            : 'border-transparent bg-transparent',
         )}
-        style={
-          overHero
-            ? {
-                // Solid themed bar (white in light, near-black in dark) — the
-                // hero photo sits below it rather than behind it.
-                backgroundColor: 'hsl(var(--background))',
-                borderColor: 'hsl(var(--border) / 0.6)',
-                boxShadow: '0 1px 3px hsl(var(--foreground) / 0.04)',
-              }
-            : {
-                backgroundColor: `hsl(var(--background) / ${scrollFade * 0.62})`,
-                borderColor:
-                  scrollFade > 0.02 ? `hsl(var(--border) / ${scrollFade * 0.45})` : 'transparent',
-                boxShadow:
-                  scrollFade > 0.25
-                    ? `0 1px 3px hsl(var(--foreground) / ${scrollFade * 0.04})`
-                    : 'none',
-                backdropFilter: scrollFade > 0.08 ? `blur(${Math.round(12 * scrollFade)}px)` : 'none',
-              }
-        }
       >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <div className="flex min-w-0 items-center gap-4 lg:gap-8">
@@ -154,7 +135,7 @@ export function Navigation({ overHero = false }: { overHero?: boolean } = {}) {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 md:hidden">
+          <div className={cn('flex items-center gap-1.5', isAuthenticated ? 'md:hidden' : 'xl:hidden')}>
             <MobileNavSheet
               open={mobileOpen}
               onOpenChange={setMobileOpen}

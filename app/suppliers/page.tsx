@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Building2 } from 'lucide-react'
 import { Navigation } from '@/components/navigation'
 import { JsonLd } from '@/components/seo/json-ld'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerDictionary, tr } from '@/lib/i18n/server'
 import { SuppliersData } from './suppliers-data'
 import { SuppliersSkeleton } from './suppliers-skeleton'
@@ -13,10 +14,7 @@ export async function generateMetadata() {
       'Browse verified suppliers across Latin America. Connect suppliers to deals for milestone-based payments secured by escrow.',
     alternates: {
       canonical: '/suppliers',
-      languages: {
-        en: '/suppliers?lang=en',
-        es: '/suppliers?lang=es',
-      },
+      languages: languageAlternates('/suppliers'),
     },
   }
 }
@@ -48,7 +46,7 @@ export default async function SuppliersPage() {
       <JsonLd data={breadcrumbSchema} />
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto px-4 py-10">
+        <main id="main" tabIndex={-1} className="container mx-auto px-4 py-10">
           <div className="mb-8">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/20">
               <Building2 className="h-3 w-3" aria-hidden />
@@ -64,7 +62,7 @@ export default async function SuppliersPage() {
           <Suspense fallback={<SuppliersSkeleton />}>
             <SuppliersData />
           </Suspense>
-        </div>
+        </main>
       </div>
     </>
   )

@@ -48,7 +48,51 @@ function verifyFailureStatus(message: string, pollarStatus: number): number {
   return 502
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error.trim()
+  if (error instanceof Error && error.message.trim()) return error.message.trim()
+  if (error && typeof error === 'object') {
+    const record = error as { message?: unknown; error?: unknown; code?: unknown }
+    if (typeof record.message === 'string' && record.message.trim()) return record.message.trim()
+    if (typeof record.error === 'string' && record.error.trim()) return record.error.trim()
+    if (typeof record.code === 'string' && record.code.trim()) return record.code.trim()
+  }
+  return fallback
+}
+
+function isRateLimitedError(error: { message?: string; code?: string; status?: number }): boolean {
+  if (error.status === 429) return true
+  const code = (error.code ?? '').toLowerCase()
+  if (code.includes('rate_limit')) return true
+  const message = (error.message ?? '').toLowerCase()
+  return message.includes('rate limit') || message.includes('for security purposes')
+}
+
+function hashedTokenFromLinkData(linkData: unknown): string | undefined {
+  const record = linkData && typeof linkData === 'object' ? (linkData as Record<string, unknown>) : null
+  if (!record) return undefined
+  const properties = record.properties
+  if (properties && typeof properties === 'object') {
+    const hashed = (properties as { hashed_token?: unknown }).hashed_token
+    if (typeof hashed === 'string' && hashed) return hashed
+  }
+  const hashed = record.hashed_token
+  return typeof hashed === 'string' && hashed ? hashed : undefined
+}
+
 export async function POST(request: Request) {
+  try {
+    return await handlePollarSync(request)
+  } catch (error) {
+    console.error('[pollar-sync] unhandled error', error)
+    return NextResponse.json(
+      { error: errorMessage(error, 'Could not link Pollar to your Mercato account') },
+      { status: 500 },
+    )
+  }
+}
+
+async function handlePollarSync(request: Request) {
   let body: Body
   try {
     body = (await request.json()) as Body
@@ -130,7 +174,11 @@ export async function POST(request: Request) {
   })
 
   if (createError && !isEmailAlreadyExistsError(createError)) {
-    return NextResponse.json({ error: createError.message ?? 'Could not create account' }, { status: 500 })
+    const status = isRateLimitedError(createError) ? 429 : 500
+    return NextResponse.json(
+      { error: errorMessage(createError, 'Could not create account') },
+      { status },
+    )
   }
 
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -141,15 +189,18 @@ export async function POST(request: Request) {
     },
   })
 
-  if (linkError || !linkData?.properties?.hashed_token) {
+  const tokenHash = hashedTokenFromLinkData(linkData)
+
+  if (linkError || !tokenHash) {
+    const status = linkError && isRateLimitedError(linkError) ? 429 : 500
     return NextResponse.json(
-      { error: linkError?.message ?? 'Could not start session' },
-      { status: 500 },
+      { error: errorMessage(linkError, 'Could not start session') },
+      { status },
     )
   }
 
   return NextResponse.json({
     email,
-    token_hash: linkData.properties.hashed_token,
+    token_hash: tokenHash,
   })
 }

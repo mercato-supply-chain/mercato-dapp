@@ -1,6 +1,8 @@
 import { heroIllustrativeDeals } from '@/lib/hero-illustrative-deals'
 import { formatCurrency } from '@/lib/format'
 import type { Deal } from '@/lib/types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { mapDealFromDb, type DealRow } from '@/lib/deals'
 
 export type FeedEventType = 'open' | 'funded' | 'production' | 'milestone' | 'repaid'
 
@@ -15,7 +17,6 @@ export type LandingFeedItem = {
   productName: string
   companyLine: string
   amountLabel: string
-  aprLabel?: string
   termDays: number
   category?: string
   milestonesCompleted: number
@@ -86,7 +87,6 @@ export function dealToFeedItem(deal: Deal): LandingFeedItem {
     productName: deal.productName,
     companyLine: [deal.pymeName, deal.supplier].filter(Boolean).join(' · '),
     amountLabel: formatCurrency(deal.priceUSDC),
-    aprLabel: deal.yieldAPR != null ? `${deal.yieldAPR.toFixed(1)}%` : undefined,
     termDays: deal.term,
     category: deal.category,
     milestonesCompleted: completed,
@@ -95,7 +95,7 @@ export function dealToFeedItem(deal: Deal): LandingFeedItem {
   }
 }
 
-function illustrativeToFeed(): LandingFeedItem[] {
+export function illustrativeToFeed(): LandingFeedItem[] {
   return heroIllustrativeDeals.map((d) => ({
     id: `illus-${d.key}`,
     href: d.cta.href,
@@ -106,7 +106,6 @@ function illustrativeToFeed(): LandingFeedItem[] {
     productName: d.product,
     companyLine: d.company,
     amountLabel: d.amount,
-    aprLabel: d.apr,
     termDays: Number(d.termDays),
     category: d.category.split(' · ')[0],
     milestonesCompleted: d.milestone === 'repaid' ? 2 : d.milestone === 'funded_progress' ? 2 : 0,
@@ -139,6 +138,27 @@ export function splitIntoColumns<T>(items: T[], columns: number): T[][] {
 }
 
 type TranslateFn = (key: string, replacements?: Record<string, string | number>) => string
+
+/** Fetch a small fixed feed of deals for server-side rendering (max 6 deals). */
+export async function getLandingDealsFeed(supabase: SupabaseClient): Promise<Deal[]> {
+  const { data, error } = await supabase
+    .from('deals')
+    .select(
+      `
+      *,
+      milestones(*),
+      pyme:profiles!deals_pyme_id_fkey(company_name, full_name, contact_name, stake_amount)
+    `,
+    )
+    .order('created_at', { ascending: false })
+    .limit(6)
+
+  if (error || !data?.length) {
+    return []
+  }
+
+  return (data as DealRow[]).map(mapDealFromDb)
+}
 
 /** Apply i18n keys to feed items (live status labels + illustrative sample copy). */
 export function localizeLandingFeedItem(item: LandingFeedItem, t: TranslateFn): LandingFeedItem {

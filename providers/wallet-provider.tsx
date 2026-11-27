@@ -1,58 +1,33 @@
 'use client'
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from 'react'
-import type { TxHistoryState } from '@pollar/core'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { signOutApp } from '@/lib/auth/sign-out-app'
 import { usePollarSession } from '@/providers/pollar-provider'
-import { getStellarWalletKitSync } from '@/lib/trustless/lazy-wallet-kit'
+import {
+  WalletContext,
+  useOptionalWalletContext,
+  useWalletContext,
+  type WalletContextValue,
+} from '@/providers/wallet-context'
+import {
+  getStellarWalletKitSync,
+  resetStellarWalletKit,
+} from '@/lib/trustless/lazy-wallet-kit'
 import { useWalletPersistence } from '@/hooks/use-wallet-persistence'
 import { useWalletBalance } from '@/hooks/use-wallet-balance'
 import { usePollarWallet } from '@/hooks/use-pollar-wallet'
 import { useExternalWallet } from '@/hooks/use-external-wallet'
 import {
+  DEFAULT_WALLET_CLEANUP_TIMEOUT_MS,
+  runWithBoundedTimeout,
+} from '@/lib/wallet/session-cleanup'
+import {
   getWalletAdapterLabel,
   truncatePublicKey,
   type ConnectedWallet,
-  type WalletBalanceSummary,
-  type WalletProviderType,
-  type WalletStatus,
 } from '@/lib/mercato-wallet'
 
-interface WalletContextValue {
-  provider: WalletProviderType | null
-  publicKey: string | null
-  walletId: string | null
-  status: WalletStatus | null
-  isConnected: boolean
-  isEmbedded: boolean
-  walletName: string | null
-  wallet: ConnectedWallet | null
-  walletInfo: { address: string; walletName: string } | null
-  truncatedAddress: string | null
-  balances: WalletBalanceSummary | null
-  txHistory: TxHistoryState | null
-  canSignTransactions: boolean
-  connectExternalWallet: () => Promise<void>
-  connectPollarWallet: () => Promise<void>
-  disconnect: () => Promise<void>
-  refreshBalance: () => Promise<void>
-}
-
-const WalletContext = createContext<WalletContextValue | null>(null)
-
-export function useWalletContext(): WalletContextValue {
-  const context = useContext(WalletContext)
-  if (!context) {
-    throw new Error('useWalletContext must be used within a WalletProvider')
-  }
-  return context
-}
+export { useOptionalWalletContext, useWalletContext, type WalletContextValue }
 
 function toWalletInfo(wallet: ConnectedWallet | null) {
   if (!wallet) return null
@@ -70,35 +45,50 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { connectExternalWallet } = useExternalWallet(persistWallet)
 
   const disconnect = useCallback(async () => {
+    const wasPollar = wallet?.provider === 'pollar'
+
+    // Clear local wallet state immediately so UI and storage never linger if remote calls stall.
+    clearPollarSyncRefs()
+    persistWallet(null)
+    clearBalances()
+
     try {
       // The wallet kit is only disconnected if it was already initialized.
       // Otherwise, there's nothing to disconnect.
       const walletKit = getStellarWalletKitSync()
       if (walletKit) {
-        await walletKit.disconnect()
+        resetStellarWalletKit()
+        await runWithBoundedTimeout(
+          Promise.resolve(walletKit.disconnect()),
+          DEFAULT_WALLET_CLEANUP_TIMEOUT_MS,
+        )
       }
     } catch {
       // ignore wallet-kit disconnect failures
     }
 
     try {
-      await pollar.logout()
+      await runWithBoundedTimeout(
+        Promise.resolve(pollar.logout()),
+        DEFAULT_WALLET_CLEANUP_TIMEOUT_MS,
+      )
     } catch {
       // ignore embedded wallet logout failures
     }
 
-    if (wallet?.provider === 'pollar') {
+    if (wasPollar) {
       try {
         await signOutApp()
       } catch {
         // ignore sign-out failures
       }
     }
-
-    clearPollarSyncRefs()
-    persistWallet(null)
-    clearBalances()
   }, [clearBalances, clearPollarSyncRefs, persistWallet, pollar, wallet?.provider])
+
+  const canSignTransactions =
+    wallet !== null &&
+    (wallet.provider !== 'pollar' ||
+      (pollar.verified && pollar.wallet?.provisioning !== 'CREATING'))
 
   const value = useMemo<WalletContextValue>(
     () => ({
@@ -114,7 +104,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       truncatedAddress: truncatePublicKey(wallet?.publicKey),
       balances,
       txHistory: txHistory ?? null,
-      canSignTransactions: wallet !== null,
+      canSignTransactions,
       connectExternalWallet,
       connectPollarWallet,
       disconnect,
@@ -122,6 +112,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }),
     [
       balances,
+      canSignTransactions,
       connectExternalWallet,
       connectPollarWallet,
       disconnect,

@@ -73,7 +73,7 @@ export default async function SettingsPage({
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <div className="container mx-auto min-w-0 px-4 py-8">
+      <main id="main" tabIndex={-1} className="container mx-auto min-w-0 px-4 py-8">
         {showOnboarding ? (
           <SettingsOnboarding
             userId={user.id}
@@ -89,7 +89,7 @@ export default async function SettingsPage({
             initialStake={initialStake}
           />
         )}
-      </div>
+      </main>
     </div>
   )
 }

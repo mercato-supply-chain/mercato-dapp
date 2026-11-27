@@ -19,7 +19,7 @@ export const RWA_DOCUMENT_DOMAIN = 'mercato.rwa.document.v1'
 
 /**
  * Ordered field list hashed inside the snapshot. Any change to this list is a new
- * snapshot version; `__tests__/rwa/commitment.test.ts` pins the order.
+ * snapshot version. Keep this list stable; it is the hash contract.
  */
 export const RWA_SNAPSHOT_FIELDS = [
   'snapshot_version',

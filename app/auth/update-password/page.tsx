@@ -80,7 +80,7 @@ export default function UpdatePasswordPage() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted/30">
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <main id="main" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-[400px]">
           <Link
             href="/"
@@ -174,7 +174,7 @@ export default function UpdatePasswordPage() {
             {t('auth.tagline')}
           </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

@@ -30,12 +30,6 @@ export function LivePOShowcase() {
         accent: false,
       },
       {
-        label: t('landing.showcase.metricInvestorApr'),
-        value: '12.5%',
-        sub: t('landing.showcase.metricAnnual'),
-        accent: true,
-      },
-      {
         label: t('landing.showcase.metricTimeline'),
         value: 'Day 18',
         sub: t('landing.showcase.metricDayOf', { total: 45 }),

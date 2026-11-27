@@ -4,7 +4,7 @@ export function DealDetailSkeleton() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navigation />
-      <div className="container mx-auto px-4 py-10">
+      <main id="main" tabIndex={-1} className="container mx-auto px-4 py-10">
         <div className="mb-8 h-4 w-36 animate-pulse rounded-full bg-muted" />
         <div className="mb-3 flex gap-2">
           <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
@@ -28,7 +28,7 @@ export function DealDetailSkeleton() {
             ))}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

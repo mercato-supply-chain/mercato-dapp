@@ -1,4 +1,9 @@
-import { Networks } from '@stellar/stellar-sdk'
+// Same values as `Networks` in @stellar/stellar-sdk. Importing the SDK here would put all of it in
+// every client bundle that only needs a network name or explorer link.
+const NETWORK_PASSPHRASES = {
+  mainnet: 'Public Global Stellar Network ; September 2015',
+  testnet: 'Test SDF Network ; September 2015',
+} as const
 
 export type StellarNetwork = 'testnet' | 'mainnet'
 
@@ -14,6 +19,6 @@ export function getStellarNetworkConfig(network: StellarNetwork = getAppStellarN
       network === 'mainnet'
         ? 'https://soroban-rpc.mainnet.stellar.org'
         : 'https://soroban-testnet.stellar.org',
-    networkPassphrase: network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET,
+    networkPassphrase: NETWORK_PASSPHRASES[network],
   }
 }

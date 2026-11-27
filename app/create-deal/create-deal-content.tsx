@@ -56,14 +56,8 @@ export default function CreateDealContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <a
-        href="#main-content"
-        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-      >
-        Skip to main content
-      </a>
       <Navigation />
-      <main id="main-content" className="container mx-auto px-4 py-8 pb-16">
+      <main id="main" tabIndex={-1} className="container mx-auto px-4 py-8 pb-16">
         <CreateDealFormBody
           formData={form.formData}
           currentStep={form.currentStep}

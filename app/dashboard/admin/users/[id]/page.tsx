@@ -13,6 +13,7 @@ import { AdminEditProfileDialog } from '@/components/dashboard/admin/admin-edit-
 import { AdminVerifyDialog } from '@/components/dashboard/admin/admin-verify-dialog'
 import { getAdminUserDetail } from '@/lib/admin/get-admin-users'
 import { requireAdminProfile } from '@/lib/admin/require-admin'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { getServerDictionary, getServerLocale, tr } from '@/lib/i18n/server'
 
 export default async function AdminUserDetailPage({
@@ -33,7 +34,7 @@ export default async function AdminUserDetailPage({
   const { profile, companies, recentAuditEvents, dealCounts } = detail
   const name =
     profile.companyName || profile.fullName || profile.contactName || profile.email
-  const dateFormat = new Intl.DateTimeFormat(locale === 'es' ? 'es-MX' : 'en-US', {
+  const dateFormat = new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
   })

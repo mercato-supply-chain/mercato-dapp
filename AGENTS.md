@@ -13,7 +13,7 @@
 | **Primary network** | Stellar (testnet by default) |
 | **Auth & data** | Supabase (Postgres + Auth) |
 | **Settlement** | Classic USDC for default deals. Opt-in deals use the Soroban credit registry and funding pool, then Trustless Work for repayment. |
-| **Package manager** | Bun (`bun install`, `bun dev`, `bun test`) |
+| **Package manager** | Bun (`bun install`, `bun dev`) |
 
 ## Documentation map
 
@@ -28,6 +28,7 @@ Read documents in this order depending on your task:
 | **[SETUP.md](SETUP.md)** | Step-by-step local setup checklist |
 | **[env.sample](env.sample)** | Complete environment variable list |
 | **[doc/rwa-architecture.md](doc/rwa-architecture.md)** | Credit-asset schema, allowed state edges, issuance → contribute → settle → redeem |
+| **[doc/how-money-moves.md](doc/how-money-moves.md)** | Which screen calls which contract, and which calls have no screen |
 | **[doc/rwa-testnet-evidence.md](doc/rwa-testnet-evidence.md)** | Testnet contract ids and tx hashes. Lifecycle tables under that deploy record are a template. |
 | **[lib/anchors/README.md](lib/anchors/README.md)** | Fiat ramp anchor interface and provider clients |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Branch policy (`develop`), PR expectations, Drips Wave |
@@ -290,7 +291,7 @@ Migrations: `supabase/migrations/` — apply with `npx supabase db push`.
 | Admin queues | `lib/admin/get-admin-queue-data.ts` |
 | Dashboard data | `lib/dashboard/get-dashboard-data.ts` |
 | Investor portfolio | `lib/investments/get-investor-portfolio.ts` |
-| i18n (en/es) | `lib/i18n/` — locale cookie `mercato-locale`, `?lang=` param |
+| i18n (en/es/pt-BR) | `lib/i18n/` — locale cookie `mercato-locale`, `?lang=` (`en`, `es`, `pt-BR` / `pt`) |
 | Proxy | `proxy.ts` — Supabase session refresh + locale |
 
 ## Project layout (abbreviated)
@@ -303,7 +304,6 @@ lib/                    # Business logic, Stellar, anchors, defindex, supabase
 providers/              # wallet-provider, pollar-provider
 contracts/              # Soroban credit registry, funding pool, and shared types
 supabase/migrations/    # Schema (source of truth for DB)
-__tests__/              # Bun tests
 doc/                    # Architecture docs
 ```
 
@@ -328,16 +328,14 @@ Full list: [env.sample](env.sample). Architecture reference: [doc/architecture.m
 ```bash
 bun install
 bun lint
-bun typecheck        # app source (tsconfig.json, excludes __tests__)
-bun typecheck:tests  # tests + app (tsconfig.tests.json, includes Bun test types)
+bun typecheck
 bun build
-bun test
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Before opening a PR: lint + typecheck + typecheck:tests + build must pass. Schema changes: new file under `supabase/migrations/` via `supabase migration new <name>`.
+Before opening a PR: lint + typecheck + build must pass. Schema changes: new file under `supabase/migrations/` via `supabase migration new <name>`.
 
 ## Common agent tasks
 

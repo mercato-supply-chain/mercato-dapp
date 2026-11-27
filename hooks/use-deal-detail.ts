@@ -20,15 +20,41 @@ type DealLoadResult =
   | { kind: 'not-found' }
   | { kind: 'error' }
 
-export function useDealDetail(dealId: string | undefined) {
-  const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(null)
-  const [reloadCounter, setReloadCounter] = useState(0)
-  const [userType, setUserType] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [indexerEscrow, setIndexerEscrow] = useState<GetEscrowsFromIndexerResponse | null>(null)
-  const [pymeReputation, setPymeReputation] = useState<Reputation | null>(null)
-  const [supplierReputation, setSupplierReputation] = useState<Reputation | null>(null)
-  const [partyReputationsLoading, setPartyReputationsLoading] = useState(false)
+type AuthViewerState = {
+  userId: string | null
+  userType: string | null
+  resolved: boolean
+}
+
+export function useDealDetail(dealId: string | undefined, initialDeal?: Deal) {
+  const [dealLoadState, setDealLoadState] = useState<DealLoadState | null>(() =>
+    initialDeal && initialDeal.id === dealId
+      ? { status: 'success', dealId: initialDeal.id, deal: initialDeal }
+      : null,
+  )
+  const [previousInitialDeal, setPreviousInitialDeal] = useState(initialDeal)
+  // A new RSC snapshot replaces the previous route's state before it is rendered.
+  if (initialDeal !== previousInitialDeal) {
+    setPreviousInitialDeal(initialDeal)
+    if (initialDeal && initialDeal.id === dealId) {
+      setDealLoadState({ status: 'success', dealId: initialDeal.id, deal: initialDeal })
+    }
+  }
+  const [reloadRequest, setReloadRequest] = useState<{
+    dealId: string
+    initialDeal: Deal | undefined
+  } | null>(null)
+  const [authViewer, setAuthViewer] = useState<AuthViewerState>({
+    userId: null,
+    userType: null,
+    resolved: false,
+  })
+  const [partyData, setPartyData] = useState<{
+    key: string
+    pymeReputation: Reputation | null
+    supplierReputation: Reputation | null
+    indexerEscrow: GetEscrowsFromIndexerResponse | null
+  } | null>(null)
 
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds()
   const { walletInfo, isConnected, handleConnect } = useWallet()
@@ -37,6 +63,14 @@ export function useDealDetail(dealId: string | undefined) {
   const requestSequenceRef = useRef(0)
   const lastCommittedSequenceRef = useRef(0)
   const dealRequestSequencesRef = useRef(new WeakMap<Deal, number>())
+  const getEscrowRef = useRef(getEscrowByContractIds)
+
+  useEffect(() => {
+    getEscrowRef.current = getEscrowByContractIds
+  }, [getEscrowByContractIds])
+
+  const userId = authViewer.userId
+  const userType = authViewer.userType
 
   const loadDeal = useCallback(async (id: string): Promise<DealLoadResult> => {
     try {
@@ -105,28 +139,66 @@ export function useDealDetail(dealId: string | undefined) {
   const retry = useCallback(() => {
     if (!dealId) return
     setDealLoadState({ status: 'loading', dealId })
-    setReloadCounter((counter) => counter + 1)
-  }, [dealId])
+    setReloadRequest({ dealId, initialDeal })
+  }, [dealId, initialDeal])
 
   useEffect(() => {
-    const loadUserProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        setUserType(null)
-        setUserId(null)
+    let cancelled = false
+    let authSeq = 0
+
+    const resolveViewerFromUserId = async (nextUserId: string | null) => {
+      const seq = ++authSeq
+      if (!nextUserId) {
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({ userId: null, userType: null, resolved: true })
         return
       }
-      setUserId(user.id)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .single()
-      setUserType(profile?.user_type ?? null)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', nextUserId)
+          .single()
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({
+          userId: nextUserId,
+          userType: profile?.user_type ?? null,
+          resolved: true,
+        })
+      } catch {
+        if (cancelled || seq !== authSeq) return
+        setAuthViewer({ userId: nextUserId, userType: null, resolved: true })
+      }
     }
-    loadUserProfile()
+
+    const loadUserProfile = async () => {
+      const loadSeq = ++authSeq
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (cancelled || loadSeq !== authSeq) return
+        await resolveViewerFromUserId(user?.id ?? null)
+      } catch {
+        if (cancelled || loadSeq !== authSeq) return
+        setAuthViewer({ userId: null, userType: null, resolved: true })
+      }
+    }
+
+    void loadUserProfile()
+
+    const authListener =
+      typeof supabase.auth.onAuthStateChange === 'function'
+        ? supabase.auth.onAuthStateChange((event, session) => {
+            if (cancelled || event === 'INITIAL_SESSION') return
+            void resolveViewerFromUserId(session?.user?.id ?? null)
+          })
+        : null
+
+    return () => {
+      cancelled = true
+      authListener?.data?.subscription?.unsubscribe()
+    }
   }, [supabase])
 
   useEffect(() => {
@@ -138,6 +210,14 @@ export function useDealDetail(dealId: string | undefined) {
 
   useEffect(() => {
     if (!dealId) return
+    // The RSC payload already contains the same row used by metadata. Explicit
+    // retries and post-action refreshes still read the latest browser-visible row.
+    if (
+      initialDeal?.id === dealId &&
+      (reloadRequest?.dealId !== dealId || reloadRequest.initialDeal !== initialDeal)
+    ) {
+      return
+    }
     let cancelled = false
     const sequence = ++requestSequenceRef.current
     void loadDeal(dealId).then((result) => {
@@ -159,70 +239,71 @@ export function useDealDetail(dealId: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [dealId, loadDeal, reloadCounter])
+  }, [dealId, initialDeal, loadDeal, reloadRequest])
 
-  const matchingLoadState = dealLoadState?.dealId === dealId ? dealLoadState : null
+  const hasMatchingInitialDeal = Boolean(initialDeal && initialDeal.id === dealId)
+  const matchingLoadState =
+    dealLoadState?.dealId === dealId
+      ? dealLoadState
+      : initialDeal && initialDeal.id === dealId
+        ? { status: 'success' as const, dealId, deal: initialDeal }
+        : null
   const deal = matchingLoadState?.status === 'success' ? matchingLoadState.deal : null
   const isLoading = Boolean(
-    dealId && (!matchingLoadState || matchingLoadState.status === 'loading'),
+    dealId &&
+      matchingLoadState?.status !== 'error' &&
+      matchingLoadState?.status !== 'not-found' &&
+      (!matchingLoadState ||
+        matchingLoadState.status === 'loading' ||
+        (!hasMatchingInitialDeal && !authViewer.resolved)),
   )
   const loadError = matchingLoadState?.status === 'error'
 
-  useEffect(() => {
-    const pymeId = deal?.pymeId
-    const supplierOwnerId = deal?.supplierOwnerId
-    if (!pymeId && !supplierOwnerId) {
-      setPymeReputation(null)
-      setSupplierReputation(null)
-      setPartyReputationsLoading(false)
-      return
-    }
-    let cancelled = false
-    setPartyReputationsLoading(true)
-    Promise.all([
-      pymeId ? getReputation(supabase, pymeId) : Promise.resolve(null),
-      supplierOwnerId ? getReputation(supabase, supplierOwnerId) : Promise.resolve(null),
-    ])
-      .then(([pyme, supplier]) => {
-        if (cancelled) return
-        setPymeReputation(pyme)
-        setSupplierReputation(supplier)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPymeReputation(null)
-          setSupplierReputation(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPartyReputationsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [deal?.pymeId, deal?.supplierOwnerId, supabase])
-
   const escrowAddress = deal?.escrowAddress ?? ''
-  const getEscrowRef = useRef(getEscrowByContractIds)
-  getEscrowRef.current = getEscrowByContractIds
+  const pymeId = deal?.pymeId
+  const supplierOwnerId = deal?.supplierOwnerId
+  const partyLookupKey = deal
+    ? `${deal.id}:${pymeId ?? ''}:${supplierOwnerId ?? ''}:${escrowAddress}`
+    : ''
+  const hasReputations = Boolean(pymeId || supplierOwnerId)
+  const currentPartyData = partyData?.key === partyLookupKey ? partyData : null
+  const pymeReputation = currentPartyData?.pymeReputation ?? null
+  const supplierReputation = currentPartyData?.supplierReputation ?? null
+  const indexerEscrow = currentPartyData?.indexerEscrow ?? null
+  const partyReputationsLoading = Boolean(hasReputations && !currentPartyData)
+
   useEffect(() => {
-    if (!escrowAddress) {
-      setIndexerEscrow(null)
-      return
-    }
+    if (!partyLookupKey) return
     let cancelled = false
-    getEscrowRef.current({ contractIds: [escrowAddress] })
-      .then((escrows) => {
-        if (!cancelled && escrows?.length) setIndexerEscrow(escrows[0])
-        else if (!cancelled) setIndexerEscrow(null)
-      })
-      .catch(() => {
-        if (!cancelled) setIndexerEscrow(null)
-      })
+
+    const pymeReputationPromise = pymeId
+      ? getReputation(supabase, pymeId).catch(() => null)
+      : Promise.resolve(null)
+    const supplierReputationPromise = supplierOwnerId
+      ? getReputation(supabase, supplierOwnerId).catch(() => null)
+      : Promise.resolve(null)
+    const escrowPromise = escrowAddress
+      ? getEscrowRef.current({ contractIds: [escrowAddress] })
+          .then((escrows) => escrows?.[0] ?? null)
+          .catch(() => null)
+      : Promise.resolve(null)
+
+    Promise.all([pymeReputationPromise, supplierReputationPromise, escrowPromise]).then(
+      ([pyme, supplier, escrow]) => {
+        if (cancelled) return
+        setPartyData({
+          key: partyLookupKey,
+          pymeReputation: pyme,
+          supplierReputation: supplier,
+          indexerEscrow: escrow,
+        })
+      },
+    )
+
     return () => {
       cancelled = true
     }
-  }, [escrowAddress])
+  }, [pymeId, partyLookupKey, supplierOwnerId, escrowAddress, supabase])
 
   const isSupplier = Boolean(deal?.supplierOwnerId && userId && deal.supplierOwnerId === userId)
   const isPyme = Boolean(deal?.pymeId && userId && deal.pymeId === userId)

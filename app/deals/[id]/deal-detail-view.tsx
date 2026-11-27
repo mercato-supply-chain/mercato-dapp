@@ -1,67 +1,80 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, ChevronRight, Pencil } from 'lucide-react'
+import type { Deal } from '@/lib/types'
 import { getFundingTimeRemainingMs } from '@/lib/deals'
 import { canEditDeal } from '@/lib/deals/edit'
+import { resolveDealViewerRole } from '@/lib/deals/viewer-role'
+import { MERCATO_PLATFORM_ADDRESS } from '@/lib/trustless/config'
 import { useDealDetail } from '@/hooks/use-deal-detail'
 import { Navigation } from '@/components/navigation'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { DealFundingPanel } from '@/components/deals/deal-funding-panel'
 import { DealDeliveryFlow } from '@/components/deals/deal-delivery-flow'
 import { DealRepaymentPanel } from '@/components/deals/deal-repayment-panel'
+import {
+  InvestorFundActions,
+  InvestorFundingProvider,
+  InvestorMobileFundBar,
+} from '@/components/deals/actions/investor-fund-actions'
+import {
+  PymeExtendFundingDialog,
+  PymeFundingActions,
+} from '@/components/deals/actions/pyme-funding-actions'
+import { AdminReopenActions } from '@/components/deals/actions/admin-reopen-actions'
+import { AdminSettleSupplierAction } from '@/components/deals/actions/admin-settle-supplier-action'
+import {
+  AuthenticatedViewerFundingNotice,
+  GuestFundingNotice,
+  GuestHeroFundingActions,
+} from '@/components/deals/actions/funding-status-notice'
+import { SupplierShipActions } from '@/components/deals/actions/supplier-ship-actions'
+import { PymeConfirmDeliveryActions } from '@/components/deals/actions/pyme-confirm-delivery-actions'
+import { PymeRepayActions } from '@/components/deals/actions/pyme-repay-actions'
+import { AdminReleaseActions } from '@/components/deals/actions/admin-release-actions'
 import { DealDetailSidebar } from '@/components/deals/deal-detail-sidebar'
 import { DealDetailSkeleton } from '@/components/deals/deal-detail-skeleton'
 import { DealDetailTabs } from '@/components/deals/deal-detail-tabs'
 import { DealInvestorHero } from '@/components/deals/deal-investor-hero'
 import { DealInvestorDetails } from '@/components/deals/deal-investor-details'
-import { ArrowLeft, ChevronRight, Pencil, Sparkles } from 'lucide-react'
-import { formatCurrency } from '@/lib/format'
-import { formatDate } from '@/lib/date-utils'
 import { useI18n } from '@/lib/i18n/provider'
-import { investorFundingTotal } from '@/lib/deals/fees'
 
-function getDealStatus(deal: NonNullable<ReturnType<typeof useDealDetail>['deal']>, t: ReturnType<typeof useI18n>['t']) {
-  const statusConfig = {
-    awaiting_funding: { label: t('dealStatus.awaiting_funding'), color: 'text-accent', bgColor: 'bg-accent/10' },
-    funded:           { label: t('dealStatus.funded'),           color: 'text-success', bgColor: 'bg-success/10' },
-    in_progress:      { label: t('dealStatus.in_progress'),      color: 'text-warning', bgColor: 'bg-warning/10' },
-    milestone_pending:{ label: t('dealStatus.milestone_pending'),color: 'text-warning', bgColor: 'bg-warning/10' },
-    completed:        { label: t('dealStatus.completed'),        color: 'text-success', bgColor: 'bg-success/10' },
-    disputed:         { label: t('dealStatus.disputed'),         color: 'text-destructive', bgColor: 'bg-destructive/10' },
-    released:         { label: t('dealStatus.released'),         color: 'text-success', bgColor: 'bg-success/10' },
-  }
-  const fundingConfig = {
-    open:     { label: t('deals.openForFunding'),             color: 'text-accent',      bgColor: 'bg-accent/10' },
-    extended: { label: t('dealDetail.fundingPillExtended'),   color: 'text-warning',     bgColor: 'bg-warning/10' },
-    expired:  { label: t('dealDetail.fundingPillExpired'),    color: 'text-destructive', bgColor: 'bg-destructive/10' },
-    funded:   { label: t('dealDetail.fundingPillFundedShort'),color: 'text-success',     bgColor: 'bg-success/10' },
-  }
-  return deal.status === 'awaiting_funding' ? fundingConfig[deal.fundingStatus] : statusConfig[deal.status]
-}
-
-function formatFundingRemaining(ms: number, t: ReturnType<typeof useI18n>['t']): string {
-  const mins = Math.floor(ms / 60000)
-  if (mins < 60) return t('deals.fundingTimeMinutes', { n: Math.max(1, mins) })
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return t('deals.fundingTimeHours', { n: hrs })
-  return t('deals.fundingTimeDays', { n: Math.floor(hrs / 24) })
-}
-
-export default function DealDetailPage() {
+export default function DealDetailPage({ initialDeal }: { initialDeal?: Deal } = {}) {
   const { t } = useI18n()
   const params = useParams()
   const dealId = typeof params.id === 'string' ? params.id : params.id?.[0]
   const searchParams = useSearchParams()
   const hasHandledAction = useRef(false)
 
-  const ctx = useDealDetail(dealId)
-  const { deal, setDeal, isLoading, userId, userType, isSupplier, isPyme, isAdmin,
-    indexerEscrow, pymeReputation, supplierReputation, partyReputationsLoading,
-    fetchDeal, supabase, walletInfo, isConnected, handleConnect, loadError, retry } = ctx
-  const isInvestor = userType === 'investor'
+  const ctx = useDealDetail(dealId, initialDeal)
+  const {
+    deal,
+    setDeal,
+    isLoading,
+    userId,
+    userType,
+    isSupplier,
+    isPyme,
+    isAdmin,
+    indexerEscrow,
+    pymeReputation,
+    supplierReputation,
+    partyReputationsLoading,
+    fetchDeal,
+    supabase,
+    walletInfo,
+    handleConnect,
+    loadError,
+    retry,
+  } = ctx
+
+  const refreshDeal = useCallback(async () => {
+    const updated = await fetchDeal()
+    if (updated) setDeal(updated)
+  }, [fetchDeal, setDeal])
 
   useEffect(() => {
     if (!deal || isLoading || !userId || hasHandledAction.current) return
@@ -86,16 +99,20 @@ export default function DealDetailPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('dealDetail.loadError')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.loadErrorHelp')}</p>
             <div className="flex justify-center gap-2">
-              <Button onClick={retry}>{t('dealDetail.retry')}</Button>
-              <Button asChild variant="outline"><Link href="/deals">{t('common.back')}</Link></Button>
+              <Button type="button" onClick={retry}>
+                {t('dealDetail.retry')}
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/deals">{t('common.back')}</Link>
+              </Button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -104,42 +121,41 @@ export default function DealDetailPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Navigation />
-        <div className="container mx-auto flex flex-1 items-center justify-center px-4">
+        <main id="main" tabIndex={-1} className="container mx-auto flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <h1 className="mb-2 text-2xl font-bold">{t('deals.noDeals')}</h1>
             <p className="mb-4 text-muted-foreground">{t('dealDetail.notFoundHelp')}</p>
-            <Button asChild><Link href="/deals">{t('common.back')}</Link></Button>
+            <Button asChild>
+              <Link href="/deals">{t('common.back')}</Link>
+            </Button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
 
-  const status = getDealStatus(deal, t)
+  const viewerRole = resolveDealViewerRole({
+    userId,
+    userType,
+    isPyme,
+    isSupplier,
+    isAdmin,
+  })
   const isFundingOpen = deal.fundingStatus === 'open' || deal.fundingStatus === 'extended'
   const fundingRemainingMs = getFundingTimeRemainingMs(deal.fundingExpiresAt)
-  const canFund = userType === 'investor' && Boolean(deal.supplierAddress) && isFundingOpen
-  const showInvestorPitch = deal.status === 'awaiting_funding' && isFundingOpen && !isPyme && !isSupplier && !isAdmin
-  const fundingTotal = deal.investorFundingTotal || investorFundingTotal(deal.priceUSDC)
+  const showMobileInvestorBar =
+    viewerRole === 'investor' &&
+    deal.status === 'awaiting_funding' &&
+    isFundingOpen &&
+    Boolean(deal.supplierAddress)
+  const showInvestorPitch =
+    deal.status === 'awaiting_funding' &&
+    isFundingOpen &&
+    !isPyme &&
+    !isSupplier &&
+    !isAdmin
   const showEditDeal = canEditDeal(deal, { userId, isPyme, isAdmin })
 
-  const fundingProps = {
-    deal,
-    supabase,
-    fetchDeal,
-    isConnected,
-    walletAddress: walletInfo?.address,
-    onDealUpdate: setDeal,
-    isFundingOpen,
-    isPyme,
-    isAdmin,
-    userType,
-    onConnect: handleConnect,
-    canFund,
-    userId,
-  }
-
-  const fundPanel = <DealFundingPanel {...fundingProps} showMobileBar={false} />
   const editDealButton = showEditDeal ? (
     <Button asChild variant="outline" size="sm" className="gap-1.5">
       <Link href={`/deals/${deal.id}/edit`}>
@@ -149,112 +165,268 @@ export default function DealDetailPage() {
     </Button>
   ) : null
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Navigation />
-      <div className={`container mx-auto px-4 py-10${showInvestorPitch && canFund ? ' pb-24 lg:pb-10' : ''}`}>
-        <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/deals" className="flex items-center gap-1 hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />{t('deals.title')}
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 opacity-40" aria-hidden />
-          <span className="truncate text-foreground/70">{deal.productName || t('deals.viewDeal')}</span>
-        </div>
-
-        {showInvestorPitch ? (
-          <DealInvestorHero deal={deal} fundingRemainingMs={fundingRemainingMs} isFundingOpen={isFundingOpen}
-            canFund={canFund} userType={userType} pymeReputation={pymeReputation}
-            supplierReputation={supplierReputation} reputationsLoading={partyReputationsLoading}
-            fundDialog={fundPanel} onConnectWallet={handleConnect} />
-        ) : (
-          <div className="mb-8">
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${status.color} ${status.bgColor} ring-current/20`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${status.color.replace('text-', 'bg-')}`} aria-hidden />
-                    {status.label}
-                  </span>
-                  {deal.category && <Badge variant="outline" className="capitalize">{deal.category}</Badge>}
-                  {(deal.yieldBonusApr ?? 0) > 0 && (
-                    <Badge variant="secondary" className="gap-1 bg-success/10 text-success">
-                      <Sparkles className="h-3 w-3" aria-hidden />
-                      +{deal.yieldBonusApr}% {t('deals.bonusApr').replace('+', '')}
-                    </Badge>
-                  )}
-                </div>
-                <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl">{deal.productName}</h1>
-                <p className="max-w-xl text-lg text-muted-foreground">
-                  {deal.description || t('dealDetail.descriptionFallback', { name: deal.pymeName })}
-                </p>
-              </div>
-              <div className="flex flex-col items-stretch gap-2 sm:items-end">
-                {editDealButton}
-                <DealFundingPanel {...fundingProps} showMobileBar={showInvestorPitch} />
-              </div>
-            </div>
-            {deal.status === 'awaiting_funding' && deal.fundingExpiresAt && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                {t('dealDetail.fundingDeadline')} {formatDate(deal.fundingExpiresAt)}
-                {isFundingOpen && fundingRemainingMs != null && fundingRemainingMs > 0
-                  ? ` (${formatFundingRemaining(fundingRemainingMs, t)})` : ''}
-              </p>
-            )}
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: t('common.amount'),   value: formatCurrency(deal.priceUSDC), sub: t('deals.usdc') },
-                { label: t('dealDetail.youPayTotal'), value: formatCurrency(fundingTotal), sub: t('deals.usdc') },
-                { label: t('deals.apr'),       value: deal.yieldAPR ? `${deal.yieldAPR.toFixed(1)}%` : '—', sub: t('common.yield'), hi: Boolean(deal.yieldAPR) },
-                { label: t('common.term'),     value: String(deal.term),              sub: t('common.days') },
-              ].map(({ label, value, sub, hi }) => (
-                <div key={label} className={`rounded-xl border px-4 py-3 text-center ${hi ? 'border-success/30 bg-success/5' : 'border-border bg-muted/30'}`}>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-                  <p className={`mt-1 text-xl font-bold tabular-nums ${hi ? 'text-success' : ''}`}>{value}</p>
-                  <p className="text-[11px] text-muted-foreground">{sub}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div id="delivery-panel" className="mb-8">
-          <DealDeliveryFlow
+  const fundingActions = (() => {
+    switch (viewerRole) {
+      case 'investor':
+        return (
+          <InvestorFundActions
             deal={deal}
-            isSupplier={isSupplier}
-            isPyme={isPyme}
-            isAdmin={isAdmin}
+            isFundingOpen={isFundingOpen}
             supabase={supabase}
             fetchDeal={fetchDeal}
             onDealUpdate={setDeal}
+            userId={userId}
           />
-        </div>
-
-        <div id="repayment-panel" className="mb-8">
-          <DealRepaymentPanel
+        )
+      case 'pyme':
+        return (
+          <PymeFundingActions
             deal={deal}
-            isPyme={isPyme}
-            isAdmin={isAdmin}
-            isInvestor={isInvestor}
-            indexerEscrow={indexerEscrow}
+            isFundingOpen={isFundingOpen}
+            supabase={supabase}
             fetchDeal={fetchDeal}
             onDealUpdate={setDeal}
+            userId={userId}
           />
+        )
+      case 'admin':
+        return (
+          <div className="space-y-2">
+            <AdminReopenActions
+              deal={deal}
+              isFundingOpen={isFundingOpen}
+              fetchDeal={fetchDeal}
+              onDealUpdate={setDeal}
+            />
+            {isPyme && deal.status === 'awaiting_funding' && !isFundingOpen ? (
+              <PymeExtendFundingDialog
+                deal={deal}
+                supabase={supabase}
+                fetchDeal={fetchDeal}
+                onDealUpdate={setDeal}
+                userId={userId}
+              />
+            ) : null}
+          </div>
+        )
+      case 'supplier':
+      case 'authenticated_viewer':
+        return (
+          <AuthenticatedViewerFundingNotice
+            deal={deal}
+            isFundingOpen={isFundingOpen}
+          />
+        )
+      case 'guest':
+      default:
+        return (
+          <GuestFundingNotice
+            deal={deal}
+            isFundingOpen={isFundingOpen}
+          />
+        )
+    }
+  })()
+
+  const heroActions = (() => {
+    switch (viewerRole) {
+      case 'investor':
+        return <div className="w-full [&_button]:w-full">{fundingActions}</div>
+      case 'authenticated_viewer':
+        return (
+          <AuthenticatedViewerFundingNotice
+            deal={deal}
+            isFundingOpen={isFundingOpen}
+          />
+        )
+      case 'guest':
+      default:
+        return (
+          <GuestHeroFundingActions
+            deal={deal}
+            isFundingOpen={isFundingOpen}
+            onConnectWallet={handleConnect}
+          />
+        )
+    }
+  })()
+
+  const settlementAction =
+    viewerRole === 'admin' ? (
+      <AdminSettleSupplierAction
+        deal={deal}
+        fetchDeal={fetchDeal}
+        onDealUpdate={setDeal}
+      />
+    ) : null
+
+  const isShipped = Boolean(deal.shippedAt)
+  const isDelivered = Boolean(deal.deliveredAt)
+  const canViewerShip =
+    !isShipped && deal.status !== 'completed' && (isSupplier || isAdmin)
+  const canViewerConfirmDelivery =
+    isShipped && !isDelivered && deal.repaymentStatus === 'none' && (isPyme || isAdmin)
+
+  const deliveryActions = canViewerShip ? (
+    <SupplierShipActions deal={deal} supabase={supabase} onRefresh={refreshDeal} />
+  ) : canViewerConfirmDelivery ? (
+    <PymeConfirmDeliveryActions deal={deal} supabase={supabase} onRefresh={refreshDeal} />
+  ) : null
+
+  const deliveryNotice = (() => {
+    if (!isShipped && !isSupplier && !isAdmin) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          {t('dealDetail.deliveryAwaitingSupplier')}
+        </p>
+      )
+    }
+    if (isShipped && !isDelivered && !isPyme && !isAdmin) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          {t('dealDetail.deliveryAwaitingBuyer')}
+        </p>
+      )
+    }
+    return null
+  })()
+
+  const repaymentHeaderNotice =
+    viewerRole === 'investor' ? (
+      <p className="text-sm text-muted-foreground">
+        {t('dealDetail.repaymentInvestorReadOnlyHint')}
+      </p>
+    ) : null
+
+  const isPlatformReleaseSigner =
+    viewerRole !== 'guest' &&
+    Boolean(MERCATO_PLATFORM_ADDRESS && walletInfo?.address === MERCATO_PLATFORM_ADDRESS)
+
+  const adminApprovalsNotice =
+    (deal.repaymentStatus ?? 'none') === 'order_confirmed' ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm text-muted-foreground">
+          {t('dealDetail.repaymentAdminCreateHint')}
+        </p>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/dashboard/admin/approvals">
+            {t('dealDetail.repaymentAdminApprovalsLink')}
+          </Link>
+        </Button>
+      </div>
+    ) : null
+
+  const repaymentActions = (() => {
+    if (viewerRole === 'admin') {
+      return (
+        <>
+          {isPyme ? <PymeRepayActions deal={deal} /> : null}
+          {adminApprovalsNotice}
+          <AdminReleaseActions deal={deal} />
+        </>
+      )
+    }
+    if (viewerRole === 'pyme') {
+      return (
+        <>
+          <PymeRepayActions deal={deal} />
+          {isPlatformReleaseSigner ? <AdminReleaseActions deal={deal} /> : null}
+        </>
+      )
+    }
+    if (isPlatformReleaseSigner) {
+      return <AdminReleaseActions deal={deal} />
+    }
+    return null
+  })()
+
+  const content = (
+    <div className="flex min-h-screen flex-col">
+      <Navigation />
+      <main id="main" tabIndex={-1} className={`container mx-auto px-4 py-10${showInvestorPitch && showMobileInvestorBar ? ' pb-24 lg:pb-10' : ''}`}>
+        <div className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/deals" className="flex items-center gap-1 hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            {t('deals.title')}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 opacity-40" aria-hidden />
+          <span className="truncate text-foreground/70">
+            {deal.productName || t('deals.viewDeal')}
+          </span>
         </div>
+
+        {showInvestorPitch ? (
+          <DealInvestorHero
+            deal={deal}
+            fundingRemainingMs={fundingRemainingMs}
+            isFundingOpen={isFundingOpen}
+            pymeReputation={pymeReputation}
+            supplierReputation={supplierReputation}
+            reputationsLoading={partyReputationsLoading}
+            actions={heroActions}
+          />
+        ) : (
+          <DealFundingPanel
+            deal={deal}
+            isFundingOpen={isFundingOpen}
+            fundingRemainingMs={fundingRemainingMs}
+            headerSlot={editDealButton}
+            settlementAction={settlementAction}
+            actions={fundingActions}
+          />
+        )}
+
+        {deal.status !== 'awaiting_funding' ? (
+          <>
+            <div className="mb-8">
+              <DealDeliveryFlow
+                deal={deal}
+                actions={deliveryActions}
+                statusNotice={deliveryNotice}
+              />
+            </div>
+
+            <div id="repayment-panel" className="mb-8">
+              <DealRepaymentPanel
+                deal={deal}
+                indexerEscrow={indexerEscrow}
+                fetchDeal={fetchDeal}
+                onDealUpdate={setDeal}
+                headerNotice={repaymentHeaderNotice}
+                actions={repaymentActions}
+              />
+            </div>
+          </>
+        ) : null}
 
         <div className={`grid gap-8 ${showInvestorPitch ? '' : 'lg:grid-cols-3'}`}>
           <div className={`space-y-6 ${showInvestorPitch ? '' : 'lg:col-span-2'}`}>
-            {showInvestorPitch
-              ? <DealInvestorDetails deal={deal} indexerEscrow={indexerEscrow} />
-              : <DealDetailTabs deal={deal} indexerEscrow={indexerEscrow} />}
+            {showInvestorPitch ? (
+              <DealInvestorDetails deal={deal} indexerEscrow={indexerEscrow} />
+            ) : (
+              <DealDetailTabs deal={deal} indexerEscrow={indexerEscrow} />
+            )}
           </div>
-          {!showInvestorPitch && (
-            <DealDetailSidebar deal={deal} isFundingOpen={isFundingOpen} pymeReputation={pymeReputation} />
-          )}
+          {!showInvestorPitch ? (
+            <DealDetailSidebar
+              deal={deal}
+              isFundingOpen={isFundingOpen}
+              pymeReputation={pymeReputation}
+            />
+          ) : null}
         </div>
-      </div>
-      {showInvestorPitch && canFund ? (
-        <DealFundingPanel {...fundingProps} showMobileBar />
-      ) : null}
+      </main>
+      {showInvestorPitch && showMobileInvestorBar ? <InvestorMobileFundBar /> : null}
     </div>
   )
+
+  if (viewerRole === 'investor') {
+    return (
+      <InvestorFundingProvider deal={deal} isFundingOpen={isFundingOpen}>
+        {content}
+      </InvestorFundingProvider>
+    )
+  }
+
+  return content
 }

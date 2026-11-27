@@ -3,19 +3,20 @@ import { ArrowRight, Clock } from 'lucide-react'
 import type { BlogPost } from '@/lib/blog/types'
 import { getBlogLocaleContent } from '@/lib/blog/content'
 import type { Locale } from '@/lib/i18n/config'
+import { toIntlLocale } from '@/lib/i18n/format'
 import { cn } from '@/lib/utils'
 
-const CATEGORY_LABELS: Record<BlogPost['category'], { en: string; es: string }> = {
-  vault: { en: 'Vault guides', es: 'Guías de vault' },
-  guides: { en: 'Investor guides', es: 'Guías para inversionistas' },
-  platform: { en: 'Platform', es: 'Plataforma' },
+const CATEGORY_LABELS: Record<BlogPost['category'], Record<Locale, string>> = {
+  vault: { en: 'Vault guides', es: 'Guías de vault', 'pt-BR': 'Guias do vault' },
+  guides: { en: 'Investor guides', es: 'Guías para inversionistas', 'pt-BR': 'Guias para investidores' },
+  platform: { en: 'Platform', es: 'Plataforma', 'pt-BR': 'Plataforma' },
 }
 
-const AUDIENCE_LABELS: Record<BlogPost['audience'], { en: string; es: string }> = {
-  pyme: { en: 'For PyMEs', es: 'Para PyMEs' },
-  supplier: { en: 'For Suppliers', es: 'Para proveedores' },
-  investor: { en: 'For Investors', es: 'Para inversionistas' },
-  all: { en: 'For everyone', es: 'Para todos' },
+const AUDIENCE_LABELS: Record<BlogPost['audience'], Record<Locale, string>> = {
+  pyme: { en: 'For PyMEs', es: 'Para PyMEs', 'pt-BR': 'Para PMEs' },
+  supplier: { en: 'For Suppliers', es: 'Para proveedores', 'pt-BR': 'Para fornecedores' },
+  investor: { en: 'For Investors', es: 'Para inversionistas', 'pt-BR': 'Para investidores' },
+  all: { en: 'For everyone', es: 'Para todos', 'pt-BR': 'Para todos' },
 }
 
 const AUDIENCE_BADGE_CLASSES: Record<BlogPost['audience'], string> = {
@@ -60,7 +61,7 @@ export function BlogPostCard({ post, locale }: { post: BlogPost; locale: Locale 
 
       <div className="mt-5 flex items-center justify-between gap-3 pt-2">
         <time dateTime={post.publishedAt} className="text-xs text-muted-foreground">
-          {new Date(post.publishedAt).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
+          {new Date(post.publishedAt).toLocaleDateString(toIntlLocale(locale), {
             year: 'numeric',
             month: 'long',
             day: 'numeric',

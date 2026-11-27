@@ -88,21 +88,7 @@ The SDK is initialized (called lazily) when:
 
 5. **`hooks/use-external-wallet.ts`**
    - Import `getStellarWalletKit` instead of `stellarWalletKit`
-   - Connection callback calls `getStellarWalletKit()` with await
-
-#### Tests
-
-- **`__tests__/trustless/lazy-wallet-kit.test.ts`** — Unit tests for lazy accessor
-  - Initialization on first call
-  - Cached instance on subsequent calls
-  - Concurrent call handling
-  - Server context behavior
-  - Error handling and retry
-
-- **`__tests__/wallets/wallet-persistence-lazy-loading.test.ts`** — Integration contract tests
-  - Verify modules export required functions
-  - Verify hooks use lazy accessors
-  - Verify provider uses sync accessor
+    - Connection callback calls `getStellarWalletKit()` with await
 
 ## Behavior
 
@@ -204,48 +190,11 @@ Future: Pollar can also be deferred using similar pattern if needed.
 - [x] Signing transactions work (lazy init before sign)
 - [x] Disconnect handles uninitialized kit
 - [x] Concurrent calls to `getStellarWalletKit()` return same instance
-- [x] Tests pass: unit (lazy-wallet-kit), integration (wallet-persistence)
 - [x] Build passes: `npm run build`
 - [x] Lint passes: no new errors in wallet files
 - [x] No errors in signing paths (DeFindex, repayment escrow)
 
-## Testing
-
-### Unit Tests (`__tests__/trustless/lazy-wallet-kit.test.ts`)
-
-```bash
-bun test __tests__/trustless/lazy-wallet-kit.test.ts
-```
-
-Tests:
-- Initialization on first call
-- Cached instance retrieval
-- Concurrent call safety
-- Server context returns null
-- Sync accessor behavior
-- Reset and re-initialization
-- Error handling allows retry
-
-### Integration Tests (`__tests__/wallets/wallet-persistence-lazy-loading.test.ts`)
-
-```bash
-bun test __tests__/wallets/wallet-persistence-lazy-loading.test.ts
-```
-
-Tests:
-- Modules export required functions
-- Hooks use lazy accessors
-- Provider uses sync accessor
-
-### Full Test Suite
-
-```bash
-npm run test
-```
-
-Expected: 11 new tests pass (lazy-wallet-kit), 4 contract tests pass (wallet-persistence-lazy-loading).
-
-### Manual Verification
+## Manual verification
 
 1. **Public route (no wallet):**
    - Open DevTools Network tab

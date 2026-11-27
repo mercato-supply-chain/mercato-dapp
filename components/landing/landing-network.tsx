@@ -7,7 +7,7 @@ import { Package, TrendingUp, ShieldCheck, Star } from 'lucide-react'
 
 const NODES = [
   { id: 'sme', label: 'Industrias NOVA', sub: 'SME · Buyer', icon: Package, pos: 'top-0 left-1/2 -translate-x-1/2 -translate-y-2' },
-  { id: 'inv', label: 'InverCap SA', sub: '+12.5% APR', icon: TrendingUp, pos: 'right-0 top-1/2 -translate-y-1/2 translate-x-2' },
+  { id: 'inv', label: 'InverCap SA', sub: 'Investor', icon: TrendingUp, pos: 'right-0 top-1/2 -translate-y-1/2 translate-x-2' },
   { id: 'sup', label: 'Acero del Pacífico', sub: 'Verified · 4.8★', icon: ShieldCheck, pos: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-2' },
   { id: 'rep', label: 'Reputation', sub: '↑ growing', icon: Star, pos: 'left-0 top-1/2 -translate-y-1/2 -translate-x-2' },
 ]

@@ -2,6 +2,7 @@ import { BlogIndexView } from '@/components/blog/blog-views'
 import { JsonLd } from '@/components/seo/json-ld'
 import { getAllBlogPosts } from '@/lib/blog/posts'
 import { getBlogLocaleContent } from '@/lib/blog/content'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerLocale } from '@/lib/i18n/server'
 
 export async function generateMetadata() {
@@ -18,10 +19,7 @@ export async function generateMetadata() {
     },
     alternates: {
       canonical: '/blog',
-      languages: {
-        en: '/blog?lang=en',
-        es: '/blog?lang=es',
-      },
+      languages: languageAlternates('/blog'),
     },
   }
 }

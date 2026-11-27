@@ -17,9 +17,57 @@ export function dealsBrowseQueryString(filters: DealBrowseFilters): string {
 }
 
 /**
+ * Build the browser URL for `/deals` while preserving unrelated query
+ * parameters (such as `lang`) and clearing legacy `filter` aliases.
+ */
+export function buildDealsBrowseUrl(
+  pathname: string,
+  currentSearch: string,
+  filters: DealBrowseFilters,
+): string {
+  const params = new URLSearchParams(currentSearch)
+  params.delete('filter')
+
+  if (filters.status !== 'all') {
+    params.set('status', filters.status)
+  } else {
+    params.delete('status')
+  }
+
+  if (filters.category) {
+    params.set('category', filters.category)
+  } else {
+    params.delete('category')
+  }
+
+  if (filters.q) {
+    params.set('q', filters.q)
+  } else {
+    params.delete('q')
+  }
+
+  if (filters.sort !== 'newest') {
+    params.set('sort', filters.sort)
+  } else {
+    params.delete('sort')
+  }
+
+  if (filters.page > 1) {
+    params.set('page', String(filters.page))
+  } else {
+    params.delete('page')
+  }
+
+  const query = params.toString()
+  return query ? `${pathname}?${query}` : pathname
+}
+
+/**
  * Deduplicating client data layer for subsequent pages and filter changes.
  * Coalesces identical in-flight requests (React Strict Mode, fast typing) and
- * reuses recent responses briefly.
+ * reuses recent responses briefly. The first page is rendered on the server
+ * as part of the browse shell, so this fetcher is only used after hydration
+ * for filter changes and "load more" actions.
  */
 export const fetchDealsBrowse = createDedupedFetcher(
   async (filters: DealBrowseFilters): Promise<DealsBrowseResponse> => {

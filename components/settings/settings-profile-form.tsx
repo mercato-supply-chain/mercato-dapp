@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { LATAM_COUNTRIES, SECTORS } from '@/lib/constants'
 import { useI18n } from '@/lib/i18n/provider'
+import { STELLAR_ADDRESS_INPUT_PROPS } from '@/lib/stellar/address-input'
 import { SettingsAvatarUpload } from './settings-avatar-upload'
 
 export type ProfileFormState = {
@@ -150,6 +151,7 @@ export function SettingsProfileForm({
             value={formData.address}
             onChange={(e) => onChange({ address: e.target.value })}
             placeholder={t('settings.walletAddressPlaceholder')}
+            {...STELLAR_ADDRESS_INPUT_PROPS}
           />
           <p className="text-xs text-muted-foreground">{t('settings.walletAddressHint')}</p>
         </div>

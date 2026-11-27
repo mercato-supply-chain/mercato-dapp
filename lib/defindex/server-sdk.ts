@@ -26,7 +26,7 @@ export function getServerDefindexSdk(): DefindexSDK {
 /**
  * Clear the cached SDK instance so the next {@link getServerDefindexSdk} call rebuilds
  * it from current config. Enables recovery from a client constructed with bad config
- * (e.g. during a bad deploy) and simplifies unit testing/mocking.
+ * (e.g. during a bad deploy).
  */
 export function resetServerDefindexSdk(): void {
   instance = null

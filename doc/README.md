@@ -10,6 +10,7 @@ This folder contains architecture and design documentation for the MERCATO appli
 |----------|----------|-------------|
 | **[AGENTS.md](../AGENTS.md)** | AI agents | Structured orientation: deal lifecycles, route/API index, wallet signing matrix, key files, what is / isn't implemented |
 | **[architecture.md](./architecture.md)** | Engineers | System overview, Mermaid diagrams, escrow/ramp/vault flows, data model, environment variables |
+| **[how-money-moves.md](./how-money-moves.md)** | Anyone using the app | Which button calls which contract, for both the default deal and the credit pool |
 | **[rwa-architecture.md](./rwa-architecture.md)** | AI agents, engineers | Credit-asset schema, state machine, and the issuance → pool → redemption sequence |
 | **[rwa-testnet-evidence.md](./rwa-testnet-evidence.md)** | AI agents | Deployed Testnet registry. Lifecycle tables are a template until a real run fills them. |
 | **[rwa-repayment-capability.md](./rwa-repayment-capability.md)** | Engineers | Trustless Work multi-receiver repayment notes |

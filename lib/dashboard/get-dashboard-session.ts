@@ -13,17 +13,13 @@ export type DashboardProfile = {
   contact_name: string | null
 }
 
+type DashboardClient = Awaited<ReturnType<typeof createClient>>
+
 /**
- * The request's Supabase client, signed-in user and profile, loaded once per request.
- *
- * `cache()` makes the dashboard layout and the page it wraps share a single auth check and a
- * single profile query. It never redirects: each caller keeps its own redirect decisions.
- *
- * The result is memoized for the whole render, so use it for reads. Code that changes auth or
- * profile state should create its own client and re-read afterwards.
+ * Reads the signed-in user and dashboard profile from an existing client. Kept separate from
+ * `getDashboardSession` so the read can be exercised with a stub client.
  */
-export const getDashboardSession = cache(async () => {
-  const supabase = await createClient()
+export async function loadDashboardSession(supabase: DashboardClient) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -39,4 +35,15 @@ export const getDashboardSession = cache(async () => {
     .single<DashboardProfile>()
 
   return { supabase, user, profile }
-})
+}
+
+/**
+ * The request's Supabase client, signed-in user and profile, loaded once per request.
+ *
+ * `cache()` makes the dashboard layout and the page it wraps share a single auth check and a
+ * single profile query. It never redirects: each caller keeps its own redirect decisions.
+ *
+ * The result is memoized for the whole render, so use it for reads. Code that changes auth or
+ * profile state should create its own client and re-read afterwards.
+ */
+export const getDashboardSession = cache(async () => loadDashboardSession(await createClient()))

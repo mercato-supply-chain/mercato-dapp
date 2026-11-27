@@ -40,8 +40,8 @@ function getFinancingOptions(t: (key: string) => string): FinancingOption[] {
       label: t('landing.rates.options.mercato.label'),
       subtitle: t('landing.rates.options.mercato.subtitle'),
       rateLabel: t('landing.rates.options.mercato.rate'),
-      rateMin: 18,
-      rateMax: 24,
+      rateMin: 0,
+      rateMax: 0,
       requirements: t('landing.rates.options.mercato.requirements'),
       access: 'high',
       icon: BadgeCheck,
@@ -121,7 +121,7 @@ function RateBar({
     >
       <div
         className={cn(
-          'absolute top-0 h-full rounded-full transition-all duration-700',
+          'absolute top-0 h-full rounded-full transition-color duration-700',
           highlighted
             ? 'bg-gradient-to-r from-brand-mid to-brand-light shadow-[0_0_12px_hsl(var(--brand-light)/0.45)]'
             : 'bg-muted-foreground/35 dark:bg-white/20',
@@ -149,7 +149,7 @@ function AccessPill({ level, t }: { level: AccessLevel; t: (key: string) => stri
   }[level]
 
   return (
-    <span className={cn('rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide', config.className)}>
+    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', config.className)}>
       {config.label}
     </span>
   )
@@ -189,24 +189,22 @@ export function LandingRateComparison() {
       <div className="container relative mx-auto px-4">
         <div
           className={cn(
-            'mx-auto max-w-6xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            'mx-auto max-w-6xl transition-opacity transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
           )}
         >
           <div className="mb-12 max-w-3xl md:mb-16">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-mid dark:text-brand-light">
+            <p className="mb-3 text-sm font-medium text-brand-mid dark:text-brand-light">
               {t('landing.rates.eyebrow')}
             </p>
             <h2
               id="rate-comparison-heading"
               className="font-display mb-5 text-[clamp(2rem,5vw,3.25rem)] font-normal leading-[1.06] tracking-tight text-foreground text-balance"
             >
-              {t('landing.rates.titleLine1')}
-              <br />
-              <span className="text-brand-mid dark:text-brand-light">{t('landing.rates.titleAccent')}</span>
+              {t('landing.rates.titleLine1')} {t('landing.rates.titleAccent')}
             </h2>
             <p className="text-lg leading-relaxed text-muted-foreground">
-              {t('landing.rates.description', { apr: t('landing.rates.aprHighlight') })}
+              {t('landing.rates.description')}
             </p>
           </div>
 
@@ -221,7 +219,7 @@ export function LandingRateComparison() {
                     <div key={option.id} className="flex-[0_0_100%] min-w-0 px-4 md:flex-[0_0_80%] lg:flex-[0_0_60%]">
                       <div
                         className={cn(
-                          'relative h-full rounded-3xl border p-6 transition-all duration-500 md:p-10',
+                          'relative h-full rounded-3xl border p-6 transition-opacity transition-transform duration-500 motion-reduce:transition-none',
                           option.mercato
                             ? 'border-brand-light/50 bg-gradient-to-br from-brand-pale/90 via-background to-brand-ultra shadow-glow-brand dark:border-brand-light/25 dark:from-brand-mid/10 dark:via-card dark:to-background'
                             : 'border-border/60 bg-card/80 dark:bg-card/50',
@@ -258,8 +256,10 @@ export function LandingRateComparison() {
                             <div className="text-right">
                               <p
                                 className={cn(
-                                  'text-3xl font-bold tabular-nums tracking-tight',
-                                  option.mercato ? 'text-brand-mid dark:text-brand-light' : 'text-foreground',
+                                  'font-bold tracking-tight',
+                                  option.mercato
+                                    ? 'max-w-[9rem] text-right text-lg leading-tight text-brand-mid dark:text-brand-light'
+                                    : 'text-3xl tabular-nums text-foreground',
                                 )}
                               >
                                 {option.rateLabel}
@@ -268,22 +268,20 @@ export function LandingRateComparison() {
                             </div>
                           </div>
 
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                              <span>{t('landing.rates.chartLabel')}</span>
-                              <div className="flex items-center gap-4">
-                                <span className="flex items-center gap-1.5">
-                                  <span className="h-2 w-4 rounded-full bg-brand-mid" />
-                                  {t('landing.rates.chartLegendMercato')}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="h-2 w-4 rounded-full bg-muted-foreground/35" />
-                                  {t('landing.rates.chartLegendAlt')}
-                                </span>
+                          {!option.mercato ? (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                <span>{t('landing.rates.chartLabel')}</span>
+                                <div className="flex items-center gap-4">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="h-2 w-4 rounded-full bg-muted-foreground/35" />
+                                    {t('landing.rates.chartLegendAlt')}
+                                  </span>
+                                </div>
                               </div>
+                              <RateBar min={option.rateMin} max={option.rateMax} />
                             </div>
-                            <RateBar min={option.rateMin} max={option.rateMax} highlighted={option.mercato} />
-                          </div>
+                          ) : null}
 
                           <div className="grid gap-6 md:grid-cols-2">
                             <div className="rounded-2xl bg-muted/30 p-5 dark:bg-white/[0.02]">
@@ -319,7 +317,7 @@ export function LandingRateComparison() {
                   key={i}
                   onClick={() => emblaApi?.scrollTo(i)}
                   className={cn(
-                    'h-1.5 rounded-full transition-all duration-300',
+                    'h-1.5 rounded-full transition-width transition-color duration-300',
                     i === selectedIndex ? 'w-8 bg-brand-mid' : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
                   )}
                   aria-label={`Go to slide ${i + 1}`}

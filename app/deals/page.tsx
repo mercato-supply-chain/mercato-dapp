@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { DealsBrowse } from './deals-browse'
+import { languageAlternates } from '@/lib/i18n/config'
 import { getServerDictionary } from '@/lib/i18n/server'
 import { JsonLd } from '@/components/seo/json-ld'
 import { createClient } from '@/lib/supabase/server'
@@ -18,10 +19,7 @@ export async function generateMetadata() {
     description: 'Explore live supply chain invoice financing deals in Latin America. Support PyMEs and earn short-term yield secured by smart contracts.',
     alternates: {
       canonical: '/deals',
-      languages: {
-        en: '/deals?lang=en',
-        es: '/deals?lang=es',
-      },
+      languages: languageAlternates('/deals'),
     },
   }
 }
@@ -59,8 +57,8 @@ const EMPTY_META: DealsBrowseMeta = {
 
 /**
  * Server Component: parses the search params and fetches the first page of
- * deals (plus summary + categories) so the marketplace is part of the
- * server-rendered HTML instead of appearing after hydration.
+ * deals (plus summary + categories). The first page of cards is rendered as
+ * server HTML; the client island only owns the filter bar and "load more".
  */
 export default async function DealsPage({
   searchParams,
@@ -90,9 +88,9 @@ export default async function DealsPage({
       <Suspense
         fallback={
           <div className="flex min-h-screen flex-col">
-            <div className="container mx-auto px-4 py-8">
+            <main id="main" tabIndex={-1} className="container mx-auto px-4 py-8">
               <p className="text-muted-foreground">{dict.deals.loadingDeals}</p>
-            </div>
+            </main>
           </div>
         }
       >

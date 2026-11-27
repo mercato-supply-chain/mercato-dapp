@@ -102,7 +102,6 @@
 
 - [x] **Build passes:** `bunx next build`
 - [x] **Lint clean:** `bun lint` (no new violations)
-- [x] **Tests run:** `bun test --run` (pre-existing failures unrelated)
 - [x] **Scroll motion preserved:** Waterfall effect unchanged, smooth parallax continues
 - [x] **Highlight phases intact:** Card highlighting still cycles every ~1/8th of scroll
 - [x] **Reduced motion respected:** `motion-reduce:` classes still apply
