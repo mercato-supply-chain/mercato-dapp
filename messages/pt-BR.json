@@ -2524,9 +2524,9 @@
   "landing": {
     "hero": {
       "badge": "Escrow na Stellar",
-      "titleLine1": "Financie estoque,",
-      "titleLine2": "um pedido de cada vez.",
-      "description": "A Mercato conecta pequenos negócios a investidores que pagam fornecedores à vista em USDC. Depois da entrega, as empresas pagam pelo escrow na Stellar.",
+      "titleLine1": "Financie seu próximo",
+      "titleLine2": "pedido.",
+      "description": "Os investidores pagam seu fornecedor em USDC. Depois de receber a mercadoria, pague o financiamento pelo escrow na Stellar.",
       "primaryCta": "Explorar pedidos abertos",
       "flowLink": "Como funciona",
       "secondaryCta": "Financiar um pedido",
@@ -2619,60 +2619,28 @@
       "explorer": "Abrir Stellar Expert"
     },
     "roles": {
-      "eyebrow": "Para quem é",
-      "titleLine1": "Uma plataforma.",
-      "titleLine2": "Três jeitos de crescer.",
+      "heading": "Um pedido, três formas de participar.",
       "sme": {
         "label": "PMEs",
-        "headline": "Pare de esperar pelo capital.",
-        "subhead": "Comece a enviar.",
-        "body": "Crie um pedido, escolha um fornecedor verificado, defina os marcos — e abra para investidores. Capital de giro em horas, não em ciclo de banco.",
-        "bullet1": "Publique um pedido em minutos",
-        "bullet2": "Construa reputação a cada operação",
-        "bullet3": "Pague com a venda do estoque",
-        "cta": "Crie sua primeira operação",
-        "mockupTitle": "Novo pedido de compra",
-        "mockupSubtitle": "Fornecedor e marcos"
+        "body": "Publique um pedido de compra para financiar seu estoque. Confirme a entrega e pague pelo escrow na Stellar.",
+        "cta": "Crie sua primeira operação"
       },
       "investor": {
         "label": "Investidores",
-        "headline": "Rendimento em comércio real.",
-        "subhead": "Sem especulação.",
-        "body": "Explore pedidos abertos e financie-os na Stellar. Você vê as condições de cada pedido antes de investir, e os marcos de produção e entrega protegem o capital.",
-        "bullet1": "Veja exatamente o que você financia",
-        "bullet2": "Liberações por marco",
-        "bullet3": "Prazos de 30–90 dias",
+        "body": "Confira a fatura, o prazo e o retorno esperado antes de financiar um pedido em USDC.",
         "cta": "Explorar operações abertas"
       },
       "supplier": {
         "label": "Fornecedores",
-        "headline": "Receba conforme entrega.",
-        "subhead": "Em cada marco.",
-        "body": "O USDC fica travado antes de você produzir. O pagamento sai quando envio e entrega são confirmados — sem correr atrás de fatura entre países.",
-        "bullet1": "Fundos garantidos antes",
-        "bullet2": "Perfil de fornecedor verificado",
-        "bullet3": "Compradores que voltam na Mercato",
-        "cta": "Entrar como fornecedor",
-        "mockupVerified": "Verificado · top 3%",
-        "mockupProduction": "Início da produção",
-        "mockupDelivery": "Entrega confirmada",
-        "mockupPaid": "Pago",
-        "mockupPending": "Pendente"
-      },
-      "forRole": "Para {role}",
-      "escrowNote": "Escrow por marcos na Stellar",
-      "footerLine": "Um pedido de compra liga os três — escolha sua função e entre no fluxo.",
-      "chooseRoleAria": "Escolha sua função",
-      "investorMockupTitle": "Operações abertas",
-      "investorMockupAvg": "Pedidos abertos",
-      "smeMockupOpenCta": "Abrir para investidores →",
-      "smeMockupOrders": "156 pedidos"
+        "body": "Receba o valor integral da fatura em USDC quando o pedido estiver totalmente financiado e depois envie a mercadoria.",
+        "cta": "Entrar como fornecedor"
+      }
     },
     "rates": {
       "eyebrow": "Por que a Mercato",
       "titleLine1": "Capital de giro no pedido.",
       "titleAccent": "Sem as barreiras de banco.",
-      "description": "PMEs enfrentam 19–21% CAT em bancos que muitas vezes não acessam — ou 60%+ com credores informais. A Mercato financia o pedido inteiro com escrow por marcos, com condições definidas em cada operação — sem um APR publicado.",
+      "description": "A Mercato financia faturas de fornecedores em USDC. Cada pedido de compra define suas condições de pagamento.",
       "aprHighlight": "Por pedido",
       "stat1Value": "85%",
       "stat1Label": "das PMEs na América Latina não acessam crédito bancário formal",
@@ -2699,7 +2667,7 @@
       "options": {
         "mercato": {
           "label": "Mercato",
-          "subtitle": "Escrow lastreado no pedido, na Stellar",
+          "subtitle": "Financiamento de faturas em USDC",
           "rate": "Por pedido",
           "requirements": "Pedido ativo + fornecedor verificado — sem histórico bancário",
           "caveat": "100% do pedido de produção financiado"
@@ -2742,6 +2710,7 @@
       "footnote": "Etapa ilustrativa · escrow por marcos na Stellar",
       "order": {
         "short": "Criar um pedido",
+        "summary": "A PME publica um pedido de compra para o estoque de que precisa.",
         "title": "A PME cria o pedido",
         "body": "Escolha um fornecedor verificado, defina os marcos de envio e entrega e publique o pedido no marketplace.",
         "actor": "PME",
@@ -2749,6 +2718,7 @@
       },
       "fund": {
         "short": "Financiar a fatura",
+        "summary": "Os investidores financiam a fatura em USDC. O fornecedor recebe quando o financiamento é concluído.",
         "title": "O investidor financia",
         "body": "O USDC fica no escrow por marcos na Stellar. O capital permanece protegido até cada condição de liberação ser cumprida on-chain.",
         "actor": "Investidor",
@@ -2756,6 +2726,7 @@
       },
       "produce": {
         "short": "Enviar o pedido",
+        "summary": "O fornecedor envia a mercadoria, e a PME confirma a entrega.",
         "title": "O fornecedor produz",
         "body": "A produção começa com o pagamento garantido. O primeiro marco pode liberar quando a fabricação ou o envio começa.",
         "actor": "Fornecedor",
@@ -2770,6 +2741,7 @@
       },
       "complete": {
         "short": "Pagar pelo escrow",
+        "summary": "A PME deposita os fundos no escrow na Stellar, e os investidores recebem os pagamentos programados.",
         "title": "Todo mundo ganha",
         "body": "A PME paga principal mais rendimento com as vendas. Investidores ganham, fornecedores já receberam, e o ciclo pode repetir.",
         "actor": "PME",
@@ -2841,7 +2813,6 @@
       "card": {
         "example": "Exemplo",
         "amount": "Valor",
-        "apr": "APR",
         "term": "Prazo",
         "milestones": "Marcos",
         "fundDeal": "Financiar esta operação",
@@ -2885,33 +2856,33 @@
       "eyebrow": "FAQ",
       "titlePrefix": "Perguntas antes de você",
       "titleAccent": "entrar no fluxo.",
-      "description": "Como o financiamento funciona, quem participa e o que protege o capital na Mercato.",
+      "description": "Como os pedidos são financiados, quando os fornecedores recebem e como funciona o pagamento.",
       "walkthroughCta": "Passo a passo completo",
       "signUpCta": "Criar conta grátis",
       "items": {
         "whatIsMercato": {
           "q": "O que é a Mercato?",
-          "a": "A Mercato é um marketplace de financiamento de cadeia para a América Latina. PMEs publicam pedidos reais, investidores financiam por escrow de marcos na Stellar e fornecedores recebem conforme a mercadoria anda — tudo numa operação transparente."
+          "a": "A Mercato conecta PMEs da América Latina a investidores que financiam compras de estoque. Os fornecedores recebem USDC quando o financiamento é concluído, e as PMEs pagam os investidores pelo escrow na Stellar após a entrega."
         },
         "whoCanUse": {
           "q": "Quem pode usar a plataforma?",
-          "a": "PMEs (compradoras) criam e gerenciam pedidos. Investidores exploram operações abertas e financiam o escrow. Fornecedores verificados atendem e recebem por marco. Cada função tem um fluxo próprio depois do cadastro."
+          "a": "As PMEs criam pedidos de compra. Investidores analisam e financiam pedidos em aberto. Fornecedores recebem o pagamento e enviam a mercadoria."
         },
         "howFunded": {
           "q": "Como as operações são financiadas?",
-          "a": "Quando uma PME publica um pedido, investidores comprometem USDC num escrow não custodial. O capital fica travado até marcos definidos — como início da produção ou entrega — serem confirmados on-chain."
+          "a": "Em um pedido padrão, um investidor paga a fatura do fornecedor em USDC e paga a taxa da plataforma separadamente. Alguns pedidos usam um pool de financiamento, permitindo que vários investidores contribuam para a mesma fatura."
         },
         "milestones": {
           "q": "O que são marcos de pagamento?",
-          "a": "Os marcos dividem a operação em etapas (por exemplo 50% no envio e 50% na entrega). O fornecedor só recebe quando o comprovante combinado é enviado e aprovado, reduzindo o risco de todos."
+          "a": "Os marcos de pagamento dividem em parcelas o valor devido aos investidores. Após a confirmação da entrega, a PME deposita os fundos no escrow e a Mercato aprova e libera cada parcela financiada."
         },
         "investorRisk": {
-          "q": "Como o capital do investidor é protegido?",
-          "a": "Seus fundos ficam em escrow, ligados a um pedido específico — não a uma linha de crédito genérica. Você vê produto, fornecedor, condições e APR antes, e a liberação depende de marcos, não de um pagamento discricionário."
+          "q": "O que os investidores devem analisar antes de financiar?",
+          "a": "Confira a fatura do fornecedor, o prazo de pagamento e o retorno esperado de cada pedido. O pagamento usa escrow na Stellar e depende de a PME depositar os fundos de cada parcela programada."
         },
         "supplierPayment": {
           "q": "Quando o fornecedor recebe?",
-          "a": "Depois do financiamento, o pagamento sai em cada marco confirmado. O fornecedor sabe que o dinheiro está garantido antes de produzir, em vez de esperar ciclos longos de fatura depois da entrega."
+          "a": "Os fornecedores recebem o valor integral da fatura em USDC quando o pedido está totalmente financiado, antes do envio."
         },
         "stellar": {
           "q": "Por que Stellar?",

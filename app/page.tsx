@@ -39,11 +39,11 @@ const breadcrumbSchema = {
 }
 
 function HowItWorksFallback() {
-  return <div className="h-16 w-full" aria-hidden />
+  return <div className="h-[27rem] w-full lg:h-[25rem]" aria-hidden />
 }
 
 function HeroOrderFallback() {
-  return <div className="min-h-72 rounded-2xl border border-border bg-card lg:min-h-44" aria-hidden />
+  return <div className="min-h-[21rem] rounded-2xl border border-border bg-card" aria-hidden />
 }
 
 function LiveDealsFallback() {
@@ -79,13 +79,12 @@ export default function HomePage() {
 
         <section
           id={LANDING_SECTION_IDS.howItWorks}
-          className="landing-section-anchor border-b border-border bg-background"
+          aria-labelledby="landing-flow-title"
+          className="landing-section-anchor border-y border-border bg-[#f5f9f6] dark:bg-[#101511]"
         >
-          <div className="container mx-auto px-4 py-8 md:py-10">
-            <Suspense fallback={<HowItWorksFallback />}>
-              <HeroHowItWorksSteps />
-            </Suspense>
-          </div>
+          <Suspense fallback={<HowItWorksFallback />}>
+            <HeroHowItWorksSteps />
+          </Suspense>
         </section>
 
         <LandingRoles />

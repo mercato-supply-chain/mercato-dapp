@@ -1,32 +1,39 @@
-import { getDictionary } from '@/lib/i18n/dictionaries'
-import { getServerLocale, tr } from '@/lib/i18n/server'
+import { getServerDictionary, tr } from '@/lib/i18n/server'
 
-const STEPS = [
-  { id: 'order', n: 1, titleKey: 'landing.flow.order.short', actorKey: 'landing.flow.order.actor' },
-  { id: 'fund', n: 2, titleKey: 'landing.flow.fund.short', actorKey: 'landing.flow.fund.actor' },
-  { id: 'produce', n: 3, titleKey: 'landing.flow.produce.short', actorKey: 'landing.flow.produce.actor' },
-  { id: 'complete', n: 4, titleKey: 'landing.flow.complete.short', actorKey: 'landing.flow.complete.actor' },
-] as const
+const STEPS = ['order', 'fund', 'produce', 'complete'] as const
 
 export async function HeroHowItWorksSteps() {
-  const locale = await getServerLocale()
-  const t = await getDictionary(locale)
+  const messages = await getServerDictionary()
 
   return (
-    <ol className="grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-4 lg:gap-8">
-      {STEPS.map((step, index) => (
-        <li key={step.id} className="relative min-w-0">
-          {index < STEPS.length - 1 ? (
+    <div className="mx-auto grid max-w-7xl gap-7 px-5 py-10 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:gap-12 lg:px-12 lg:py-16">
+      <h2 id="landing-flow-title" className="font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-none tracking-tight">
+        {tr(messages, 'landing.hero.flowLink')}
+      </h2>
+
+      <ol className="list-none" role="list">
+        {STEPS.map((step, index) => (
+          <li
+            key={step}
+            className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-4 pb-5 last:pb-0 before:absolute before:bottom-0 before:left-[1.0625rem] before:top-9 before:w-0.5 before:bg-[#c1d9c9] last:before:hidden dark:before:bg-[#345444]"
+          >
             <span
-              className="pointer-events-none absolute -right-3 top-3 hidden h-px w-6 bg-border lg:block"
-              aria-hidden
-            />
-          ) : null}
-          <p className="text-sm tabular-nums text-brand-mid dark:text-brand-light">{step.n}</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{tr(t, step.titleKey)}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{tr(t, step.actorKey)}</p>
-        </li>
-      ))}
-    </ol>
+              className="grid size-9 place-items-center rounded-full bg-brand-pale text-sm font-semibold tabular-nums text-brand-dark dark:bg-[#19362a] dark:text-[#bde8c8]"
+              aria-hidden="true"
+            >
+              {index + 1}
+            </span>
+            <div className="min-w-0 pt-1">
+              <h3 className="text-base font-semibold leading-6 tracking-tight sm:text-lg">
+                {tr(messages, `landing.flow.${step}.short`)}
+              </h3>
+              <p className="mt-1 max-w-[54ch] text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {tr(messages, `landing.flow.${step}.summary`)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }

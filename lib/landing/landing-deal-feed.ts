@@ -17,7 +17,6 @@ export type LandingFeedItem = {
   productName: string
   companyLine: string
   amountLabel: string
-  aprLabel?: string
   termDays: number
   category?: string
   milestonesCompleted: number
@@ -88,7 +87,6 @@ export function dealToFeedItem(deal: Deal): LandingFeedItem {
     productName: deal.productName,
     companyLine: [deal.pymeName, deal.supplier].filter(Boolean).join(' · '),
     amountLabel: formatCurrency(deal.priceUSDC),
-    aprLabel: deal.yieldAPR != null ? `${deal.yieldAPR.toFixed(1)}%` : undefined,
     termDays: deal.term,
     category: deal.category,
     milestonesCompleted: completed,
@@ -108,7 +106,6 @@ export function illustrativeToFeed(): LandingFeedItem[] {
     productName: d.product,
     companyLine: d.company,
     amountLabel: d.amount,
-    aprLabel: d.apr,
     termDays: Number(d.termDays),
     category: d.category.split(' · ')[0],
     milestonesCompleted: d.milestone === 'repaid' ? 2 : d.milestone === 'funded_progress' ? 2 : 0,

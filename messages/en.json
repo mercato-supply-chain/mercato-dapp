@@ -2524,9 +2524,9 @@
   "landing": {
     "hero": {
       "badge": "Escrow on Stellar",
-      "titleLine1": "Finance inventory,",
-      "titleLine2": "one order at a time.",
-      "description": "Mercato connects small businesses with investors who pay suppliers up front in USDC. After delivery, businesses repay through escrow on Stellar.",
+      "titleLine1": "Finance your next",
+      "titleLine2": "order.",
+      "description": "Investors pay your supplier in USDC. Once your goods arrive, repay through escrow on Stellar.",
       "primaryCta": "Browse open orders",
       "flowLink": "How it works",
       "secondaryCta": "Fund an order",
@@ -2619,60 +2619,28 @@
       "explorer": "Open Stellar Expert"
     },
     "roles": {
-      "eyebrow": "Who it's for",
-      "titleLine1": "One platform.",
-      "titleLine2": "Three ways to grow.",
+      "heading": "One order, three ways to take part.",
       "sme": {
         "label": "SMEs",
-        "headline": "Stop waiting on capital.",
-        "subhead": "Start shipping.",
-        "body": "Create a purchase order, choose a verified supplier, set milestones — then open it to investors. Working capital in hours, not bank cycles.",
-        "bullet1": "Deploy a PO in minutes",
-        "bullet2": "Build reputation with every deal",
-        "bullet3": "Repay from inventory sales",
-        "cta": "Create your first deal",
-        "mockupTitle": "New purchase order",
-        "mockupSubtitle": "Supplier & milestones"
+        "body": "Publish a purchase order to finance your inventory. Confirm delivery, then repay through escrow on Stellar.",
+        "cta": "Create your first deal"
       },
       "investor": {
         "label": "Investors",
-        "headline": "Yield on real trade.",
-        "subhead": "Not speculation.",
-        "body": "Browse open purchase orders and fund them on Stellar. You see each order's terms before you invest, and production and delivery milestones protect your capital.",
-        "bullet1": "See exactly what you fund",
-        "bullet2": "Milestone-gated releases",
-        "bullet3": "30–90 day terms",
+        "body": "Review the invoice, term, and expected return before funding an order in USDC.",
         "cta": "Browse open deals"
       },
       "supplier": {
         "label": "Suppliers",
-        "headline": "Get paid as you deliver.",
-        "subhead": "Every milestone.",
-        "body": "USDC is locked before you produce. Payments release when shipment and delivery are confirmed — no chasing invoices across borders.",
-        "bullet1": "Funds secured upfront",
-        "bullet2": "Verified supplier profile",
-        "bullet3": "Repeat buyers on Mercato",
-        "cta": "Join as supplier",
-        "mockupVerified": "Verified · Top 3%",
-        "mockupProduction": "Production start",
-        "mockupDelivery": "Delivery confirmed",
-        "mockupPaid": "Paid",
-        "mockupPending": "Pending"
-      },
-      "forRole": "For {role}",
-      "escrowNote": "Milestone escrow on Stellar",
-      "footerLine": "One purchase order links all three — pick your role and enter the flow.",
-      "chooseRoleAria": "Choose your role",
-      "investorMockupTitle": "Open deals",
-      "investorMockupAvg": "Open orders",
-      "smeMockupOpenCta": "Open for investors →",
-      "smeMockupOrders": "156 orders"
+        "body": "Receive the full invoice amount in USDC once the order is fully funded, then ship the goods.",
+        "cta": "Join as supplier"
+      }
     },
     "rates": {
       "eyebrow": "Why Mercato",
       "titleLine1": "Working capital on the PO.",
       "titleAccent": "Without the bank-grade barriers.",
-      "description": "SMEs face 19–21% CAT at banks they often cannot access — or 60%+ from informal lenders. Mercato finances the full purchase order through milestone escrow, with terms set on each deal — not a published APR.",
+      "description": "Mercato finances supplier invoices in USDC, with repayment terms set for each purchase order.",
       "aprHighlight": "Per purchase order",
       "stat1Value": "85%",
       "stat1Label": "of SMEs in LATAM lack access to formal bank credit",
@@ -2699,7 +2667,7 @@
       "options": {
         "mercato": {
           "label": "Mercato",
-          "subtitle": "PO-backed escrow on Stellar",
+          "subtitle": "Supplier invoice financing in USDC",
           "rate": "Per purchase order",
           "requirements": "Live PO + verified supplier — no banking history",
           "caveat": "100% of the production order financed"
@@ -2742,6 +2710,7 @@
       "footnote": "Illustrative step · milestone escrow on Stellar",
       "order": {
         "short": "Create an order",
+        "summary": "The buyer posts a purchase order for the inventory they need.",
         "title": "SME creates the order",
         "body": "Pick a verified supplier, define shipment & delivery milestones, and publish the purchase order to the marketplace.",
         "actor": "SME",
@@ -2749,6 +2718,7 @@
       },
       "fund": {
         "short": "Fund the invoice",
+        "summary": "Investors fund the invoice in USDC. The supplier gets paid once funding is complete.",
         "title": "Investor funds it",
         "body": "USDC locks in milestone escrow on Stellar. Capital stays protected until each release condition is met on-chain.",
         "actor": "Investor",
@@ -2756,6 +2726,7 @@
       },
       "produce": {
         "short": "Ship the order",
+        "summary": "The supplier ships the goods, and the buyer confirms delivery.",
         "title": "Supplier produces",
         "body": "Production begins with payment secured. The first milestone can release when manufacturing or shipment starts.",
         "actor": "Supplier",
@@ -2770,6 +2741,7 @@
       },
       "complete": {
         "short": "Repay through escrow",
+        "summary": "The buyer funds escrow on Stellar, and investors receive scheduled repayments.",
         "title": "Everyone wins",
         "body": "The SME repays principal plus yield from sales. Investors earn, suppliers were paid, and the cycle can repeat.",
         "actor": "SME",
@@ -2841,7 +2813,6 @@
       "card": {
         "example": "Example",
         "amount": "Amount",
-        "apr": "APR",
         "term": "Term",
         "milestones": "Milestones",
         "fundDeal": "Fund this deal",
@@ -2885,33 +2856,33 @@
       "eyebrow": "FAQ",
       "titlePrefix": "Questions before you",
       "titleAccent": "join the flow.",
-      "description": "How funding works, who participates, and what keeps capital safe on Mercato.",
+      "description": "How orders are funded, when suppliers get paid, and how repayment works.",
       "walkthroughCta": "Full walkthrough",
       "signUpCta": "Create free account",
       "items": {
         "whatIsMercato": {
           "q": "What is Mercato?",
-          "a": "Mercato is a supply chain finance marketplace for Latin America. SMEs post real purchase orders, investors fund them through milestone escrow on Stellar, and suppliers get paid as goods move — all tied to one transparent deal."
+          "a": "Mercato connects small businesses in Latin America with investors who fund inventory purchases. Suppliers receive USDC when the order is fully funded, and buyers repay investors through escrow on Stellar after delivery."
         },
         "whoCanUse": {
           "q": "Who can use the platform?",
-          "a": "SMEs (buyers) create and manage purchase orders. Investors browse open deals and fund escrow. Verified suppliers fulfill orders and receive milestone payments. Each role has a dedicated flow after signing up."
+          "a": "Small businesses create purchase orders. Investors browse and fund open orders. Suppliers receive payment and ship the goods."
         },
         "howFunded": {
           "q": "How are deals funded?",
-          "a": "Once an SME publishes a PO, investors commit USDC into a non-custodial escrow contract. Capital stays locked until predefined milestones — such as production start or delivery — are confirmed on-chain."
+          "a": "On a standard order, an investor pays the supplier invoice in USDC and pays the platform fee separately. Some orders use a funding pool, so multiple investors can contribute toward the same invoice."
         },
         "milestones": {
           "q": "What are payment milestones?",
-          "a": "Milestones split the deal into stages (for example 50% on shipment, 50% on delivery). Funds release to the supplier only when the agreed proof is submitted and approved, reducing risk for every party."
+          "a": "Repayment milestones split the amount owed to investors into installments. After delivery is confirmed, the buyer funds the escrow and Mercato approves and releases each funded installment."
         },
         "investorRisk": {
-          "q": "How is investor capital protected?",
-          "a": "Your funds are held in escrow and tied to a specific purchase order — not a generic credit line. You see the product, supplier, terms, and APR upfront, and releases are gated by milestones rather than discretionary payouts."
+          "q": "What should investors review before funding?",
+          "a": "Review the supplier invoice, repayment term, and expected return for each order. Repayment uses escrow on Stellar and depends on the buyer funding the scheduled installments."
         },
         "supplierPayment": {
           "q": "When do suppliers get paid?",
-          "a": "After the deal is funded, payments release at each confirmed milestone. Suppliers know funds are secured before production starts, instead of waiting on long invoice cycles after delivery."
+          "a": "Suppliers receive the full invoice amount in USDC when an order is fully funded, before shipping."
         },
         "stellar": {
           "q": "Why Stellar?",

@@ -47,14 +47,10 @@ export function LandingDealCard({ item }: LandingDealCardProps) {
         ) : null}
       </div>
 
-      <dl className="grid grid-cols-3 gap-3 text-sm">
+      <dl className="grid grid-cols-2 gap-3 text-sm">
         <div>
           <dt className="text-muted-foreground">{t('landing.liveDeals.card.amount')}</dt>
           <dd className="mt-0.5 font-medium tabular-nums">{item.amountLabel}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t('landing.liveDeals.card.apr')}</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">{item.aprLabel ?? '—'}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">{t('landing.liveDeals.card.term')}</dt>
